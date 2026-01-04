@@ -1,0 +1,72 @@
+<mxfile host="Electron" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/29.0.3 Chrome/140.0.7339.249 Electron/38.7.0 Safari/537.36" version="29.0.3">
+  <diagram name="Lapa-1" id="dr0JmTAla3yxXAfY3-vh">
+    <mxGraphModel dx="2411" dy="934" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="9j3XNvROsqm5rcMQtD5K-1" value="Initialize" style="ellipse;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+          <mxGeometry x="-760" y="40" width="120" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="9j3XNvROsqm5rcMQtD5K-28" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="1" source="9j3XNvROsqm5rcMQtD5K-10" target="9j3XNvROsqm5rcMQtD5K-27" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="9j3XNvROsqm5rcMQtD5K-10" value="LoadContent" style="ellipse;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+          <mxGeometry x="460" y="50" width="120" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="9j3XNvROsqm5rcMQtD5K-30" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="1" source="9j3XNvROsqm5rcMQtD5K-27" target="9j3XNvROsqm5rcMQtD5K-29" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="9j3XNvROsqm5rcMQtD5K-27" value="Loops over All Living Entity Renderers and loads Textures" style="rounded=0;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+          <mxGeometry x="460" y="160" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="9j3XNvROsqm5rcMQtD5K-29" value="Loops over All Static Entity Renderers and loads Textures" style="rounded=0;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+          <mxGeometry x="460" y="240" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="n1xeEh8dDl6L7zhFXk2C-1" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" parent="1" source="9j3XNvROsqm5rcMQtD5K-1" target="9j3XNvROsqm5rcMQtD5K-33" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="-960" y="70" as="sourcePoint" />
+            <mxPoint x="-700" y="250" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="ociW4IYd_ouEauDg01oG-3" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="9j3XNvROsqm5rcMQtD5K-33" target="ociW4IYd_ouEauDg01oG-2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="9j3XNvROsqm5rcMQtD5K-33" value="Load Mod Assemblies" style="rounded=0;whiteSpace=wrap;html=1;" parent="1" vertex="1">
+          <mxGeometry x="-760" y="210" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="ociW4IYd_ouEauDg01oG-5" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="ociW4IYd_ouEauDg01oG-2" target="ociW4IYd_ouEauDg01oG-4">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ociW4IYd_ouEauDg01oG-2" value="Register tags" style="whiteSpace=wrap;html=1;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="-760" y="350" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="ociW4IYd_ouEauDg01oG-7" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="ociW4IYd_ouEauDg01oG-4" target="ociW4IYd_ouEauDg01oG-6">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ociW4IYd_ouEauDg01oG-4" value="Registrer Static/Dynamic Entities" style="whiteSpace=wrap;html=1;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="-760" y="490" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="ociW4IYd_ouEauDg01oG-9" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="ociW4IYd_ouEauDg01oG-6" target="ociW4IYd_ouEauDg01oG-8">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ociW4IYd_ouEauDg01oG-6" value="Register Entity renderers" style="whiteSpace=wrap;html=1;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="-760" y="630" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="ociW4IYd_ouEauDg01oG-8" value="Check if all Entities have a renderer" style="whiteSpace=wrap;html=1;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="-760" y="770" width="120" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="ociW4IYd_ouEauDg01oG-14" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;" edge="1" parent="1" source="ociW4IYd_ouEauDg01oG-11" target="ociW4IYd_ouEauDg01oG-15">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="-440" y="210.00000000000023" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="ociW4IYd_ouEauDg01oG-11" value="Register Entity" style="ellipse;whiteSpace=wrap;html=1;" vertex="1" parent="1">
+          <mxGeometry x="-500" y="40" width="120" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="ociW4IYd_ouEauDg01oG-15" value="" style="shape=parallelogram;perimeter=parallelogramPerimeter;whiteSpace=wrap;html=1;fixedSize=1;" vertex="1" parent="1">
+          <mxGeometry x="-500" y="210" width="120" height="60" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
