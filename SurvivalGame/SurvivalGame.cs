@@ -1,17 +1,19 @@
 ﻿using System;
 using System.Reflection;
 using System.Threading;
+using System.IO;
+using System.Xml.Linq;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using SurvivalGame.Core;
-using System.Collections.Generic;
-using System.Linq;
 using SurvivalGame.Core.EntitySystem;
+using System.Collections.Generic;
+using SurvivalGame.Modding;
 
 namespace SurvivalGame;
 
-public class SurvivalGame : Game
+public sealed class SurvivalGame : Game
 {
     public static readonly string GameId = "survivalgame";
     public static SurvivalGame Instance { private set; get; }
@@ -20,6 +22,11 @@ public class SurvivalGame : Game
 
     private GraphicsDeviceManager graphics;
     private SpriteBatch spriteBatch;
+
+    public const string modPath = "mods";
+
+    public List<ModInfo> loadedMods = null;
+    public List<Assembly> modAssemblies = null;
 
     public SurvivalGame()
     {
@@ -31,13 +38,25 @@ public class SurvivalGame : Game
 
     protected override void Initialize()
     {
-        //Register Entity Tags
+        if(!Directory.Exists(modPath))
+        {
+            Directory.CreateDirectory(modPath);
+            return;
+        }
+        
+        loadedMods = ModLoader.LoadMods();
 
+        //Register Entity Tags
+        Entities.RegisterTag("invincible");
+        Entities.FinalizeTagRegistry();
         //Register Entities
 
-        Entities.FinalizeRegistries();
+        Entities.Register("sg:some_entity", Entities.NewBuilder<EntityBuilder, SomeEntity>().Tagged("invincible", false));
+        Entities.FinalizeEntityRegistry();
         //Register EntityRenderers
 
+        SomeEntity someEntity = Entities.Create("sg:some_entity", new Vector2(0,0)) as SomeEntity;
+        Console.WriteLine(someEntity.ToString());
 
         base.Initialize();
     }
@@ -53,7 +72,7 @@ public class SurvivalGame : Game
         if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed || Keyboard.GetState().IsKeyDown(Keys.Escape))
             Exit();
 
-
+        
 
         base.Update(gameTime);
     }

@@ -31,3 +31,4 @@ C:\Dev\Monogame\SurvivalGame\obj\Debug\net9.0\refint\SurvivalGame.dll
 C:\Dev\Monogame\SurvivalGame\obj\Debug\net9.0\SurvivalGame.pdb
 C:\Dev\Monogame\SurvivalGame\obj\Debug\net9.0\SurvivalGame.genruntimeconfig.cache
 C:\Dev\Monogame\SurvivalGame\obj\Debug\net9.0\ref\SurvivalGame.dll
+C:\Dev\Monogame\SurvivalGame\obj\Debug\net9.0\SurvivalGame.sourcelink.json

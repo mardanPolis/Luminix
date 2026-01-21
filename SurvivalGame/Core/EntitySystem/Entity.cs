@@ -1,96 +1,160 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Microsoft.Xna.Framework;
 
 namespace SurvivalGame.Core.EntitySystem;
 
 public abstract class Entity
 {
-    public Entity() { }
-    protected EntityType type { private set; get; }
-    protected uint id { private set; get; }
-    protected EntityStaticTags staticTags = new();
-    protected HashSet<ushort> tags = new();
-
-    internal void Initialize(EntityType type, uint id)
+    public TypeValues TValues { get; } = null;
+    public uint Id { get; }
+    public Entity(uint id, Entity.TypeValues typeValues)
     {
-        this.type = type;
-        this.id = id;
+        Id = id;
+        TValues = typeValues;
     }
 
-    public abstract void Awake(); 
+    protected readonly HashSet<Tag> tags = [];
+
+    public abstract void Awake();
     public abstract void Start();
 
-    public bool HasTag(ushort tagId)
+    public bool HasTag(Tag tag)
     {
-        return staticTags.tags.Contains(tagId) || tags.Contains(tagId);
+        return TValues.HasTag(tag) || tags.Contains(tag);
     }
     public bool HasTag(string tag)
     {
-        return Entities.TryGetTag(tag, out ushort tagId) && HasTag(tagId);
+        return Entities.TryGetTag(tag, out Tag tagId) && HasTag(tagId);
     }
 
-    public bool AddTag(ushort tagId)
+    public bool AddTag(Tag tag)
     {
-        if (Entities.EntityTagCount <= tagId)
+        if (!Entities.TagExists(tag))
             return false;
 
-        return tags.Add(tagId);
+        return tags.Add(tag);
     }
-    public bool AddTag(string tag)
+    public bool AddTag(string tagString)
     {
-        if(Entities.TryGetTag(tag, out ushort tagId))
-            return tags.Add(tagId);
+        if(Entities.TryGetTag(tagString, out Tag tag))
+            return tags.Add(tag);
 
         return false;
     }
 
-    public bool RemTag(ushort tagId)
+    public bool RemTag(Tag tagId)
     {
         return tags.Remove(tagId);
     }
-    public bool RemTag(string tag)
+    public bool RemTag(string tagString)
     {
-        return Entities.TryGetTag(tag, out ushort tagId) && RemTag(tagId);
+        return Entities.TryGetTag(tagString, out Tag tag) && RemTag(tag);
     }
 
-    public static bool operator ==(Entity a, Entity b) => a.id == b.id && a.type == b.type;
-    public static bool operator !=(Entity a, Entity b) => !(a.id == b.id && a.type == b.type);
-    
-    public override bool Equals(object obj) => obj is EntityType other && Equals(other);
-    public override int GetHashCode() => HashCode.Combine(type.Id, id);
-
-    public EntityType GetEntityType()
+    public void ClrTags()
     {
-        return type;
+        tags.Clear();
+    }
+
+    public bool TryGetTypeValues(out TypeValues typeValues)
+    {
+        typeValues = TValues;
+        return TValues != null;
+    }
+
+    public override bool Equals(object obj) => obj is Entity.Type other && Equals(other);
+
+    public static bool operator ==(Entity a, Entity b) => a.Id == b.Id;
+    public static bool operator !=(Entity a, Entity b) => a.Id != b.Id;
+
+    public override int GetHashCode() => HashCode.Combine(GetEntityType().Id, Id);
+    public Entity.Type GetEntityType()
+    {
+        return TValues.Type;
     }
     public uint GetEntityId()
     {
-        return id;
+        return Id;
     }
-}
 
-public struct EntityType
-{
-    public EntityType(ushort typeId)
+    public struct Type
     {
-        this.Id = typeId;
+        public readonly ushort Id;
+        public Type(ushort typeId)
+        {
+            this.Id = typeId;
+        }
+        
+        public static bool operator ==(Entity.Type a, Entity.Type b) => a.Id == b.Id;
+        public static bool operator !=(Entity.Type a, Entity.Type b) => a.Id != b.Id;
+
+        public bool Equals(Entity.Type other) => Id == other.Id;
+
+        public override bool Equals(object obj) => obj is Entity.Type other && Equals(other);
+        public override int GetHashCode() => Id.GetHashCode();
+
+        public override string ToString() => $"Entity.Type[{Id}]";
+        public string ToTypeString()
+        {
+            if(Entities.TryGet(this, out System.Type classType))
+                return $"Entity Class[{classType.Name}]";
+
+            throw new NullReferenceException($"Entity.Type references Null Entity.Type with Id[{Id}]");
+        }
+    }
+    public struct Tag
+    {
+        public readonly ushort Id;
+        public Tag(ushort tagId)
+        {
+            this.Id = tagId;
+        }
+        
+        public static bool operator ==(Entity.Tag a, Entity.Tag b) => a.Id == b.Id;
+        public static bool operator !=(Entity.Tag a, Entity.Tag b) => a.Id != b.Id;
+
+        public bool Equals(Entity.Tag other) => Id == other.Id;
+
+        public override bool Equals(object obj) => obj is Entity.Tag other && Equals(other);
+        public override int GetHashCode() => Id.GetHashCode();
+
+        public override string ToString()
+        {
+            if(Entities.TryGetTag(Id, out string tag))
+                return tag;
+
+            throw new NullReferenceException($"Tag references Null Tag with Id[{Id}]");
+        }
     }
     
-    public readonly ushort Id;
+    public class TypeValues
+    {
+        public readonly Entity.Type Type;
+        public TypeValues(Entity.Type type)
+        {
+            Type = type;
+        }
 
-    public static bool operator ==(EntityType a, EntityType b) => a.Id == b.Id;
-    public static bool operator !=(EntityType a, EntityType b) => a.Id != b.Id;
+        public Vector2 StartingScale { private set; get; } = Vector2.One;
+        internal void SetStartingScale(Vector2 scale)
+        {
+            StartingScale = scale;
+        }
 
-    public bool Equals(EntityType other) => Id == other.Id;
-
-    public override bool Equals(object obj) => obj is EntityType other && Equals(other);
-    public override int GetHashCode() => Id.GetHashCode();
-
-    public override string ToString() => $"EntityType({Id})";
-}
-
-public class EntityStaticTags
-{
-    public HashSet<ushort> tags;
+        public HashSet<Tag> Tags { private set; get; } = [];
+        public void SetTags(List<Tag> tags) 
+        { 
+            Tags.Clear();
+            Tags.UnionWith(tags);
+        }
+        public bool AddTag(Tag tag) => Entities.TagExists(tag) && Tags.Add(tag);
+        public bool AddTag(string tagString) => Entities.TryGetTag(tagString, out Tag tag) && Tags.Add(tag);
+        public bool HasTag(Tag tag) => Tags.Contains(tag);
+        public bool HasTag(string tagString) => Entities.TryGetTag(tagString, out Tag tag) && HasTag(tag);
+        public bool RemTag(Tag tag) => Tags.Remove(tag);
+        public bool RemTag(string tagString) => Entities.TryGetTag(tagString, out Tag tag) && RemTag(tag);
+        public void ClrTags() => Tags.Clear();
+    } 
 }
