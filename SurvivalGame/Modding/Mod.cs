@@ -1,3 +1,4 @@
+using System;
 using System.Reflection;
 using SurvivalGame.Core;
 
@@ -5,8 +6,13 @@ namespace SurvivalGame.Modding;
 
 public class Mod
 {
-    public ModInfo Info { get; internal set; }
+    public readonly string ModId;
     public Assembly Assembly { get; internal set; }
+
+    public Mod(string id)
+    {
+        ModId = id;
+    }
 
     public virtual void RegisterTags() {}
     public virtual void RegisterEntities() {}
@@ -24,4 +30,12 @@ public class Mod
     public virtual void PreGameTick() {}
     public virtual void GameTick() {}
     public virtual void PostGameTick() {}
+
+    public ModInfo GetModInfo()
+    {
+        if(ModHandler.TryGetModInfo(ModId, out ModInfo info))
+            return info;
+        
+        throw new Exception("Something went wrong!");
+    }
 }

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Text.Json;
 using System.Xml.Linq;
 using SurvivalGame.Modding;
 
@@ -15,35 +16,48 @@ public struct ModInfo(string name, string modId, string version, string[] tarVer
     public readonly string Description = desc ?? "Mod description";
     public readonly string Version = version;
     public readonly string[] TarVersion = tarVersions;
-    public readonly string[] Dependencies = dependencies;
+    public readonly string[] Dependencies = dependencies ?? Array.Empty<string>();
 
     public readonly string Location = location;
     public const string Picture = "icon";
+
+    internal Mod ModInstance = null;
 }
 
 public static class ModHandler
 {
-    public static Mod[] Mods { private set; get; } = null;
-    private static Dictionary<string, Mod> activeMods = null;
-    public static Mod[] ActiveMods
+    private static Dictionary<string, ModInfo> modsIdinfo  = null;
+    private static string[] loadedModsIds = null;
+    private static string[] activeModsIds = null;
+    private static List<string> activeModsIds_new = null;
+
+    public static string[] LoadedModsIds
     {
         get
         {
-            return activeMods.Values.ToArray();
+            return loadedModsIds;
+        }
+    }
+    public static string[] ActiveModsIds
+    {
+        get
+        {
+            return activeModsIds;
+        }
+    }
+    public static ModInfo[] ActiveMods
+    {
+        get
+        {
+            return modsIdinfo.Values.ToArray();
         }
     }
 
-    internal static void LoadMods()
+    public static bool TryGetModInfo(string modId, out ModInfo info)
     {
-        foreach (var loc in Directory.GetDirectories(SurvivalGame.ModPath))
-        {
-            if(TryGetModInfo(loc, out ModInfo info))
-            {
-                
-            }
-        }
+        return modsIdinfo.TryGetValue(modId, out info);
     }
-    private static bool TryGetModInfo(string loc, out ModInfo info)
+    private static bool TryGetModInfoLoc(string loc, out ModInfo info)
     {
         static XElement GetElement(XDocument doc, string elementId, bool important)
         {
@@ -64,7 +78,7 @@ public static class ModHandler
                     throw new InvalidDataException($"'{doc.Root.Name}' element <{elementId}> is missing <{elementId}> elements.");
             }
 
-            foreach (var e in element.Elements("li"))
+            foreach (var e in element.Elements(elementsId))
                 elements.Add(e.Value);
 
             return elements;
@@ -98,21 +112,19 @@ public static class ModHandler
 
     private static Mod ActivateMod(ModInfo info)
     {
-        Mod mod;
-        Assembly assembly = null;
+        Mod mod = new(info.ModId);
+
         string assemblyPath = Path.Combine(info.Location, "Assembly.dll");
-        
         if (File.Exists(assemblyPath))
         {
             try
             {
-                assembly = Assembly.LoadFrom(assemblyPath);
-
+                Assembly assembly = Assembly.LoadFrom(assemblyPath);
                 Type modType = assembly.GetTypes().FirstOrDefault(t => typeof(Mod).IsAssignableFrom(t) && !t.IsAbstract)
                     ?? throw new Exception($"{info.Name} assembly doesn't have a Mod class!");
 
-                mod = (Mod)Activator.CreateInstance(modType)!;
-                return mod;
+                mod = (Mod)Activator.CreateInstance(modType, info.ModId)!;
+                mod.Assembly = assembly;
             }
             catch (Exception ex)
             {
@@ -120,12 +132,49 @@ public static class ModHandler
             }
         }
 
-        mod = new();
-        mod.Info = info;
-        mod.Assembly = assembly;
-
         mod.OnLoad();
 
-        return mod; 
+        return mod;
+    }
+    internal static void LoadMods()
+    {
+        if(!Directory.Exists(SurvivalGame.ModPath))
+        {
+            Directory.CreateDirectory(SurvivalGame.ModPath);
+            return;
+        }
+
+        List<string> loadedMods = new();
+        List<string> activeMods = null;
+
+        //Load all mods
+        foreach (var loc in Directory.GetDirectories(SurvivalGame.ModPath))
+        {
+            if (TryGetModInfoLoc(loc, out ModInfo info))
+            {
+                modsIdinfo[info.ModId] = info;
+                loadedMods.Add(info.ModId); 
+            }
+        }
+
+        //Get active mod list
+        string filePath = Path.Combine(SurvivalGame.AppDataLoc, "active_mods.json");
+        if (File.Exists(filePath))
+        {
+            string json = File.ReadAllText(filePath);
+            activeMods = JsonSerializer.Deserialize<List<string>>(json) ?? [];
+        }
+
+        //activating mods
+        foreach(var modId in activeMods)
+        {
+            if(TryGetModInfo(modId, out ModInfo info))
+                info.ModInstance = ActivateMod(info); 
+            else // Mod didnt get loaded
+                Console.WriteLine($"Mod '{modId}' not found!");
+        }
+
+        loadedModsIds = loadedMods.ToArray();
+        activeModsIds = activeMods.ToArray();
     }
 }

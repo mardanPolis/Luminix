@@ -37,14 +37,15 @@ public sealed class SurvivalGame : Game
 
     protected override void Initialize()
     {
-        HandleModsInit();
+        Directory.CreateDirectory(AppDataLoc);
+        ModHandler.LoadMods();
         HandleRegistryInit();
         base.Initialize();
     }
     protected override void OnExiting(object sender, ExitingEventArgs args)
     {
-        foreach(Mod mod in ModHandler.ActiveMods)
-            mod.OnUnload();
+        foreach(ModInfo mod in ModHandler.ActiveMods)
+            mod.ModInstance.OnUnload();
 
         base.OnExiting(sender, args);
     }
@@ -56,8 +57,8 @@ public sealed class SurvivalGame : Game
     }
     protected override void UnloadContent()
     {
-        foreach(Mod mod in ModHandler.ActiveMods)
-            mod.OnUnload();
+        foreach(ModInfo mod in ModHandler.ActiveMods)
+            mod.ModInstance.OnUnloadContent();
 
         base.UnloadContent();
     }
@@ -83,48 +84,22 @@ public sealed class SurvivalGame : Game
 
 
 
-    private void HandleModsInit()
-    {
-        if(!Directory.Exists(ModPath))
-        {
-            Directory.CreateDirectory(ModPath);
-            return;
-        }
-
-        Console.WriteLine("Loading Mods!");
-        
-        //Getting every possible mods
-        ModHandler.LoadMods();
-        
-    }
     private void HandleRegistryInit()
     {
         Console.WriteLine("Initializing Registry!");
 
         //Register Entity Tags
-        RegisterTags();
+        GameRegistry.RegisterTags();
 
         Entities.FinalizeTagRegistry();
+        
         //Register Entities
-        RegisterEntities();
+        GameRegistry.RegisterEntities();
         
         Entities.FinalizeEntityRegistry();
+
         //Register EntityRenderers
+        GameRegistry.RegisterRenderers();
 
-    }
-
-
-
-    private void RegisterTags()
-    {
-        Entities.RegisterTag("invincible");
-    }
-    private void RegisterEntities()
-    {
-        Entities.Register("sg:some_entity", Entities.NewBuilder<EntityBuilder, SomeEntity>().Tagged("invincible", false));
-    }
-    private void RegisterRenderers()
-    {
-        
     }
 }
