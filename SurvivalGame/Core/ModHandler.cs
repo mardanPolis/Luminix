@@ -27,29 +27,21 @@ public struct ModInfo(string name, string modId, string version, string[] tarVer
 public static class ModHandler
 {
     private static Dictionary<string, ModInfo> modsIdinfo  = null;
-    private static string[] loadedModsIds = null;
-    private static string[] activeModsIds = null;
+    private static ModInfo[] activeMods = null;
     private static List<string> activeModsIds_new = null;
 
-    public static string[] LoadedModsIds
+    public static ICollection<ModInfo> LoadedMods
     {
         get
         {
-            return loadedModsIds;
-        }
-    }
-    public static string[] ActiveModsIds
-    {
-        get
-        {
-            return activeModsIds;
+            return modsIdinfo.Values;
         }
     }
     public static ModInfo[] ActiveMods
     {
         get
         {
-            return modsIdinfo.Values.ToArray();
+            return activeMods;
         }
     }
 
@@ -109,33 +101,6 @@ public static class ModHandler
 
         return true;
     }
-
-    private static Mod ActivateMod(ModInfo info)
-    {
-        Mod mod = new(info.ModId);
-
-        string assemblyPath = Path.Combine(info.Location, "Assembly.dll");
-        if (File.Exists(assemblyPath))
-        {
-            try
-            {
-                Assembly assembly = Assembly.LoadFrom(assemblyPath);
-                Type modType = assembly.GetTypes().FirstOrDefault(t => typeof(Mod).IsAssignableFrom(t) && !t.IsAbstract)
-                    ?? throw new Exception($"{info.Name} assembly doesn't have a Mod class!");
-
-                mod = (Mod)Activator.CreateInstance(modType, info.ModId)!;
-                mod.Assembly = assembly;
-            }
-            catch (Exception ex)
-            {
-                SurvivalGame.LOGGER.Log($"Failed to load mod assembly at {assemblyPath}: {ex.Message}");
-            }
-        }
-
-        mod.OnLoad();
-
-        return mod;
-    }
     internal static void LoadMods()
     {
         if(!Directory.Exists(SurvivalGame.ModPath))
@@ -144,8 +109,7 @@ public static class ModHandler
             return;
         }
 
-        List<string> loadedMods = new();
-        List<string> activeMods = null;
+        List<string> activeModsIds = [];
 
         //Load all mods
         foreach (var loc in Directory.GetDirectories(SurvivalGame.ModPath))
@@ -153,7 +117,6 @@ public static class ModHandler
             if (TryGetModInfoLoc(loc, out ModInfo info))
             {
                 modsIdinfo[info.ModId] = info;
-                loadedMods.Add(info.ModId); 
             }
         }
 
@@ -162,19 +125,44 @@ public static class ModHandler
         if (File.Exists(filePath))
         {
             string json = File.ReadAllText(filePath);
-            activeMods = JsonSerializer.Deserialize<List<string>>(json) ?? [];
+            activeModsIds = JsonSerializer.Deserialize<List<string>>(json) ?? [];
         }
 
         //activating mods
-        foreach(var modId in activeMods)
+        foreach(var modId in activeModsIds)
         {
             if(TryGetModInfo(modId, out ModInfo info))
-                info.ModInstance = ActivateMod(info); 
-            else // Mod didnt get loaded
-                SurvivalGame.LOGGER.Log($"Mod '{modId}' not found!");
+            {
+                Mod mod = new(info.ModId);
+
+                string assemblyPath = Path.Combine(info.Location, "Assembly.dll");
+                if (File.Exists(assemblyPath))
+                {
+                    try
+                    {
+                        Assembly assembly = Assembly.LoadFrom(assemblyPath);
+                        Type modType = assembly.GetTypes().FirstOrDefault(t => typeof(Mod).IsAssignableFrom(t) && !t.IsAbstract)
+                            ?? throw new Exception($"{info.Name} assembly doesn't have a Mod class!");
+
+                        mod = (Mod)Activator.CreateInstance(modType, info.ModId)!;
+                        mod.Assembly = assembly;
+                    }
+                    catch (Exception ex)
+                    {
+                        SurvivalGame.LOGGER.Log($"Failed to load mod assembly at {assemblyPath}: {ex.Message}");
+                    }
+                }
+
+                mod.OnLoad();
+
+                info.ModInstance = mod; 
+            }
+            else  { // Mod didnt get loaded
+                SurvivalGame.LOGGER.Wrn($"Mod '{modId}' not found!");
+                activeModsIds.Remove(modId);
+            }
         }
 
-        loadedModsIds = loadedMods.ToArray();
-        activeModsIds = activeMods.ToArray();
+        activeModsIds_new = activeModsIds;
     }
 }
