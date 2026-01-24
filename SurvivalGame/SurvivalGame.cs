@@ -15,8 +15,8 @@ namespace SurvivalGame;
 public sealed class SurvivalGame : Game
 {
     public const string GameName = "SurvivalGame";
-    public const string ModPath = "mods";
     public const string GameId = "sg";
+    public const string ModPath = "mods";
 
     public static readonly string AppDataLoc = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), GameName);
 
@@ -52,6 +52,8 @@ public sealed class SurvivalGame : Game
     protected override void LoadContent()
     {
         spriteBatch = new SpriteBatch(GraphicsDevice);
+        foreach(ModInfo mod in ModHandler.ActiveMods)
+            mod.ModInstance.OnLoadContent();
 
     }
     protected override void UnloadContent()
