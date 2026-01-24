@@ -128,7 +128,7 @@ public static class ModHandler
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Failed to load mod assembly at {assemblyPath}: {ex.Message}");
+                SurvivalGame.LOGGER.Log($"Failed to load mod assembly at {assemblyPath}: {ex.Message}");
             }
         }
 
@@ -171,7 +171,7 @@ public static class ModHandler
             if(TryGetModInfo(modId, out ModInfo info))
                 info.ModInstance = ActivateMod(info); 
             else // Mod didnt get loaded
-                Console.WriteLine($"Mod '{modId}' not found!");
+                SurvivalGame.LOGGER.Log($"Mod '{modId}' not found!");
         }
 
         loadedModsIds = loadedMods.ToArray();

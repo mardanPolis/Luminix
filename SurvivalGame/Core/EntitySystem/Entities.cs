@@ -42,9 +42,9 @@ public static class Entities
         foreach(var entry in entityTagIdsArray)
             entityTagsStr[entry.Value.Id] = entry.Key;
 
-        Console.WriteLine($"Registered Tags ({entityTagsStr.Length}):");
+        SurvivalGame.LOGGER.Log($"Registered Tags ({entityTagsStr.Length}):");
         for (int i = 0; i < entityTagsStr.Length; i++)
-            Console.WriteLine($" - id:{i} -> {entityTagsStr[i]}");
+            SurvivalGame.LOGGER.Log($" - id:{i} -> {entityTagsStr[i]}");
     }
     
     public static bool TagExists(string registryTag)
@@ -55,7 +55,6 @@ public static class Entities
     {
         return tag.Id < EntityTagCount;
     }
-
 
     public static bool TryGetTag(string registryTag, out Entity.Tag tagId)
     {
@@ -71,6 +70,8 @@ public static class Entities
         registryTag = entityTagsStr[tagId];
         return true;
     }
+
+
 
     //Entity Registry
     private struct EntityTypeData
@@ -153,9 +154,9 @@ public static class Entities
         entityBuilders = null;
 
         
-        Console.WriteLine($"Registered EntityTypes ({entityTypes.Count}):");
+        SurvivalGame.LOGGER.Log($"Registered EntityTypes ({entityTypes.Count}):");
         for (int i = 0; i < entityTypeDatas.Length; i++)
-            Console.WriteLine($" - id:{i} -> registryName: {entityTypeDatas[i].registryName}; class: {entityTypeDatas[i].classType.Name}; isStatic: {entityTypeDatas[i].isStatic}; typeValues: {entityTypeDatas[i].typeValues}");
+            SurvivalGame.LOGGER.Log($" - id:{i} -> registryName: {entityTypeDatas[i].registryName}; class: {entityTypeDatas[i].classType.Name}; isStatic: {entityTypeDatas[i].isStatic}; typeValues: {entityTypeDatas[i].typeValues}");
     }
 
     public static bool TryGet(string registryName, out Entity.Type type)
@@ -208,6 +209,8 @@ public static class Entities
     {
         return (TBuilder)Activator.CreateInstance(typeof(TBuilder), typeof(TEntity))!;
     }
+
+
 
     //Runtime Instances
     private struct StaticRenderData

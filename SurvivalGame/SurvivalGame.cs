@@ -22,7 +22,7 @@ public sealed class SurvivalGame : Game
 
     public static SurvivalGame Instance { private set; get; }
     public static readonly Assembly[] Assemblies = AppDomain.CurrentDomain.GetAssemblies();
-    internal static Logger Logger;
+    internal static readonly Logger LOGGER = Logger.GetLogger();
 
     private GraphicsDeviceManager graphics;
     private SpriteBatch spriteBatch;
@@ -30,7 +30,6 @@ public sealed class SurvivalGame : Game
     public SurvivalGame()
     {
         graphics = new GraphicsDeviceManager(this);
-        Logger = new Logger();
         Content.RootDirectory = "Content";
         IsMouseVisible = true;
     }
@@ -86,13 +85,13 @@ public sealed class SurvivalGame : Game
 
     private void HandleRegistryInit()
     {
-        Console.WriteLine("Initializing Registry!");
+        LOGGER.Log("Initializing Registry!");
 
         //Register Entity Tags
         GameRegistry.RegisterTags();
 
         Entities.FinalizeTagRegistry();
-        
+
         //Register Entities
         GameRegistry.RegisterEntities();
         
