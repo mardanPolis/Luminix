@@ -11,7 +11,7 @@ public static class GameRegistry
     }
     internal static void RegisterEntities()
     {
-        Entities.Register("sg:some_entity", Entities.NewBuilder<EntityBuilder, SomeEntity>().Tagged("invincible", false));
+        Entities.Register($"{SurvivalGame.GameId}:some_entity", Entities.NewBuilder<EntityBuilder, SomeEntity>().Tagged("invincible", false));
     }
     internal static void RegisterRenderers()
     {
