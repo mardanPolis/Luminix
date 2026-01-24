@@ -4,6 +4,7 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Threading;
 using Microsoft.Xna.Framework;
+using SurvivalGame.Core.rendering;
 
 namespace SurvivalGame.Core.EntitySystem;
 
@@ -81,7 +82,7 @@ public static class Entities
         public bool isStatic;
         public Entity.TypeValues typeValues;
         public Func<uint, Entity.TypeValues, Entity> factory;
-        public List<Entity> entities;
+        public List<uint> entities;
     }
 
     private static bool finalizedEntityRegistry;
@@ -193,7 +194,7 @@ public static class Entities
         isStatic = entityTypeDatas[type.Id].isStatic;
         return true;
     }
-    public static bool TryGet(Entity.Type type, out List<Entity> entities)
+    public static bool TryGet(Entity.Type type, out List<uint> entities)
     {
         entities = null;
 
@@ -212,19 +213,12 @@ public static class Entities
 
 
 
-    //Runtime Instances
-    private struct StaticRenderData
-    {
-        public Vector2 position;
-        public float rotation;
-        public Vector2 scale;
-    }
-    
+    //Runtime Instances    
     private static Dictionary<uint, DynamicEntity> dynamicEntities = [];
     private static uint dynamicEntityId = 0;
     private static Dictionary<uint, StaticEntity> staticEntities = [];
     private static uint staticEntityId = 0;
-    private static Dictionary<uint, StaticRenderData> staticEntitiesDatas = [];
+    private static Dictionary<uint, StaticEntityRenderer.RenderData> staticEntitiesDatas = [];
 
     public static Entity Create(Entity.Type entityType, Vector2 position, float rotation = 0f, Vector2? scale = null)
     {
@@ -236,43 +230,46 @@ public static class Entities
         Vector2 finalScale = scale ?? typeValues.StartingScale;
 
         Entity entity;
+        uint entityId;
 
         if (isStatic)
         {
             // Get id
-            var id = staticEntityId++;
+            entityId = staticEntityId++;
             
             // Create entity
-            entity = factory(id, typeValues);
+            entity = factory(entityId, typeValues);
 
             // Add to static dictionary
             var staticEntity = entity as StaticEntity;
-            staticEntities.Add(id, staticEntity);
+            staticEntities.Add(entityId, staticEntity);
 
             // Render data
-            var renderData = new StaticRenderData
+            var renderData = new StaticEntityRenderer.RenderData
             {
                 position = position,
                 rotation = rotation,
                 scale = finalScale
             };
-            staticEntitiesDatas.Add(id, renderData);
+            staticEntitiesDatas.Add(entityId, renderData);
         }
         else
         {
             // Get id
-            var id = dynamicEntityId++;
+            entityId = dynamicEntityId++;
             
             // Create entity
-            entity = factory(id, typeValues);
+            entity = factory(entityId, typeValues);
 
             // Add to dynamic dictionary
             var dynamicEntity = entity as DynamicEntity;
             dynamicEntity.Position = position;
             dynamicEntity.Rotation = rotation;
             dynamicEntity.Scale = finalScale;
-            dynamicEntities.Add(id, dynamicEntity);
+            dynamicEntities.Add(entityId, dynamicEntity);
         }
+
+        entityTypeDatas[entityType.Id].entities.Add(entityId);
 
         entity.Awake();
         entity.Start();

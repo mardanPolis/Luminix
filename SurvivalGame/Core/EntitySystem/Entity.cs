@@ -122,7 +122,6 @@ public abstract class Entity
             throw new NullReferenceException($"Tag references Null Tag with Id[{Id}]");
         }
     }
-    
     public class TypeValues
     {
         public readonly Entity.Type Type;
