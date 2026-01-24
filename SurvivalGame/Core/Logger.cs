@@ -15,9 +15,9 @@ public readonly struct Log
         Error,
     }
 
-    public Log(object message, Log.Type type, string callerMember, string callerFile, int callerLine)
+    public Log(object message, Log.Type type, string callerMember, string callerFile)
     {
-        entry = CreateEntry(message, type, callerMember, callerFile, callerLine);
+        entry = CreateEntry(message, type, callerMember, callerFile);
     }
     public Log(object message)
     {
@@ -28,11 +28,11 @@ public readonly struct Log
 
     public static implicit operator string(Log log) => log.entry;
 
-    private static string CreateEntry(object message, Log.Type type, string callerMember, string callerFile, int callerLine)
+    private static string CreateEntry(object message, Log.Type type, string callerMember, string callerFile)
     {
         string timestamp = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
         string typeMsg = type == Type.Log ? "" : type == Type.Warning ? "[WARNING]" : "[ERROR]";
-        return $"[{timestamp}] [{Path.GetFileName(callerFile)}:{callerLine}] [{callerMember}] {typeMsg}: {message}";
+        return $"[{timestamp}] [{callerMember}] [{Path.GetFileName(callerFile)}]{typeMsg}: {message}";
     }
     public override string ToString() => entry;
 }
@@ -71,21 +71,21 @@ public sealed class Logger
         logs.Add(log);
     }
 
-    public void Log(object message, [CallerMemberName] string member = "", [CallerFilePath] string file = "", [CallerLineNumber] int line = 0)
+    public void Log(object message, [CallerMemberName] string member = "", [CallerFilePath] string file = "")
     {
-        Print(new Log(message, Core.Log.Type.Log, member, file, line));
+        Print(new Log(message, Core.Log.Type.Log, member, file));
     }
-    public void Log(object variable, object value, [CallerMemberName] string member = "", [CallerFilePath] string file = "", [CallerLineNumber] int line = 0)
+    public void Log(object variable, object value, [CallerMemberName] string member = "", [CallerFilePath] string file = "")
     {
-        Print(new Log($"{variable} : {value}", Core.Log.Type.Log, member, file, line));
+        Print(new Log($"{variable} : {value}", Core.Log.Type.Log, member, file));
     }
-    public void Wrn(object message, [CallerMemberName] string member = "", [CallerFilePath] string file = "", [CallerLineNumber] int line = 0)
+    public void Wrn(object message, [CallerMemberName] string member = "", [CallerFilePath] string file = "")
     {
-        Print(new Log(message, Core.Log.Type.Warning, member, file, line));
+        Print(new Log(message, Core.Log.Type.Warning, member, file));
     }
-    public void Err(object message, [CallerMemberName] string member = "", [CallerFilePath] string file = "", [CallerLineNumber] int line = 0)
+    public void Err(object message, [CallerMemberName] string member = "", [CallerFilePath] string file = "")
     {
-        Print(new Log(message, Core.Log.Type.Error, member, file, line));
+        Print(new Log(message, Core.Log.Type.Error, member, file));
     }
 
     public void Clear()
