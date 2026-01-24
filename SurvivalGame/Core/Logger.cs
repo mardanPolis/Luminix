@@ -88,6 +88,12 @@ public sealed class Logger
         Print(new Log(message, Core.Log.Type.Error, member, file, line));
     }
 
+    public void Clear()
+    {
+        Console.Clear();
+        logs.Clear();
+    }
+
 
     public Log[] Logs
     {
