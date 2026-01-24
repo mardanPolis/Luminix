@@ -7,8 +7,8 @@ namespace SurvivalGame.Core.EntitySystem;
 
 public abstract class Entity
 {
-    public TypeValues TValues { get; } = null;
-    public uint Id { get; }
+    public readonly TypeValues TValues = null;
+    public readonly uint Id;
     public Entity(uint id, Entity.TypeValues typeValues)
     {
         Id = id;
@@ -56,12 +56,6 @@ public abstract class Entity
     public void ClrTags()
     {
         tags.Clear();
-    }
-
-    public bool TryGetTypeValues(out TypeValues typeValues)
-    {
-        typeValues = TValues;
-        return TValues != null;
     }
 
     public override bool Equals(object obj) => obj is Entity.Type other && Equals(other);
