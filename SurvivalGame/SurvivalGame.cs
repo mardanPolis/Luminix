@@ -43,8 +43,8 @@ public sealed class SurvivalGame : Game
     }
     protected override void OnExiting(object sender, ExitingEventArgs args)
     {
-        foreach(ModInfo mod in ModHandler.ActiveMods)
-            mod.ModInstance.OnUnload();
+        foreach(Mod mod in ModHandler.ActiveMods)
+            mod.OnUnload();
 
         base.OnExiting(sender, args);
     }
@@ -52,14 +52,14 @@ public sealed class SurvivalGame : Game
     protected override void LoadContent()
     {
         spriteBatch = new SpriteBatch(GraphicsDevice);
-        foreach(ModInfo mod in ModHandler.ActiveMods)
-            mod.ModInstance.OnLoadContent();
+        foreach(Mod mod in ModHandler.ActiveMods)
+            mod.OnLoadContent();
 
     }
     protected override void UnloadContent()
     {
-        foreach(ModInfo mod in ModHandler.ActiveMods)
-            mod.ModInstance.OnUnloadContent();
+        foreach(Mod mod in ModHandler.ActiveMods)
+            mod.OnUnloadContent();
 
         base.UnloadContent();
     }

@@ -166,7 +166,7 @@ public static class ModHandler
                 }
             }
 
-            _mods = new OrderedDictionary<string, Mod>(mods.ToDictionary(m => m.ModId));
+            _mods = new OrderedDictionary<string, Mod>(mods.OrderBy(m => m.Name).ToDictionary(m => m.ModId));
             _activeMods = activeList.ToArray();
         }
 
@@ -185,7 +185,7 @@ public static class ModHandler
 
         mods = _mods;
         activeMods = new OrderedDictionary<string, Mod>(
-                _activeMods.OrderBy(m => m.Name).ToDictionary(m => m.ModId, m => m)
+                _activeMods.ToDictionary(m => m.ModId, m => m)
         );
         activeModsIds_new = _activeModIds.ToList();
 
