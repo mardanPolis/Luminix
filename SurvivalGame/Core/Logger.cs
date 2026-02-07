@@ -32,7 +32,7 @@ public readonly struct Log
     {
         string timestamp = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
         string typeMsg = type == Type.Log ? "" : type == Type.Warning ? "[WARNING]" : "[ERROR]";
-        return $"[{timestamp}] [{callerMember}] [{Path.GetFileName(callerFile)}]{typeMsg}: {message}";
+        return $"[{timestamp}] [{callerMember}] [{Path.GetFileName(callerFile)}] {typeMsg}: {message}";
     }
     public override string ToString() => entry;
 }

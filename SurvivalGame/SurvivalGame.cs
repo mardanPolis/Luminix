@@ -18,6 +18,8 @@ public sealed class SurvivalGame : Game
     public const string GameId = "sg";
     public const string ModPath = "mods";
 
+    public static GameState CurrentGameState { private set; get; } = GameState.Initialization;
+
     public static readonly string AppDataLoc = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), GameName);
 
     public static SurvivalGame Instance { private set; get; }
@@ -64,6 +66,17 @@ public sealed class SurvivalGame : Game
         base.UnloadContent();
     }
 
+    protected override void BeginRun()
+    {
+        CurrentGameState = GameState.Runtime;
+        
+        GameRegistry.SetUp();
+
+        foreach(var typeValues in EntityTypeRegistry.RegistryTypeValues)
+            typeValues.Init();
+
+        base.BeginRun();
+    }
 
     protected override void Update(GameTime gameTime)
     {
@@ -92,15 +105,14 @@ public sealed class SurvivalGame : Game
         //Register Entity Tags
         GameRegistry.RegisterTags();
 
-        Entities.FinalizeTagRegistry();
+        EntityTagRegistry.FinalizeRegistry();
 
         //Register Entities
         GameRegistry.RegisterEntities();
         
-        Entities.FinalizeEntityRegistry();
+        EntityTypeRegistry.FinalizeRegistry();
 
         //Register EntityRenderers
         GameRegistry.RegisterRenderers();
-
     }
 }

@@ -5,13 +5,28 @@ namespace SurvivalGame;
 
 public static class GameRegistry
 {
+    const string invincible = "invincible";
+    const string unbreakable = "unbreakable";
+
+    public static Entity.Tag TagInvincible { private set; get; }
+    public static Entity.Tag TagUnbreakable { private set; get; }
+
+    internal static void SetUp()
+    {
+        EntityTagRegistry.TryGet(invincible, out Entity.Tag TagInvincible);
+        GameRegistry.TagInvincible = TagInvincible;
+        EntityTagRegistry.TryGet(unbreakable, out Entity.Tag TagUnbreakable);
+        GameRegistry.TagUnbreakable = TagUnbreakable;
+    }
+
     internal static void RegisterTags()
     {
-        Entities.RegisterTag("invincible");
+        EntityTagRegistry.RegisterTag(invincible);
+        EntityTagRegistry.RegisterTag(unbreakable);
     }
     internal static void RegisterEntities()
     {
-        Entities.Register($"{SurvivalGame.GameId}:some_entity", Entities.NewBuilder<EntityBuilder, SomeEntity>().Tagged("invincible", false));
+        EntityTypeRegistry.Register($"{SurvivalGame.GameId}:some_entity", EntityTypeRegistry.NewBuilder<EntityTypeBuilder, SomeEntity>().Tagged(invincible, false));
     }
     internal static void RegisterRenderers()
     {
