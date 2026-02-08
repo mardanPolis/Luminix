@@ -10,30 +10,60 @@ public readonly struct Log
 {
     public enum Type
     {
-        Log,
+        Print,
+        Info,
         Warning,
         Error,
     }
 
-    public Log(object message, Log.Type type, string callerMember, string callerFile)
-    {
-        entry = CreateEntry(message, type, callerMember, callerFile);
-    }
-    public Log(object message)
-    {
-        entry = message.ToString();
-    }
-    
     private readonly string entry;
 
-    public static implicit operator string(Log log) => log.entry;
-
-    private static string CreateEntry(object message, Log.Type type, string callerMember, string callerFile)
+    private Log(string entry)
     {
-        string timestamp = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff");
-        string typeMsg = type == Type.Log ? "" : type == Type.Warning ? "[WARNING]" : "[ERROR]";
-        return $"[{timestamp}] [{callerMember}] [{Path.GetFileName(callerFile)}] {typeMsg}: {message}";
+        this.entry = entry;
     }
+
+    public static implicit operator string(Log log) => log.entry;
+    
+    private static string GetTimestamp()
+    {
+        return $"[{DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff")}]";
+    }
+
+    private static string GetTypeMessage(Log.Type type)
+    {
+        switch(type)
+        {
+            case Log.Type.Info:
+                return $"[INFO]";
+            case Log.Type.Warning:
+                return $"[WARNING]";
+            case Log.Type.Error:
+                return $"[ERROR]";
+            default:
+                return "";
+        }
+    }
+
+    public static Log New(object message, Log.Type type, bool timestamp)
+    {
+        if(message == null)
+            message = "NULL";
+
+        var entry = "";
+
+        if(type != Log.Type.Print)
+        {
+            if(timestamp)
+                entry += $"{GetTimestamp()} ";
+            
+            entry += $"{GetTypeMessage(type)} : {message}";
+        }
+
+        return new Log(entry + " : " + message.ToString());
+    }
+
+
     public override string ToString() => entry;
 }
 
@@ -59,10 +89,6 @@ public sealed class Logger
         );
     }
 
-    public void Print(object message)
-    {
-        Print(new Core.Log(message));
-    }
     private void Print(Log log)
     {
         Console.WriteLine(log);
@@ -70,22 +96,25 @@ public sealed class Logger
         File.AppendAllText(path, log + Environment.NewLine);
         logs.Add(log);
     }
-
-    public void Log(object message, [CallerMemberName] string member = "", [CallerFilePath] string file = "")
+    public void Print(object message)
     {
-        Print(new Log(message, Core.Log.Type.Log, member, file));
+        Print(Core.Log.New(message, Core.Log.Type.Print, false));
     }
-    public void Log(object variable, object value, [CallerMemberName] string member = "", [CallerFilePath] string file = "")
+    public void Log(object message)
     {
-        Print(new Log($"{variable} : {value}", Core.Log.Type.Log, member, file));
+        Print(Core.Log.New(message, Core.Log.Type.Info, true));
     }
-    public void Wrn(object message, [CallerMemberName] string member = "", [CallerFilePath] string file = "")
+    public void Log(object variable, object value)
     {
-        Print(new Log(message, Core.Log.Type.Warning, member, file));
+        Print(Core.Log.New($"{variable} : {value}", Core.Log.Type.Info, true));
     }
-    public void Err(object message, [CallerMemberName] string member = "", [CallerFilePath] string file = "")
+    public void Wrn(object message)
     {
-        Print(new Log(message, Core.Log.Type.Error, member, file));
+        Print(Core.Log.New(message, Core.Log.Type.Warning, true));
+    }
+    public void Err(object message)
+    {
+        Print(Core.Log.New(message, Core.Log.Type.Error, true));
     }
 
     public void Clear()
