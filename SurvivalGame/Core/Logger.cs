@@ -57,7 +57,7 @@ public readonly struct Log
             if(timestamp)
                 entry += $"{GetTimestamp()} ";
             
-            entry += $"{GetTypeMessage(type)} : ";
+            entry += $"{GetTypeMessage(type)} ";
         }
 
         return new Log(entry + message.ToString());
