@@ -57,6 +57,9 @@ internal static class EntityFieldHandler
 
     public static void CreateAccessors()
     {
+        if(EntityFieldHandler.staticFieldAccessors != null || EntityFieldHandler.fieldAccessors != null)
+            throw new Exception("Tried to create Entity field accessors, but they have already been created!");
+
         CreateStaticAccessors(out bool staticResult, out var staticFieldAccessors);
 
         List<(Entity.Type EntityType, FieldAccessor[] Accessors)> fieldAccessors = [];

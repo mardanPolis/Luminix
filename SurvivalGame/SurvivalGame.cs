@@ -24,7 +24,7 @@ public sealed class SurvivalGame : Game
 
     public static SurvivalGame Instance { private set; get; }
     public static readonly Assembly[] Assemblies = AppDomain.CurrentDomain.GetAssemblies();
-    internal static readonly Logger LOGGER = Logger.GetLogger();
+    internal static readonly Logger LOGGER = Logger.Get();
 
     private GraphicsDeviceManager graphics;
     private SpriteBatch spriteBatch;
@@ -114,5 +114,7 @@ public sealed class SurvivalGame : Game
 
         //Register EntityRenderers
         GameRegistry.RegisterRenderers();
+
+        EntityFieldHandler.CreateAccessors();
     }
 }

@@ -131,7 +131,7 @@ public sealed class Logger
         }
     }
 
-    public static Logger GetLogger()
+    public static Logger Get()
     {
         return _instance;
     }
