@@ -9,8 +9,6 @@ public static class Entities
 {
     private static readonly Dictionary<uint, DynamicEntity> dynamicEntities = [];
     private static readonly Dictionary<uint, StaticEntity> staticEntities = [];
-    private static readonly HashSet<uint> destroyedEntities = [];
-
 
     private static readonly Dictionary<uint, StaticEntityRenderer.RenderData> staticEntitiesDatas = [];
 
@@ -84,7 +82,7 @@ public static class Entities
         throw new Exception();
     }
 
-    public static void Destroy(ref Entity entity)
+    public static void Destroy(Entity entity)
     {
         Entity.Type entityType = entity.GetEntityType();
         
@@ -97,11 +95,8 @@ public static class Entities
             SurvivalGame.LOGGER.Wrn($"Unable to destroy {entity}!");
             return;
         }
-            
-        entity = null;
-
         entity.OnDestroy();
-        destroyedEntities.Add(entity.Id);
+        entity.isDestroyed = true;
     }
 
     public static bool TryGetDynamicEntity(uint entityId, out DynamicEntity _entity)

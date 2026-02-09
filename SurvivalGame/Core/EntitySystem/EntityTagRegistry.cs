@@ -64,7 +64,7 @@ public static class EntityTagRegistry
 
         SurvivalGame.LOGGER.Log($"Registered Tags ({registryData.tagsStrings.Length}):");
         foreach(var entry in tags)
-            SurvivalGame.LOGGER.Log($" - id:{entry.Value.Id} -> {entry.Key}");
+            SurvivalGame.LOGGER.Log($"- id:{entry.Value.Id} -> {entry.Key}");
     }
 
     public static bool IsFinalized()

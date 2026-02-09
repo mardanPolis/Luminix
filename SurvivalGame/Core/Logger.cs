@@ -29,7 +29,6 @@ public readonly struct Log
     {
         return $"[{DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff")}]";
     }
-
     private static string GetTypeMessage(Log.Type type)
     {
         switch(type)

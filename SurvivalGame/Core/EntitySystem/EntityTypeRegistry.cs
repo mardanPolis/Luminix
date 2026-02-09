@@ -44,12 +44,12 @@ public static class EntityTypeRegistry
         if(IsFinalized())
             throw new Exception($"Tried to register entity '{registryName}', but Entity registry already finalized!");
 
+        if(!entityBuilder.EntityClass.IsSubclassOf(typeof(DynamicEntity)) && !entityBuilder.EntityClass.IsSubclassOf(typeof(StaticEntity)))
+            throw new Exception($"Type '{entityBuilder.EntityClass.Name}' is nor a DynamicEntity, nor a StaticEntity!");
+
         var entityBuilders = initData.entityBuilders;
         if(entityBuilders.ContainsKey(registryName))
             throw new Exception($"Entity '{registryName}' already registered");
-
-        if(!entityBuilder.EntityClass.IsSubclassOf(typeof(DynamicEntity)) && !entityBuilder.EntityClass.IsSubclassOf(typeof(StaticEntity)))
-            throw new Exception($"Type '{entityBuilder.EntityClass.Name}' is nor a DynamicEntity, nor a StaticEntity!");
 
         if(entityBuilders.Count >= ushort.MaxValue)
             throw new Exception($"Tried to register '{registryName}', but Entity registry has reached max registry count - {ushort.MaxValue}");
@@ -96,18 +96,14 @@ public static class EntityTypeRegistry
                 typeBuilder.Build()
             );
             
-            EntityFieldHandler.CreateAccessors(entityType, typeBuilder.EntityClass, out var fieldAccessors);
         }
 
         registryData = new(entityTypes, entityTypeDatas);
-
-        EntityFieldHandler.CreateStaticAccessors();
-
         initData = null;
 
         SurvivalGame.LOGGER.Log($"Registered EntityTypes ({entityTypes.Count}):");
         for (int i = 0; i < entityTypeDatas.Length; i++)
-            SurvivalGame.LOGGER.Log($" - id:{i} -> registryName: {entityTypeDatas[i].registryName}; class: {entityTypeDatas[i].classType.Name}; isStatic: {entityTypeDatas[i].isStatic}; typeValues: {entityTypeDatas[i].typeValues}");
+            SurvivalGame.LOGGER.Log($"- id:{i} -> registryName: {entityTypeDatas[i].registryName}; class: {entityTypeDatas[i].classType.Name}; isStatic: {entityTypeDatas[i].isStatic}; typeValues: {entityTypeDatas[i].typeValues}");
         
     }
 
@@ -219,6 +215,29 @@ public static class EntityTypeRegistry
         return true;
     }
 
+    public static void Visit(Entity.Type type, Action<Entity> visitor)
+    {
+        if(TryGet(type, out HashSet<uint> entities, out bool isStatic))
+        {
+            if(isStatic)
+                foreach (uint staticEntityId in entities)
+                    if(Entities.TryGetStaticEntity(staticEntityId, out var staticEntity))
+                        visitor(staticEntity);
+            else
+                foreach (uint dynamicEntityId in entities)
+                    if(Entities.TryGetDynamicEntity(dynamicEntityId, out var dynamicEntity))
+                        visitor(dynamicEntity);
+        }
+    }
+    public static void Visit(Action<Entity.Type, string, Type, bool> visitor)
+    {
+        for (ushort i = 0; i < registryData.entityTypeDatas.Length; i++)
+        {
+            ref EntityTypeData data = ref registryData.entityTypeDatas[i];
+            visitor(new Entity.Type(i), data.registryName, data.classType, data.isStatic);
+        }
+    }
+
     public static SortedSet<string> RegistryNames
     {
         get
@@ -240,7 +259,6 @@ public static class EntityTypeRegistry
             return typeValues;
         }
     }
-
 }
 
 public class EntityTypeBuilder

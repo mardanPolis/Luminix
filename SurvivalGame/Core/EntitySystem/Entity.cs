@@ -7,7 +7,7 @@ namespace SurvivalGame.Core.EntitySystem;
 
 public abstract class Entity
 {
-    internal bool isDestroyed;
+    internal bool isDestroyed = false;
     public readonly TypeValues TValues = null;
     public readonly uint Id;
     public Entity(uint id, Entity.TypeValues typeValues)
@@ -61,14 +61,11 @@ public abstract class Entity
         tags.Clear();
     }
 
-    public override bool Equals(object obj) => obj is Entity other && this.Id == other.Id;
+    public override bool Equals(object obj) => obj is Entity other && this == other;
 
     public static bool operator ==(Entity a, Entity b) 
     {
-        bool aNull = a is null || a.isDestroyed;
-        bool bNull = b is null || b.isDestroyed;
-
-        return aNull && bNull || Equals(a, b);
+        return a is not null && b is not null && a.Id == b.Id;
     }
     public static bool operator !=(Entity a, Entity b) => !(a == b);
 
@@ -81,6 +78,8 @@ public abstract class Entity
     {
         return Id;
     }
+
+    public bool IsDestroyed() => isDestroyed;
 
     public readonly struct Type
     {
