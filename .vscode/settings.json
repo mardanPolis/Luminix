@@ -1,3 +1,6 @@
 {
-    "dotnet.defaultSolution": "SurvivalGame.sln"
+    "dotnet.defaultSolution": "SurvivalGame.sln",
+    "cSpell.words": [
+        "indegree"
+    ]
 }

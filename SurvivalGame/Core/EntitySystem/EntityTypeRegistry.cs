@@ -25,10 +25,10 @@ public static class EntityTypeRegistry
         public OrderedDictionary<string, EntityTypeBuilder> entityBuilders = [];
     }
 
-    private readonly struct RegistryData(Dictionary<string, Entity.Type> EntityTypes, EntityTypeData[] EntityTypeDatas)
+    private readonly struct RegistryData(Dictionary<string, Entity.Type> EntityTypes, EntityTypeData[] EntityTypeDatasets)
     {
         public readonly Dictionary<string, Entity.Type> entityTypes = EntityTypes;
-        public readonly EntityTypeData[] entityTypeDatas = EntityTypeDatas;
+        public readonly EntityTypeData[] entityTypeDatasets = EntityTypeDatasets;
         public readonly SortedSet<string> registryNames = [.. EntityTypes.Keys];
         public readonly ushort EntityTypeCount => (ushort)entityTypes.Count;
     }
@@ -39,7 +39,7 @@ public static class EntityTypeRegistry
     public static void Register(string registryName, EntityTypeBuilder entityBuilder)
     {
         if(!EntityTagRegistry.IsFinalized())
-            throw new Exception($"Tried to register entity '{registryName}', but Entity Tag registry isnt finalized!");
+            throw new Exception($"Tried to register entity '{registryName}', but Entity Tag registry isn't finalized!");
 
         if(IsFinalized())
             throw new Exception($"Tried to register entity '{registryName}', but Entity registry already finalized!");
@@ -77,7 +77,7 @@ public static class EntityTypeRegistry
 
         var entityBuilders = initData.entityBuilders;
         Dictionary<string, Entity.Type> entityTypes = [];
-        EntityTypeData[] entityTypeDatas = new EntityTypeData[entityBuilders.Count];
+        EntityTypeData[] entityTypeDatasets = new EntityTypeData[entityBuilders.Count];
 
         //Finalizing EntityTypes
         for (ushort i = 0; i < entityBuilders.Count; i++)
@@ -88,7 +88,7 @@ public static class EntityTypeRegistry
             Entity.Type entityType = new(i);
             entityTypes.Add(registryName, entityType);
 
-            entityTypeDatas[i] = new EntityTypeData(
+            entityTypeDatasets[i] = new EntityTypeData(
                 registryName,
                 typeBuilder.EntityClass,
                 typeBuilder.EntityClass.IsSubclassOf(typeof(StaticEntity)),
@@ -98,12 +98,12 @@ public static class EntityTypeRegistry
             
         }
 
-        registryData = new(entityTypes, entityTypeDatas);
+        registryData = new(entityTypes, entityTypeDatasets);
         initData = null;
 
         SurvivalGame.LOGGER.Log($"Registered EntityTypes ({entityTypes.Count}):");
-        for (int i = 0; i < entityTypeDatas.Length; i++)
-            SurvivalGame.LOGGER.Log($"- id:{i} -> registryName: {entityTypeDatas[i].registryName}; class: {entityTypeDatas[i].classType.Name}; isStatic: {entityTypeDatas[i].isStatic}; typeValues: {entityTypeDatas[i].typeValues}");
+        for (int i = 0; i < entityTypeDatasets.Length; i++)
+            SurvivalGame.LOGGER.Log($"- id:{i} -> registryName: {entityTypeDatasets[i].registryName}; class: {entityTypeDatasets[i].classType.Name}; isStatic: {entityTypeDatasets[i].isStatic}; typeValues: {entityTypeDatasets[i].typeValues}");
         
     }
 
@@ -128,7 +128,7 @@ public static class EntityTypeRegistry
         if(registryData.entityTypes.Count <= type.Id)
             return false;
 
-        _registryName = registryData.entityTypeDatas[type.Id].registryName;
+        _registryName = registryData.entityTypeDatasets[type.Id].registryName;
         return true;
     }
     public static bool TryGet(Entity.Type type, out Type _classType)
@@ -138,7 +138,7 @@ public static class EntityTypeRegistry
         if(registryData.entityTypes.Count <= type.Id)
             return false;
 
-        _classType = registryData.entityTypeDatas[type.Id].classType;
+        _classType = registryData.entityTypeDatasets[type.Id].classType;
         return true;
     }
     public static bool TryGet(Entity.Type type, out bool _isStatic)
@@ -148,7 +148,7 @@ public static class EntityTypeRegistry
         if(registryData.entityTypes.Count <= type.Id)
             return false;
 
-        _isStatic = registryData.entityTypeDatas[type.Id].isStatic;
+        _isStatic = registryData.entityTypeDatasets[type.Id].isStatic;
         return true;
     }
     public static bool TryGet(Entity.Type type, out HashSet<uint> _entities)
@@ -158,7 +158,7 @@ public static class EntityTypeRegistry
         if(registryData.entityTypes.Count <= type.Id)
             return false;
 
-        _entities = registryData.entityTypeDatas[type.Id].entities;
+        _entities = registryData.entityTypeDatasets[type.Id].entities;
         return true;
     }
 
@@ -171,7 +171,7 @@ public static class EntityTypeRegistry
 
         if(registryData.entityTypes.TryGetValue(registryName, out _type))
         {
-            ref EntityTypeData data = ref registryData.entityTypeDatas[_type.Id];
+            ref EntityTypeData data = ref registryData.entityTypeDatasets[_type.Id];
             _isStatic = data.isStatic;
             _factory = data.factory;
             _values = data.typeValues;
@@ -192,7 +192,7 @@ public static class EntityTypeRegistry
         if(registryData.entityTypes.Count <= type.Id)
             return false;
 
-        ref EntityTypeData data = ref registryData.entityTypeDatas[type.Id];
+        ref EntityTypeData data = ref registryData.entityTypeDatasets[type.Id];
         _isStatic = data.isStatic;
         _factory = data.factory;
         _values = data.typeValues;
@@ -208,7 +208,7 @@ public static class EntityTypeRegistry
         if(registryData.entityTypes.Count <= type.Id)
             return false;
 
-        ref EntityTypeData data = ref registryData.entityTypeDatas[type.Id];
+        ref EntityTypeData data = ref registryData.entityTypeDatasets[type.Id];
         _isStatic = data.isStatic;
         _entities = data.entities;
 
@@ -231,9 +231,9 @@ public static class EntityTypeRegistry
     }
     public static void Visit(Action<Entity.Type, string, Type, bool> visitor)
     {
-        for (ushort i = 0; i < registryData.entityTypeDatas.Length; i++)
+        for (ushort i = 0; i < registryData.entityTypeDatasets.Length; i++)
         {
-            ref EntityTypeData data = ref registryData.entityTypeDatas[i];
+            ref EntityTypeData data = ref registryData.entityTypeDatasets[i];
             visitor(new Entity.Type(i), data.registryName, data.classType, data.isStatic);
         }
     }
@@ -250,9 +250,9 @@ public static class EntityTypeRegistry
         get
         {
             List<Entity.TypeValues> typeValues = [];
-            for (int i = 0; i < registryData.entityTypeDatas.Length; i++)
+            for (int i = 0; i < registryData.entityTypeDatasets.Length; i++)
             {
-                ref EntityTypeData data = ref registryData.entityTypeDatas[i];
+                ref EntityTypeData data = ref registryData.entityTypeDatasets[i];
                 if(data.typeValues != null)
                     typeValues.Add(data.typeValues);
             }
@@ -281,14 +281,14 @@ public class EntityTypeBuilder
     }
     public Type EntityClass { private set; get; } = null;
     protected Type typeValuesClass = null;
-    public virtual Type TypeValuesClass { 
+    public virtual Type DefaultTypeValuesClass { 
         get {
-             return typeValuesClass ?? typeof(Entity.TypeValues);
+             return typeof(Entity.TypeValues);
         }
     }
     public HashSet<Entity.Tag> TypeTags { protected set; get; } = null;
     public HashSet<Entity.Tag> Tags { protected set; get; } = null;
-    public Vector2? Scale = null;
+    public Vector2? Scale { protected set; get; } = null;
 
     public virtual EntityTypeBuilder TypeValuesAs(Type typeValuesClass)
     {
@@ -305,9 +305,6 @@ public class EntityTypeBuilder
 
     public virtual EntityTypeBuilder Tagged(string tag, bool isTypeTag)
     {
-        if(isTypeTag && TypeValuesClass == null)
-            throw new Exception($"Unable to Tag the Type, because the TypeValues class is not set.");
-
         if(EntityTagRegistry.TryGet(tag, out Entity.Tag tagId))
         {
             if(isTypeTag)
@@ -374,7 +371,7 @@ public class EntityTypeBuilder
     }
     public virtual Entity.TypeValues BuildTypeValues(Entity.Type entityType)
     {
-        Entity.TypeValues typeValues = (Entity.TypeValues)Activator.CreateInstance(TypeValuesClass, entityType);
+        Entity.TypeValues typeValues = (Entity.TypeValues)Activator.CreateInstance(typeValuesClass ?? DefaultTypeValuesClass ?? typeof(Entity.TypeValues), entityType);
         if(TypeTags != null)
             typeValues.SetTags(TypeTags);
         if(Scale != null)

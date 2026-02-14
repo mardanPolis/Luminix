@@ -26,7 +26,7 @@ internal static class EntityFieldHandler
 
         public Entity Get() => getter();
         public void Set(Entity value) => setter(value);
-        public string FieldName => fieldName;
+        public readonly string FieldName => fieldName;
     }
     
     private static (Entity.Type EntityType, FieldAccessor[] Accessors)[] fieldAccessors = null;
@@ -65,7 +65,7 @@ internal static class EntityFieldHandler
         List<(Entity.Type EntityType, FieldAccessor[] Accessors)> fieldAccessors = [];
         EntityTypeRegistry.Visit((entityType, registryName, entityClass, isStatic) =>
         {
-            CreateAccessorsFor(entityType, entityClass, out bool result, out FieldAccessor[] accessors);
+            CreateInstanceAccessors(entityClass, out bool result, out FieldAccessor[] accessors);
             if (result)
                 fieldAccessors.Add((entityType, accessors));
         });
@@ -82,7 +82,7 @@ internal static class EntityFieldHandler
         EntityFieldHandler.fieldAccessors = fieldAccessors.ToArray();
         EntityFieldHandler.staticFieldAccessors = staticFieldAccessors;
     }
-    private static void CreateAccessorsFor(Entity.Type entityType, Type entityClass, out bool _result, out FieldAccessor[] _accessors)
+    private static void CreateInstanceAccessors(Type entityClass, out bool _result, out FieldAccessor[] _accessors)
     {
         List<FieldAccessor> accessors = [];
 

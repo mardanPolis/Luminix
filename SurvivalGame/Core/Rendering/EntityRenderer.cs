@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using Microsoft.Xna.Framework;
 using SurvivalGame.Core.EntitySystem;
 
-namespace SurvivalGame.Core.rendering;
+namespace SurvivalGame.Core.Rendering;
 
 public abstract class EntityRenderer
 {
@@ -38,12 +38,5 @@ public class StaticEntityRenderer : EntityRenderer
     public virtual void Render()
     {
         
-    }
-
-    public struct RenderData
-    {
-        public Vector2 position;
-        public float rotation;
-        public Vector2 scale;
     }
 }

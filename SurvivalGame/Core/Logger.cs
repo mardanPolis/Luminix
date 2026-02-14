@@ -62,28 +62,26 @@ public readonly struct Log
         return new Log(entry + message.ToString());
     }
 
-
     public override string ToString() => entry;
 }
 
 public sealed class Logger
 {
-    private static readonly Logger _instance = new();
-    private readonly string _logDir;
+    private static readonly Logger instance = new();
+    private readonly string logDir;
     private readonly List<Log> logs;
     private Logger()
     {
         logs = new();
-        _logDir = Path.Combine(AppContext.BaseDirectory, "logs");
-        Directory.CreateDirectory(_logDir);
+        logDir = Path.Combine(AppContext.BaseDirectory, "logs");
+        Directory.CreateDirectory(logDir);
     }
 
-    private static string GetThreadLogPath()
+    private string GetThreadLogPath()
     {
         int id = Thread.CurrentThread.ManagedThreadId;
         return Path.Combine(
-            AppContext.BaseDirectory,
-            "logs",
+            logDir,
             $"thread_{id}.log"
         );
     }
@@ -133,6 +131,6 @@ public sealed class Logger
 
     public static Logger Get()
     {
-        return _instance;
+        return instance;
     }
 }

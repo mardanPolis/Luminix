@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Microsoft.Xna.Framework;
-using SurvivalGame.Core.rendering;
+using SurvivalGame.Core.Rendering;
 
 namespace SurvivalGame.Core.EntitySystem;
 
@@ -10,7 +10,7 @@ public static class Entities
     private static readonly Dictionary<uint, DynamicEntity> dynamicEntities = [];
     private static readonly Dictionary<uint, StaticEntity> staticEntities = [];
 
-    private static readonly Dictionary<uint, StaticEntityRenderer.RenderData> staticEntitiesDatas = [];
+    private static readonly Dictionary<uint, StaticEntity.Instance> staticEntitiesDatasets = [];
 
     private static uint dynamicEntityId = 0;
     private static uint staticEntityId = 0;
@@ -36,13 +36,13 @@ public static class Entities
             staticEntities.Add(entityId, staticEntity);
 
             // Render data
-            var renderData = new StaticEntityRenderer.RenderData
+            var instance = new StaticEntity.Instance
             {
-                position = position,
-                rotation = rotation,
-                scale = finalScale
+                Position = position,
+                Rotation = rotation,
+                Scale = finalScale
             };
-            staticEntitiesDatas.Add(entityId, renderData);
+            staticEntitiesDatasets.Add(entityId, instance);
         }
         else
         {

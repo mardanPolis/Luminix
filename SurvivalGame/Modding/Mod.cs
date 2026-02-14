@@ -16,7 +16,7 @@ public class Mod
     public readonly string[] LoadBefore;
 
     public readonly string Location;
-    public const string Picture = "icon";
+    public const string PICTURE = "icon";
 
     public Assembly Assembly { get; internal set; }
 

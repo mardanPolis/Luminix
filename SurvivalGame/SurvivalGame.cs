@@ -8,19 +8,20 @@ using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using SurvivalGame.Core;
 using SurvivalGame.Core.EntitySystem;
+using SurvivalGame.Core.Modding;
 using SurvivalGame.Modding;
 
 namespace SurvivalGame;
 
 public sealed class SurvivalGame : Game
 {
-    public const string GameName = "SurvivalGame";
-    public const string GameId = "sg";
-    public const string ModPath = "mods";
+    public const string GAME_NAME = "SurvivalGame";
+    public const string GAME_ID = "sg";
+    public const string MODS_PATH = "mods";
 
     public static GameState CurrentGameState { private set; get; } = GameState.Initialization;
 
-    public static readonly string AppDataLoc = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), GameName);
+    public static readonly string AppDataLoc = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), GAME_NAME);
 
     public static SurvivalGame Instance { private set; get; }
     public static readonly Assembly[] Assemblies = AppDomain.CurrentDomain.GetAssemblies();
@@ -45,7 +46,7 @@ public sealed class SurvivalGame : Game
     }
     protected override void OnExiting(object sender, ExitingEventArgs args)
     {
-        foreach(Mod mod in ModHandler.ActiveMods)
+        foreach (Mod mod in ModHandler.ActiveMods)
             mod.OnUnload();
 
         base.OnExiting(sender, args);
@@ -54,13 +55,13 @@ public sealed class SurvivalGame : Game
     protected override void LoadContent()
     {
         spriteBatch = new SpriteBatch(GraphicsDevice);
-        foreach(Mod mod in ModHandler.ActiveMods)
+        foreach (Mod mod in ModHandler.ActiveMods)
             mod.OnLoadContent();
 
     }
     protected override void UnloadContent()
     {
-        foreach(Mod mod in ModHandler.ActiveMods)
+        foreach (Mod mod in ModHandler.ActiveMods)
             mod.OnUnloadContent();
 
         base.UnloadContent();
@@ -69,10 +70,10 @@ public sealed class SurvivalGame : Game
     protected override void BeginRun()
     {
         CurrentGameState = GameState.Runtime;
-        
+
         GameRegistry.SetUp();
 
-        foreach(var typeValues in EntityTypeRegistry.RegistryTypeValues)
+        foreach (var typeValues in EntityTypeRegistry.RegistryTypeValues)
             typeValues.Init();
 
         base.BeginRun();
@@ -83,7 +84,7 @@ public sealed class SurvivalGame : Game
         if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed || Keyboard.GetState().IsKeyDown(Keys.Escape))
             Exit();
 
-        
+
 
         base.Update(gameTime);
     }
@@ -109,7 +110,7 @@ public sealed class SurvivalGame : Game
 
         //Register Entities
         GameRegistry.RegisterEntities();
-        
+
         EntityTypeRegistry.FinalizeRegistry();
 
         //Register EntityRenderers

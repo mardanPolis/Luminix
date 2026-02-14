@@ -8,7 +8,7 @@ using System.Text.Json;
 using System.Xml.Linq;
 using SurvivalGame.Modding;
 
-namespace SurvivalGame.Core;
+namespace SurvivalGame.Core.Modding;
 
 public static class ModHandler
 {
@@ -30,16 +30,16 @@ public static class ModHandler
 
     private static OrderedDictionary<string, Mod> mods  = null;
     private static OrderedDictionary<string, Mod> activeMods = null;
-    private static List<string> activeModsIds_new = null;
+    private static List<string> activeModsIdsNew = null;
 
-    public static bool TryGetModInfo(string modId, out Mod mod)
+    public static bool TryGetModInfo(string modId, out Mod _mod)
     {
-        return mods.TryGetValue(modId, out mod);
+        return mods.TryGetValue(modId, out _mod);
     }
 
     public static void LoadMods()
     {
-        static bool TryGetModInfoLoc(string loc, out ModInfo? modInfo)
+        static bool TryGetModInfoLoc(string loc, out ModInfo? _modInfo)
         {
             static XElement GetElement(XDocument doc, string elementId, bool important)
             {
@@ -66,7 +66,7 @@ public static class ModHandler
                 return elements;
             }
 
-            modInfo = null;
+            _modInfo = null;
             string aboutPath = Path.Combine(loc, "about.xml");
             if (!File.Exists(aboutPath))
                 return false;
@@ -79,7 +79,7 @@ public static class ModHandler
             XElement description = GetElement(doc, "Description", false);
             List<string> deps = GetElements(doc, "Dependencies", "modId", true);
             
-            modInfo = new ModInfo(
+            _modInfo = new ModInfo(
                 nameElem.Value,
                 modIdElem.Value,
                 versionElem.Value,
@@ -96,7 +96,7 @@ public static class ModHandler
         {
             //Load all possible mods
             Dictionary<string, ModInfo> _loadedModInfos = [];
-            foreach (var loc in Directory.GetDirectories(SurvivalGame.ModPath))
+            foreach (var loc in Directory.GetDirectories(SurvivalGame.MODS_PATH))
             {
                 if (TryGetModInfoLoc(loc, out ModInfo? info))
                 {
@@ -119,17 +119,17 @@ public static class ModHandler
 
         static void ActivateMods(HashSet<string> toActivate, ModInfo[] modInfos, out OrderedDictionary<string, Mod> _mods, out Mod[] _activeMods)
         {
-            static bool TryLoadAssembly(ModInfo info, out Assembly assembly, out Type modType)
+            static bool TryLoadAssembly(ModInfo info, out Assembly _assembly, out Type _modType)
             {   
                 string path = Path.Combine(info.Location, $"Assembly.dll");
-                assembly = null;
-                modType = null;
+                _assembly = null;
+                _modType = null;
 
                 if(!File.Exists(path))
                     return false;
 
-                assembly = Assembly.LoadFrom(path);
-                modType = assembly.GetTypes().FirstOrDefault(t => typeof(Mod).IsAssignableFrom(t) && !t.IsAbstract) ?? throw new Exception("Assembly doesn't have a Mod type!");
+                _assembly = Assembly.LoadFrom(path);
+                _modType = _assembly.GetTypes().FirstOrDefault(t => typeof(Mod).IsAssignableFrom(t) && !t.IsAbstract) ?? throw new Exception("Assembly doesn't have a Mod type!");
                 return true;
             }
 
@@ -143,18 +143,17 @@ public static class ModHandler
                     Mod modInstance = null;
                     bool isActive = toActivate.Contains(info.ModId);
 
-                    if (isActive && TryLoadAssembly(info, out Assembly assembly, out Type modType))
-                    {
+                    if (TryLoadAssembly(info, out Assembly assembly, out Type modType))
                         modInstance = (Mod)Activator.CreateInstance(modType,
                             info.Name, info.ModId, info.Version, info.TarVersion, info.Location,
                             info.Description, info.Dependencies, info.LoadAfter, info.LoadBefore);
-
-                        activeList.Add(modInstance);
-                    }
                     else
                         modInstance = new Mod(info.Name, info.ModId, info.Version, info.TarVersion,
                                             info.Location, info.Description, info.Dependencies,
                                             info.LoadAfter, info.LoadBefore);
+
+                    if(isActive)
+                        activeList.Add(modInstance);
 
                     mods.Add(modInstance);
                     
@@ -172,11 +171,11 @@ public static class ModHandler
 
         mods = [];
         activeMods = [];
-        activeModsIds_new = [];
+        activeModsIdsNew = [];
 
-        if(!Directory.Exists(SurvivalGame.ModPath))
+        if(!Directory.Exists(SurvivalGame.MODS_PATH))
         {
-            Directory.CreateDirectory(SurvivalGame.ModPath);
+            Directory.CreateDirectory(SurvivalGame.MODS_PATH);
             return;
         }
         
@@ -187,12 +186,17 @@ public static class ModHandler
         activeMods = new OrderedDictionary<string, Mod>(
                 _activeMods.ToDictionary(m => m.ModId, m => m)
         );
-        activeModsIds_new = _activeModIds.ToList();
+        activeModsIdsNew = _activeModIds.ToList();
 
         //removing unloaded mods from the activeModsIds_new list
         foreach(var modId in _activeModIds)
+        {
             if(!mods.ContainsKey(modId))
-                activeModsIds_new.Remove(modId);
+            {
+                activeModsIdsNew.Remove(modId);
+                SurvivalGame.LOGGER.Wrn($"Failed to load Mod '{modId}'!");
+            }
+        }
     }
 
     public static bool ActivateMod(string modId)
@@ -200,98 +204,88 @@ public static class ModHandler
         if(!mods.ContainsKey(modId))
             return false;
 
-        activeModsIds_new.Add(modId);
+        activeModsIdsNew.Add(modId);
         return true;
     }
-    public static bool DeactiveMod(string modId)
+    public static bool DeactivateMod(string modId)
     {
         if(!mods.ContainsKey(modId))
             return false;
 
-        return activeModsIds_new.Remove(modId);
+        return activeModsIdsNew.Remove(modId);
     }
 
     public static void MoveMod(int index, int toIndex)
     {
         if (index == toIndex) return;
 
-        string item = activeModsIds_new[index];
-        activeModsIds_new.RemoveAt(index);
+        string item = activeModsIdsNew[index];
+        activeModsIdsNew.RemoveAt(index);
 
         if (toIndex > index) toIndex--;
 
-        activeModsIds_new.Insert(toIndex, item);
+        activeModsIdsNew.Insert(toIndex, item);
     }
 
-    public static bool SortMods(out string Error)
+    public static void SortMods()
     {
-        Error = null;
-        try
+        int n = activeModsIdsNew.Count;
+        var depGraph = new Dictionary<string, HashSet<string>>(n);
+        var indegree = new Dictionary<string, int>(n);
+
+        //initialize
+        foreach (var modId in activeModsIdsNew)
         {
-            int n = activeModsIds_new.Count;
-            var depGraph = new Dictionary<string, HashSet<string>>(n);
-            var indegree = new Dictionary<string, int>(n);
-
-            //initialize
-            foreach (var modId in activeModsIds_new)
-            {
-                depGraph[modId] = [];
-                indegree[modId] = 0;
-            }
-
-            //Adding deps
-            foreach (var modId in activeModsIds_new)
-            {
-                if (!mods.TryGetValue(modId, out var mod)) continue;
-
-                foreach (var dep in mod.Dependencies.Concat(mod.LoadAfter))
-                {
-                    if (!depGraph.ContainsKey(dep)) continue;
-                    depGraph[dep].Add(modId);
-                    indegree[modId]++;
-                }
-
-                foreach (var dep in mod.LoadBefore)
-                {
-                    if (!depGraph.ContainsKey(dep)) continue;
-                    depGraph[modId].Add(dep);
-                    indegree[dep]++;
-                }
-            }
-
-            var sorted = new List<string>(n);
-
-            //Queue all mods with no dependencies
-            var queue = new Queue<string>(n);
-            foreach (var kv in indegree)
-                if (kv.Value == 0) queue.Enqueue(kv.Key);
-
-            while (queue.Count > 0)
-            {
-                //first in queue
-                var modId = queue.Dequeue();
-                sorted.Add(modId);
-
-                //loop over the mods that are dependant on this mod
-                foreach (var dependent in depGraph[modId])
-                {
-                    indegree[dependent]--;
-                    if (indegree[dependent] == 0)
-                        queue.Enqueue(dependent);
-                }
-            }
-
-            if (sorted.Count != activeModsIds_new.Count)
-                throw new Exception("Circular dependencies detected!");
-
-            activeModsIds_new = sorted;
-            return true;
+            depGraph[modId] = [];
+            indegree[modId] = 0;
         }
-        catch(Exception ex)
+
+        //Adding deps
+        foreach (var modId in activeModsIdsNew)
         {
-            Error = ex.Message;
-            return false;
+            if (!mods.TryGetValue(modId, out var mod)) continue;
+
+            foreach (var dep in mod.Dependencies.Concat(mod.LoadAfter))
+            {
+                if (!depGraph.ContainsKey(dep)) continue;
+                depGraph[dep].Add(modId);
+                indegree[modId]++;
+            }
+
+            foreach (var dep in mod.LoadBefore)
+            {
+                if (!depGraph.ContainsKey(dep)) continue;
+                depGraph[modId].Add(dep);
+                indegree[dep]++;
+            }
         }
+
+        var sorted = new List<string>(n);
+
+        //Queue all mods with no dependencies
+        var queue = new Queue<string>(n);
+        foreach (var kv in indegree)
+            if (kv.Value == 0) queue.Enqueue(kv.Key);
+
+        while (queue.Count > 0)
+        {
+            //first in queue
+            var modId = queue.Dequeue();
+            sorted.Add(modId);
+
+            //loop over the mods that are dependant on this mod
+            foreach (var dependent in depGraph[modId])
+            {
+                indegree[dependent]--;
+                if (indegree[dependent] == 0)
+                    queue.Enqueue(dependent);
+            }
+        }
+
+        if (sorted.Count != activeModsIdsNew.Count)
+            throw new Exception("Circular dependencies detected!");
+
+        activeModsIdsNew = sorted;
     }
     
     public static void SaveActiveMods()
@@ -300,7 +294,7 @@ public static class ModHandler
         
         try
         {
-            string json = JsonSerializer.Serialize(new HashSet<string>(activeModsIds_new), new JsonSerializerOptions
+            string json = JsonSerializer.Serialize(new HashSet<string>(activeModsIdsNew), new JsonSerializerOptions
             {
                 WriteIndented = true
             });

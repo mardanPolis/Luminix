@@ -1,0 +1,21 @@
+# GUIDELINES
+### Naming Conventions
+- **PascalCase**
+    - Namespaces
+    - Classes
+    - Structs
+    - Enums
+    - Methods
+    - Property
+    - Public fields
+    - Internal fields
+    - Interfaces, with `Prefix I`
+- **camelCase**
+    - Protected fields
+    - Private fields
+    - Local variables
+    - method parameters
+- **_camelCase**
+    - Out parameters
+- **UPPER_SNAKE_CASE**
+    - Constants
