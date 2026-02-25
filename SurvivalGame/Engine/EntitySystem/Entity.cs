@@ -79,6 +79,16 @@ public abstract class Entity : IDestroyable
         return Id;
     }
 
+    public void Destroy()
+    {
+        if (isDestroyed)
+        {
+            Main.LOGGER.Wrn($"Entity {this} is already destroyed!");
+            return;
+        }
+        Entities.Destroy(this);
+    }
+
     public bool IsDestroyed() => isDestroyed;
 
     public readonly struct Type

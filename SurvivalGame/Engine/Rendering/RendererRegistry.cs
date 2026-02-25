@@ -32,16 +32,10 @@ public static class RendererRegistry
         throw new KeyNotFoundException($"Renderer of type {typeof(T)} is not registered.");
     }
 
-    internal static void SwapData()
+    internal static void UpdateData()
     {
         foreach (var renderer in renderers)
-            renderer.SwapData();
-    }
-
-    internal static void GatherData()
-    {
-        foreach (var renderer in renderers)
-            renderer.GatherData();
+            renderer.UpdateData();
     }
 
     internal static void RenderData(float partialTicks)
