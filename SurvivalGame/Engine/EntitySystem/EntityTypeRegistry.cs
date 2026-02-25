@@ -6,21 +6,22 @@ using System.Linq.Expressions;
 using Microsoft.Win32;
 using Microsoft.Xna.Framework;
 
-namespace SurvivalGame.Core.EntitySystem;
+namespace SurvivalGame.Engine.EntitySystem;
 
 public static class EntityTypeRegistry
 {
     private struct EntityTypeData(string RegistryName, Type ClassType, bool IsStatic, Entity.TypeValues TypeValues, Func<uint, Entity.TypeValues, Entity> Factory)
     {
         public readonly string registryName = RegistryName;
-        public readonly Type classType = ClassType ?? throw new Exception("Failed to create EntityTypeData: no classType defined!");
+        public readonly Type classType = ClassType ?? throw new ArgumentException("Failed to create EntityTypeData: no classType defined!");
         public readonly bool isStatic = IsStatic;
-        public readonly Entity.TypeValues typeValues = TypeValues ?? throw new Exception("Failed to create EntityTypeData: no typeValues defined!");
-        public readonly Func<uint, Entity.TypeValues, Entity> factory = Factory ?? throw new Exception("Failed to create EntityTypeData: no factory defined!");
+        public readonly Entity.TypeValues typeValues = TypeValues ?? throw new ArgumentException("Failed to create EntityTypeData: no typeValues defined!");
+        public readonly Func<uint, Entity.TypeValues, Entity> factory = Factory ?? throw new ArgumentException("Failed to create EntityTypeData: no factory defined!");
         public readonly HashSet<uint> entities = [];
     }
     private class InitData
     {
+        public string prefix = string.Empty;
         public HashSet<string> registryNames = [];
         public OrderedDictionary<string, EntityTypeBuilder> entityBuilders = [];
     }
@@ -35,31 +36,39 @@ public static class EntityTypeRegistry
 
     private static InitData initData = new();
     private static RegistryData registryData;
+    internal static void SetPrefix(string prefix)
+    {
+        if (IsFinalized())
+            throw new InvalidOperationException($"Tried to set EntityTypeRegistry prefix to '{prefix}', but registry is already finalized!");
+
+        initData.prefix = prefix + ":";
+    }
 
     public static void Register(string registryName, EntityTypeBuilder entityBuilder)
     {
         if(!EntityTagRegistry.IsFinalized())
-            throw new Exception($"Tried to register entity '{registryName}', but Entity Tag registry isn't finalized!");
+            throw new InvalidOperationException($"Tried to register entity '{registryName}', but Entity Tag registry isn't finalized!");
 
         if(IsFinalized())
-            throw new Exception($"Tried to register entity '{registryName}', but Entity registry already finalized!");
+            throw new InvalidOperationException($"Tried to register entity '{registryName}', but Entity registry already finalized!");
 
         if(!entityBuilder.EntityClass.IsSubclassOf(typeof(DynamicEntity)) && !entityBuilder.EntityClass.IsSubclassOf(typeof(StaticEntity)))
-            throw new Exception($"Type '{entityBuilder.EntityClass.Name}' is nor a DynamicEntity, nor a StaticEntity!");
+            throw new ArgumentException($"Type '{entityBuilder.EntityClass.Name}' is nor a DynamicEntity, nor a StaticEntity!");
 
+        var prefixRegistryName = initData.prefix + registryName.ToLower();
         var entityBuilders = initData.entityBuilders;
-        if(entityBuilders.ContainsKey(registryName))
-            throw new Exception($"Entity '{registryName}' already registered");
+        if(entityBuilders.ContainsKey(prefixRegistryName))
+            throw new ArgumentException($"Entity '{registryName}' already registered");
 
         if(entityBuilders.Count >= ushort.MaxValue)
-            throw new Exception($"Tried to register '{registryName}', but Entity registry has reached max registry count - {ushort.MaxValue}");
+            throw new InvalidOperationException($"Tried to register '{registryName}', but Entity registry has reached max registry count - {ushort.MaxValue}");
 
-        entityBuilders.Add(registryName, entityBuilder);
+        entityBuilders.Add(prefixRegistryName, entityBuilder);
     }
     public static bool TryGetBuilder(string registryName, out EntityTypeBuilder _builder)
     {
         if(IsFinalized())
-            throw new Exception($"Tried to get entity '{registryName}' builder, but Entity registry already finalized!");
+            throw new InvalidOperationException($"Tried to get entity '{registryName}' builder, but Entity registry already finalized!");
 
         if (initData.entityBuilders.TryGetValue(registryName, out var baseBuilder) && baseBuilder is EntityTypeBuilder typedBuilder)
         {
@@ -73,7 +82,7 @@ public static class EntityTypeRegistry
     internal static void FinalizeRegistry()
     {
         if(IsFinalized())
-            throw new System.Exception($"Entities registry is already finalized!");
+            throw new InvalidOperationException($"Entities registry is already finalized!");
 
         var entityBuilders = initData.entityBuilders;
         Dictionary<string, Entity.Type> entityTypes = [];
@@ -101,9 +110,9 @@ public static class EntityTypeRegistry
         registryData = new(entityTypes, entityTypeDatasets);
         initData = null;
 
-        SurvivalGame.LOGGER.Log($"Registered EntityTypes ({entityTypes.Count}):");
+        Main.LOGGER.Log($"Registered EntityTypes ({entityTypes.Count}):");
         for (int i = 0; i < entityTypeDatasets.Length; i++)
-            SurvivalGame.LOGGER.Log($"- id:{i} -> registryName: {entityTypeDatasets[i].registryName}; class: {entityTypeDatasets[i].classType.Name}; isStatic: {entityTypeDatasets[i].isStatic}; typeValues: {entityTypeDatasets[i].typeValues}");
+            Main.LOGGER.Log($"- id:{i} -> registryName: {entityTypeDatasets[i].registryName}; class: {entityTypeDatasets[i].classType.Name}; isStatic: {entityTypeDatasets[i].isStatic}; typeValues: {entityTypeDatasets[i].typeValues}");
         
     }
 
@@ -265,17 +274,17 @@ public class EntityTypeBuilder
 {
     public EntityTypeBuilder(Type entityClass)
     {
-        if (SurvivalGame.CurrentGameState != GameState.Initialization)
-            throw new Exception($"Cannot create EntityBuilder of type '{entityClass.Name}', because the GameState is not in Initialization.");
+        if (Main.CurrentGameState != EngineState.Initialization)
+            throw new InvalidOperationException($"Cannot create EntityBuilder of type '{entityClass.Name}', because the GameState is not in Initialization.");
 
         if (!EntityTagRegistry.IsFinalized())
-            throw new Exception($"Cannot create EntityBuilder of type '{entityClass.Name}', because Entity Tag registry is not finalized.");
+            throw new InvalidOperationException($"Cannot create EntityBuilder of type '{entityClass.Name}', because Entity Tag registry is not finalized.");
 
         if (!typeof(Entity).IsAssignableFrom(entityClass))
-            throw new Exception($"Cannot create EntityBuilder: type '{entityClass.Name}' must inherit from 'Entity'.");
+            throw new ArgumentException($"Cannot create EntityBuilder: type '{entityClass.Name}' must inherit from 'Entity'.");
 
         if (entityClass.IsAbstract)
-            throw new Exception($"Cannot create EntityBuilder: type '{entityClass.Name}' is abstract.");
+            throw new ArgumentException($"Cannot create EntityBuilder: type '{entityClass.Name}' is abstract.");
 
         EntityClass = entityClass;
     }
@@ -293,10 +302,10 @@ public class EntityTypeBuilder
     public virtual EntityTypeBuilder TypeValuesAs(Type typeValuesClass)
     {
         if(!typeValuesClass.IsAbstract)
-            throw new Exception("Provided Type cant be abstract!");
+            throw new ArgumentException("Provided Type cant be abstract!");
 
         if(!typeValuesClass.IsSubclassOf(typeof(Entity.TypeValues)))
-            throw new Exception("Provided Type must inherit from 'Entity.TypeValues'!");
+            throw new ArgumentException("Provided Type must inherit from 'Entity.TypeValues'!");
 
         this.typeValuesClass = typeValuesClass;
 
@@ -320,7 +329,7 @@ public class EntityTypeBuilder
             return this;
         }
 
-        throw new Exception($"Tag {tag} does not exist!");
+        throw new InvalidOperationException($"Tag {tag} does not exist!");
     }
     public virtual EntityTypeBuilder UnTagged(string tag)
     {
@@ -345,7 +354,7 @@ public class EntityTypeBuilder
     public virtual Func<uint, Entity.TypeValues, Entity> Build()
     {
         //Getting Entity Class constructor new Entity(id)
-        var ci = EntityClass.GetConstructor(new[] { typeof(uint), typeof(Entity.TypeValues) }) ?? throw new Exception($"{EntityClass.Name} must have ctor (uint, Entity.TypeValues)");
+        var ci = EntityClass.GetConstructor(new[] { typeof(uint), typeof(Entity.TypeValues) }) ?? throw new InvalidOperationException($"{EntityClass.Name} must have constructor (uint, Entity.TypeValues)");
         var id = Expression.Parameter(typeof(uint));
         var tv = Expression.Parameter(typeof(Entity.TypeValues));
 
@@ -371,7 +380,7 @@ public class EntityTypeBuilder
     }
     public virtual Entity.TypeValues BuildTypeValues(Entity.Type entityType)
     {
-        Entity.TypeValues typeValues = (Entity.TypeValues)Activator.CreateInstance(typeValuesClass ?? DefaultTypeValuesClass ?? typeof(Entity.TypeValues), entityType);
+        Entity.TypeValues typeValues = (Entity.TypeValues)Activator.CreateInstance(typeValuesClass ?? DefaultTypeValuesClass ?? typeof(Entity.TypeValues), entityType) ?? throw new InvalidOperationException("Failed to create Entity.TypeValues instance!");
         if(TypeTags != null)
             typeValues.SetTags(TypeTags);
         if(Scale != null)

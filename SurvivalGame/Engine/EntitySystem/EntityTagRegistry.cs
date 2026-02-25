@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace SurvivalGame.Core.EntitySystem;
+namespace SurvivalGame.Engine.EntitySystem;
 
 public static class EntityTagRegistry
 {
@@ -27,14 +27,14 @@ public static class EntityTagRegistry
         tag = tag.ToLower();
 
         if(IsFinalized())
-            throw new Exception($"Tried to register tag '{tag}', but Entity registry already finalized!");
+            throw new InvalidOperationException($"Tried to register tag '{tag}', but Entity registry already finalized!");
 
         if(initData.entityTags.Count >= ushort.MaxValue)
-            throw new Exception($"Tried to register Entity.Tag '{tag}', but Entity Tag registry has reached max registry count - {ushort.MaxValue}");
+            throw new ArgumentException($"Tried to register Entity.Tag '{tag}', but Entity Tag registry has reached max registry count - {ushort.MaxValue}");
 
         if(initData.seenEntityTags.Contains(tag))
         {
-            SurvivalGame.LOGGER.Wrn($"Entity.Tag '{tag}' already registered");
+            Main.LOGGER.Wrn($"Entity.Tag '{tag}' already registered");
             return;
         }
 
@@ -52,7 +52,7 @@ public static class EntityTagRegistry
             var tag = entityTags[i];
             if(tags.ContainsKey(tag))
             {
-                SurvivalGame.LOGGER.Wrn($"Entity.Tag '{tag}' already registered");
+                Main.LOGGER.Wrn($"Entity.Tag '{tag}' already registered");
                 continue;
             }
             tags.Add(tag, new Entity.Tag(i));
@@ -62,9 +62,9 @@ public static class EntityTagRegistry
         initData = null;
         
 
-        SurvivalGame.LOGGER.Log($"Registered Tags ({registryData.tagsStrings.Length}):");
+        Main.LOGGER.Log($"Registered Tags ({registryData.tagsStrings.Length}):");
         foreach(var entry in tags)
-            SurvivalGame.LOGGER.Log($"- id:{entry.Value.Id} -> {entry.Key}");
+            Main.LOGGER.Log($"- id:{entry.Value.Id} -> {entry.Key}");
     }
 
     public static bool IsFinalized()

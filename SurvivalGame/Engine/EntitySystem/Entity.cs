@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using Microsoft.Xna.Framework;
 
-namespace SurvivalGame.Core.EntitySystem;
+namespace SurvivalGame.Engine.EntitySystem;
 
-public abstract class Entity
+public abstract class Entity : IDestroyable
 {
     internal bool isDestroyed = false;
     public readonly TypeValues TValues = null;

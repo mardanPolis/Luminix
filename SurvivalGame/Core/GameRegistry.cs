@@ -1,7 +1,7 @@
 using System;
-using SurvivalGame.Core.EntitySystem;
+using SurvivalGame.Engine.EntitySystem;
 
-namespace SurvivalGame;
+namespace SurvivalGame.Core;
 
 public static class GameRegistry
 {
@@ -26,7 +26,7 @@ public static class GameRegistry
     }
     internal static void RegisterEntities()
     {
-        EntityTypeRegistry.Register($"{SurvivalGame.GAME_ID}:some_entity", EntityTypeRegistry.NewBuilder<EntityTypeBuilder, SomeEntity>().Tagged(INVINCIBLE, false));
+        EntityTypeRegistry.Register($"some_entity", EntityTypeRegistry.NewBuilder<EntityTypeBuilder, SomeEntity>().Tagged(INVINCIBLE, false));
     }
     internal static void RegisterRenderers()
     {

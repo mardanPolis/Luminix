@@ -1,13 +1,14 @@
 using System;
 using Microsoft.Xna.Framework;
+using SurvivalGame.Engine.Rendering;
 
-namespace SurvivalGame.Core.EntitySystem;
+namespace SurvivalGame.Engine.EntitySystem;
 
 public class SomeEntity : DynamicEntity
 { 
     ~SomeEntity()
     {
-        SurvivalGame.LOGGER.Log($"{Id} got destroyed!");
+        Main.LOGGER.Log($"{Id} got destroyed!");
     }    
     public SomeEntity(uint id, TypeValues typeValues) : base(id, typeValues) { }
     public int randomValue;
@@ -36,12 +37,12 @@ public class SomeEntity : DynamicEntity
 
     public override void OnDestroy()
     {
-        SurvivalGame.LOGGER.Log($"{Id} got destroyed!");
+        Main.LOGGER.Log($"{Id} got destroyed!");
     }
 
     public void Speak()
     {
-        SurvivalGame.LOGGER.Log("HELLO WORLD! FROM SOMEENTITY!");
+        Main.LOGGER.Log("HELLO WORLD! FROM SOMEENTITY!");
     }
 
     public override string ToString()

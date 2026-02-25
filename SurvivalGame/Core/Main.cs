@@ -7,30 +7,31 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using SurvivalGame.Core;
-using SurvivalGame.Core.EntitySystem;
-using SurvivalGame.Core.Modding;
+using SurvivalGame.Engine;
+using SurvivalGame.Engine.EntitySystem;
+using SurvivalGame.Engine.Modding;
 using SurvivalGame.Modding;
 
 namespace SurvivalGame;
 
-public sealed class SurvivalGame : Game
+public sealed class Main : Game
 {
     public const string GAME_NAME = "SurvivalGame";
-    public const string GAME_ID = "sg";
+    public const string GAME_ID = "survival_game";
     public const string MODS_PATH = "mods";
 
-    public static GameState CurrentGameState { private set; get; } = GameState.Initialization;
+    public static EngineState CurrentGameState { private set; get; } = EngineState.Initialization;
 
     public static readonly string AppDataLoc = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), GAME_NAME);
 
-    public static SurvivalGame Instance { private set; get; }
+    public static Main Instance { private set; get; }
     public static readonly Assembly[] Assemblies = AppDomain.CurrentDomain.GetAssemblies();
     internal static readonly Logger LOGGER = Logger.Get();
 
     private GraphicsDeviceManager graphics;
     private SpriteBatch spriteBatch;
 
-    public SurvivalGame()
+    public Main()
     {
         graphics = new GraphicsDeviceManager(this);
         Content.RootDirectory = "Content";
@@ -69,7 +70,7 @@ public sealed class SurvivalGame : Game
 
     protected override void BeginRun()
     {
-        CurrentGameState = GameState.Runtime;
+        CurrentGameState = EngineState.Runtime;
 
         GameRegistry.SetUp();
 
@@ -109,6 +110,7 @@ public sealed class SurvivalGame : Game
         EntityTagRegistry.FinalizeRegistry();
 
         //Register Entities
+        EntityTypeRegistry.SetPrefix(GAME_ID);
         GameRegistry.RegisterEntities();
 
         EntityTypeRegistry.FinalizeRegistry();

@@ -1,9 +1,9 @@
 using System;
 using System.Collections.Generic;
 using Microsoft.Xna.Framework;
-using SurvivalGame.Core.Rendering;
+using SurvivalGame.Engine.Rendering;
 
-namespace SurvivalGame.Core.EntitySystem;
+namespace SurvivalGame.Engine.EntitySystem;
 
 public static class Entities
 {
@@ -92,7 +92,7 @@ public static class Entities
         bool removed = typeEntities.Remove(entity.Id) && (isStatic ? staticEntities.Remove(entity.Id) : dynamicEntities.Remove(entity.Id));
         if (!removed)
         {
-            SurvivalGame.LOGGER.Wrn($"Unable to destroy {entity}!");
+            Main.LOGGER.Wrn($"Unable to destroy {entity}!");
             return;
         }
         entity.OnDestroy();

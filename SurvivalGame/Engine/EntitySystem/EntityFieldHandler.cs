@@ -4,7 +4,7 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 
-namespace SurvivalGame.Core.EntitySystem;
+namespace SurvivalGame.Engine.EntitySystem;
 
 internal static class EntityFieldHandler
 {
@@ -71,12 +71,12 @@ internal static class EntityFieldHandler
         });
 
         foreach(var accessor in staticFieldAccessors)
-            SurvivalGame.LOGGER.Log($"Registered static field accessor for field '{accessor.FieldName}'");
+            Main.LOGGER.Log($"Registered static field accessor for field '{accessor.FieldName}'");
 
         foreach(var (entityType, accessors) in fieldAccessors)
         {
             foreach(var accessor in accessors)
-                SurvivalGame.LOGGER.Log($"Registered field accessor for EntityType '{entityType.Id}' and field '{accessor.FieldName}'");
+                Main.LOGGER.Log($"Registered field accessor for EntityType '{entityType.Id}' and field '{accessor.FieldName}'");
         }
 
         EntityFieldHandler.fieldAccessors = fieldAccessors.ToArray();

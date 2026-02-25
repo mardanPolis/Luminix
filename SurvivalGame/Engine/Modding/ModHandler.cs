@@ -8,7 +8,7 @@ using System.Text.Json;
 using System.Xml.Linq;
 using SurvivalGame.Modding;
 
-namespace SurvivalGame.Core.Modding;
+namespace SurvivalGame.Engine.Modding;
 
 public static class ModHandler
 {
@@ -96,7 +96,7 @@ public static class ModHandler
         {
             //Load all possible mods
             Dictionary<string, ModInfo> _loadedModInfos = [];
-            foreach (var loc in Directory.GetDirectories(SurvivalGame.MODS_PATH))
+            foreach (var loc in Directory.GetDirectories(Main.MODS_PATH))
             {
                 if (TryGetModInfoLoc(loc, out ModInfo? info))
                 {
@@ -110,7 +110,7 @@ public static class ModHandler
 
             //Get active mod list
             _activeModIds = [];
-            string filePath = Path.Combine(SurvivalGame.AppDataLoc, ActiveModsFileName);
+            string filePath = Path.Combine(Main.AppDataLoc, ActiveModsFileName);
             if (File.Exists(filePath))
             {
                 _activeModIds = JsonSerializer.Deserialize<HashSet<string>>(File.ReadAllText(filePath)) ?? _activeModIds;
@@ -160,7 +160,7 @@ public static class ModHandler
                 }
                 catch(Exception ex)
                 {
-                    SurvivalGame.LOGGER.Wrn($"Failed to activate mod '{info.ModId}', exception: {ex.Message}");
+                    Main.LOGGER.Wrn($"Failed to activate mod '{info.ModId}', exception: {ex.Message}");
                     continue;
                 }
             }
@@ -173,9 +173,9 @@ public static class ModHandler
         activeMods = [];
         activeModsIdsNew = [];
 
-        if(!Directory.Exists(SurvivalGame.MODS_PATH))
+        if(!Directory.Exists(Main.MODS_PATH))
         {
-            Directory.CreateDirectory(SurvivalGame.MODS_PATH);
+            Directory.CreateDirectory(Main.MODS_PATH);
             return;
         }
         
@@ -194,7 +194,7 @@ public static class ModHandler
             if(!mods.ContainsKey(modId))
             {
                 activeModsIdsNew.Remove(modId);
-                SurvivalGame.LOGGER.Wrn($"Failed to load Mod '{modId}'!");
+                Main.LOGGER.Wrn($"Failed to load Mod '{modId}'!");
             }
         }
     }
@@ -290,7 +290,7 @@ public static class ModHandler
     
     public static void SaveActiveMods()
     {
-        string filePath = Path.Combine(SurvivalGame.AppDataLoc, ActiveModsFileName);
+        string filePath = Path.Combine(Main.AppDataLoc, ActiveModsFileName);
         
         try
         {
@@ -302,7 +302,7 @@ public static class ModHandler
         }
         catch (Exception ex)
         {
-            SurvivalGame.LOGGER.Err($"Failed to save active mods: {ex.Message}");
+            Main.LOGGER.Err($"Failed to save active mods: {ex.Message}");
         }
     }
     

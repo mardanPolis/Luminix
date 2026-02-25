@@ -4,7 +4,7 @@ using System.IO;
 using System.Runtime.CompilerServices;
 using System.Threading;
 
-namespace SurvivalGame.Core;
+namespace SurvivalGame.Engine;
 
 public readonly struct Log
 {
@@ -95,23 +95,23 @@ public sealed class Logger
     }
     public void Print(object message)
     {
-        Print(Core.Log.New(message, Core.Log.Type.Print, false));
+        Print(Engine.Log.New(message, Engine.Log.Type.Print, false));
     }
     public void Log(object message)
     {
-        Print(Core.Log.New(message, Core.Log.Type.Info, true));
+        Print(Engine.Log.New(message, Engine.Log.Type.Info, true));
     }
     public void Log(object variable, object value)
     {
-        Print(Core.Log.New($"{variable} : {value}", Core.Log.Type.Info, true));
+        Print(Engine.Log.New($"{variable} : {value}", Engine.Log.Type.Info, true));
     }
     public void Wrn(object message)
     {
-        Print(Core.Log.New(message, Core.Log.Type.Warning, true));
+        Print(Engine.Log.New(message, Engine.Log.Type.Warning, true));
     }
     public void Err(object message)
     {
-        Print(Core.Log.New(message, Core.Log.Type.Error, true));
+        Print(Engine.Log.New(message, Engine.Log.Type.Error, true));
     }
 
     public void Clear()
