@@ -1,0 +1,76 @@
+using System;
+using System.Collections;
+using System.Collections.Generic;
+
+namespace Verse.Collections;
+
+public class DenseList<T> : ICollection
+{
+    private T[] items;
+    private int count;
+    private Dictionary<T, int> indexMap;
+
+    public int Count => count;
+    public bool IsSynchronized => false;
+    public object SyncRoot => items;
+
+    public DenseList(int capacity = 16)
+    {
+        items = new T[capacity];
+        indexMap = new Dictionary<T, int>();
+        count = 0;
+    }
+    
+    public bool Add(T item)
+    {
+        if (indexMap.ContainsKey(item))
+            return false;
+
+        if (count >= items.Length)
+            Array.Resize(ref items, items.Length * 2);
+
+        items[count] = item;
+        indexMap[item] = count;
+        count++;
+        return true;
+    }
+
+    public bool Remove(T item)
+    {
+        if (!indexMap.TryGetValue(item, out int idx))
+            return false;
+
+        int lastIndex = count - 1;
+        T lastItem = items[lastIndex];
+
+        items[idx] = lastItem;
+        indexMap[lastItem] = idx;
+
+        indexMap.Remove(item);
+        items[lastIndex] = default;
+        count--;
+        return true;
+    }
+
+    public bool Contains(T item) => indexMap.ContainsKey(item);
+
+    public void Clear()
+    {
+        Array.Clear(items, 0, count);
+        indexMap.Clear();
+        count = 0;
+    }
+
+    public void CopyTo(Array array, int index)
+    {
+        items.CopyTo(array, index);
+    }
+
+    public IEnumerator<T> GetEnumerator()
+    {
+        for (int i = 0; i < count; i++)
+            yield return items[i];
+    }
+
+    IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+}

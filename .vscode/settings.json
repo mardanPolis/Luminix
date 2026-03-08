@@ -2,6 +2,7 @@
     "dotnet.defaultSolution": "SurvivalGame.sln",
     "cSpell.words": [
         "indegree",
-        "Renderable"
+        "Renderable",
+        "renderables"
     ]
 }
