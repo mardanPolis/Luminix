@@ -1,26 +1,25 @@
 {
   "format": 1,
   "restore": {
-    "/home/markuss/Dev/Monogame/SurvivalGame/SurvivalGame.csproj": {}
+    "C:\\Dev\\Monogame\\SurvivalGame\\SurvivalGame.csproj": {}
   },
   "projects": {
-    "/home/markuss/Dev/Monogame/SurvivalGame/SurvivalGame.csproj": {
+    "C:\\Dev\\Monogame\\SurvivalGame\\SurvivalGame.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "/home/markuss/Dev/Monogame/SurvivalGame/SurvivalGame.csproj",
+        "projectUniqueName": "C:\\Dev\\Monogame\\SurvivalGame\\SurvivalGame.csproj",
         "projectName": "SurvivalGame",
-        "projectPath": "/home/markuss/Dev/Monogame/SurvivalGame/SurvivalGame.csproj",
-        "packagesPath": "/home/markuss/.nuget/packages/",
-        "outputPath": "/home/markuss/Dev/Monogame/SurvivalGame/obj/",
+        "projectPath": "C:\\Dev\\Monogame\\SurvivalGame\\SurvivalGame.csproj",
+        "packagesPath": "C:\\Users\\Lietotajs\\.nuget\\packages\\",
+        "outputPath": "C:\\Dev\\Monogame\\SurvivalGame\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
-          "/home/markuss/.nuget/NuGet/NuGet.Config"
+          "C:\\Users\\Lietotajs\\AppData\\Roaming\\NuGet\\NuGet.Config"
         ],
         "originalTargetFrameworks": [
           "net9.0"
         ],
         "sources": {
-          "/usr/lib/dotnet/library-packs": {},
           "https://api.nuget.org/v3/index.json": {}
         },
         "frameworks": {
@@ -71,11 +70,15 @@
               "version": "[9.0.13, 9.0.13]"
             },
             {
-              "name": "Microsoft.NETCore.App.Host.linux-x64",
+              "name": "Microsoft.NETCore.App.Host.win-x64",
               "version": "[9.0.13, 9.0.13]"
             },
             {
               "name": "Microsoft.NETCore.App.Ref",
+              "version": "[9.0.13, 9.0.13]"
+            },
+            {
+              "name": "Microsoft.WindowsDesktop.App.Ref",
               "version": "[9.0.13, 9.0.13]"
             }
           ],
@@ -84,7 +87,7 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "/usr/lib/dotnet/sdk/10.0.103/PortableRuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.103/PortableRuntimeIdentifierGraph.json"
         }
       }
     }

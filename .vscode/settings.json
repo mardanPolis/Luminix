@@ -1,5 +1,5 @@
 {
-    "dotnet.defaultSolution": "SurvivalGame.sln",
+    "dotnet.defaultSolution": "Monogame.sln",
     "cSpell.words": [
         "indegree",
         "Renderable",

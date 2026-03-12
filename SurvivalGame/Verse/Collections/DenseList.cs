@@ -4,7 +4,7 @@ using System.Collections.Generic;
 
 namespace Verse.Collections;
 
-public class DenseList<T> : ICollection
+public sealed class DenseList<T> : ICollection
 {
     private T[] items;
     private int count;

@@ -1,30 +1,42 @@
 using System;
+using Verse.Identifiers;
 
 namespace Verse.Rendering;
 
 public abstract class Renderer
 {
     public abstract Type RenderDataType { get; }
-    internal abstract void RenderAll(float PartialTick, RenderDataContainer newRenderDataContainer);
+    public ID ID { get; private set; }
+    public void Assign(ID ID)
+    {
+        this.ID = ID;
+    }
+    internal abstract void SetContainers(RenderDataContainer[] newRenderDataContainer);
 }
 
 public abstract class Renderer<TRenderData> : Renderer where TRenderData : struct
 {
-    private RenderDataContainer renderDataContainer;
+    private RenderDataContainer<TRenderData>[] renderDataContainers;
 
-    internal sealed override void RenderAll(float PartialTick, RenderDataContainer newRenderDataContainer)
+    internal sealed override void SetContainers(RenderDataContainer[] newRenderDataContainers)
     {
-        if (newRenderDataContainer.RenderDataType != RenderDataType)
-            throw new ArgumentException($"Invalid new RenderDataContainer type. Expected {RenderDataType}, got {newRenderDataContainer.RenderDataType}");
-        
-        this.renderDataContainer = newRenderDataContainer;
-
-        RenderAll(PartialTick);
+        if(newRenderDataContainers is RenderDataContainer<TRenderData>[] renderDataContainers)
+        {
+            this.renderDataContainers = renderDataContainers;
+        }
+        else
+        {
+            foreach(var container in newRenderDataContainers)
+            {
+                if(container.RenderDataType != RenderDataType)
+                    throw new ArgumentException($"Invalid RenderDataContainer type. Expected {RenderDataType}, got {container.RenderDataType}");
+            }
+        }
     }
 
     internal void RenderAll(float PartialTick)
     {
-        var dataset = ((RenderDataContainer<TRenderData>) renderDataContainer).GetDataset();
+        var dataset = renderDataContainer.ToList();
         for (int i = 0; i < dataset.Count; i++)
             Render(PartialTick, dataset[i]);
     }
