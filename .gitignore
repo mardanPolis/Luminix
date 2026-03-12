@@ -1,3 +1,6 @@
 SurvivalGame/obj/
 SurvivalGame/bin/
 mods/
+obj/
+
+.cache
