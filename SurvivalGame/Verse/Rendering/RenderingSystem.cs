@@ -5,8 +5,9 @@ using Verse.Rendering;
 
 namespace Verse.Rendering;
 
-internal static class RenderingSystem
+public static class RenderingSystem
 {
+    private static UPSCounter upsCounter;
     private static FrameRenderer FrameRenderer;
 
     private static RenderStack writeStack;
@@ -15,7 +16,12 @@ internal static class RenderingSystem
 
     private static RenderStack hotRenderStack;
 
-    public static void Initialize()
+    private static RenderStack readStack;
+
+    private static float partialTick = 0f;
+    private static bool pendingStack = false;
+
+    internal static void Initialize()
     {
         FrameRenderer = new FrameRenderer();
 
@@ -26,7 +32,20 @@ internal static class RenderingSystem
         hotRenderStack = new RenderStack();
     }
 
-    public static void Write()
+    internal static void BeginFrame()
+    {
+        hotRenderStack.Clear();
+
+        partialTick = Math.Clamp(partialTick, 0f, 1f);
+
+        if(pendingStack && partialTick >= 1f)
+        {
+            readStack = currReadStack;
+            pendingStack = false;
+        }
+    }
+
+    internal static void Render()
     {
         writeStack.Clear();
         
@@ -37,19 +56,32 @@ internal static class RenderingSystem
         prevReadStack = currReadStack;
         currReadStack = writeStack;
         writeStack = temp;
+
+        pendingStack = true;
     }
 
-    public static void BeginFrame()
+    internal static void HotRender()
     {
-        hotRenderStack.Clear();
+        foreach(var renderer in RendererRegistry.GetRenderers())
+            renderer.RenderOn(hotRenderStack);
     }
 
-    public static void DrawFrame()
+    internal static void DrawFrame()
     {
         foreach(var renderer in RendererRegistry.GetHotRenderers())
             renderer.RenderOn(hotRenderStack);
 
-        var readStack = currReadStack;
         FrameRenderer.DrawFrame(hotRenderStack, readStack);
     }
+
+    public static bool CountFPS { 
+        get { return upsCounter != null; } 
+        set
+        {
+            if(value && upsCounter == null)
+                upsCounter = new UPSCounter();
+            else if(!value && upsCounter != null)
+                upsCounter = null;
+        }
+     }
 }
