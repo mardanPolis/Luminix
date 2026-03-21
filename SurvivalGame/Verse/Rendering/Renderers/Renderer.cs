@@ -51,4 +51,18 @@ public abstract class Renderer<T> : Renderer
     }
 
     public abstract void Render(T renderable, RenderStack renderStack);
+
+    public virtual int GetSpriteRenderableCount()
+    {
+        int total = 0;
+        for (int i = 0; i < count; i++)
+            total += renderables[i].Count;
+
+        return total;
+    }
+
+    public virtual int GetLineRenderableCount()
+    {
+        return 0;
+    }
 }

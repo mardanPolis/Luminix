@@ -1,0 +1,22 @@
+using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
+using Verse.Resources;
+
+namespace Verse.Rendering.RenderData;
+internal struct InstanceSprite
+{
+    public Sprite Sprite;
+    public Vector2 Position;
+    public Vector2 Scale;
+    public float Rotation;
+    public float LayerDepth;
+
+    public InstanceSprite(Sprite sprite, Vector2 position, Vector2 scale, float rotation, float layerDepth)
+    {
+        Sprite = sprite;
+        Position = position;
+        Scale = scale;
+        Rotation = rotation;
+        LayerDepth = layerDepth;
+    }
+}

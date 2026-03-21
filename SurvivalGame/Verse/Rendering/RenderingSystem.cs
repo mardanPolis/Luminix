@@ -1,27 +1,27 @@
 using System;
-using System.Collections;
-using Verse.Identifiers;
-using Verse.Rendering;
+using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
 
 namespace Verse.Rendering;
 
-public static class RenderingSystem
+internal static class RenderingSystem
 {
-    private static UPSCounter upsCounter;
     private static FrameRenderer FrameRenderer;
 
     private static RenderStack writeStack;
     private static RenderStack currReadStack;
     private static RenderStack prevReadStack;
 
-    private static RenderStack hotRenderStack;
+    private static RenderStack readStack; // the stack currently used to draw frames
+    private static RenderStack hotRenderStack; // the stack that is used for hot rendering (e.g. UI, debug, etc.)
 
-    private static RenderStack readStack;
+    private static SpriteBatch spriteBatch;
+    private static GraphicsDeviceManager graphics;
 
     private static float partialTick = 0f;
     private static bool pendingStack = false;
 
-    internal static void Initialize()
+    public static void Initialize(GraphicsDeviceManager graphics)
     {
         FrameRenderer = new FrameRenderer();
 
@@ -30,24 +30,26 @@ public static class RenderingSystem
         prevReadStack = new RenderStack();
 
         hotRenderStack = new RenderStack();
+
+        RenderingSystem.graphics = graphics;
     }
 
-    internal static void BeginFrame()
+    public static void BeginFrame(float partialTick)
     {
-        hotRenderStack.Clear();
+        hotRenderStack.Reset();
 
-        partialTick = Math.Clamp(partialTick, 0f, 1f);
+        RenderingSystem.partialTick = Math.Clamp(partialTick, 0f, 1f);
 
-        if(pendingStack && partialTick >= 1f)
+        if(pendingStack && RenderingSystem.partialTick >= 1f)
         {
             readStack = currReadStack;
             pendingStack = false;
         }
     }
 
-    internal static void Render()
+    public static void Render()
     {
-        writeStack.Clear();
+        writeStack.Reset();
         
         foreach(var renderer in RendererRegistry.GetRenderers())
             renderer.RenderOn(writeStack);
@@ -60,28 +62,21 @@ public static class RenderingSystem
         pendingStack = true;
     }
 
-    internal static void HotRender()
+    public static void HotRender()
     {
         foreach(var renderer in RendererRegistry.GetRenderers())
             renderer.RenderOn(hotRenderStack);
     }
 
-    internal static void DrawFrame()
+    public static void DrawFrame()
     {
-        foreach(var renderer in RendererRegistry.GetHotRenderers())
-            renderer.RenderOn(hotRenderStack);
-
         FrameRenderer.DrawFrame(hotRenderStack, readStack);
     }
 
-    public static bool CountFPS { 
-        get { return upsCounter != null; } 
-        set
-        {
-            if(value && upsCounter == null)
-                upsCounter = new UPSCounter();
-            else if(!value && upsCounter != null)
-                upsCounter = null;
-        }
-     }
+
+    public static void SetSpriteBatch(SpriteBatch spriteBatch)
+    {
+        RenderingSystem.spriteBatch = spriteBatch;
+        FrameRenderer.SetSpriteBatch(spriteBatch);
+    }
 }
