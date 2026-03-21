@@ -54,10 +54,14 @@ internal static class RenderingSystem
         foreach(var renderer in RendererRegistry.GetRenderers())
             renderer.RenderOn(writeStack);
 
+        SwapReadStacks();
+    }
+
+    private static void SwapReadStacks()
+    {
         var temp = prevReadStack;
         prevReadStack = currReadStack;
-        currReadStack = writeStack;
-        writeStack = temp;
+        currReadStack = temp;
 
         pendingStack = true;
     }
@@ -66,6 +70,16 @@ internal static class RenderingSystem
     {
         foreach(var renderer in RendererRegistry.GetRenderers())
             renderer.RenderOn(hotRenderStack);
+
+        int spriteCapacity = 0;
+        int lineCapacity = 0;
+        foreach(var renderer in RendererRegistry.GetHotRenderers())
+        {
+            spriteCapacity += renderer.GetSpriteRenderableCount();
+            lineCapacity += renderer.GetLineRenderableCount();
+        }
+
+        hotRenderStack.Resize(spriteCapacity, lineCapacity);
     }
 
     public static void DrawFrame()

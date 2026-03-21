@@ -40,7 +40,7 @@ public static class RendererRegistry
             throw new ArgumentException($"Renderer with ID {iD} is not registered.");
 
         var renderer = entry.Renderer;
-        renderer.Assign(list);
+        renderer.Assign(list, typeof(T));
     }
 
     private static bool ValidRendererType(Type rendererType)

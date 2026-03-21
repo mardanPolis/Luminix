@@ -10,24 +10,26 @@ internal class FrameRenderer
     public void DrawFrame(RenderStack hotRenderStack, RenderStack renderStack)
     {
         spriteBatch.Begin();
-        foreach(var spriteRenderData in renderStack.SpriteRenderDataSet)
-            DrawSprite(spriteRenderData);
-        
-        foreach(var lineRenderData in renderStack.LineRenderDataSet)
-            DrawLine(lineRenderData);
 
-        //hot
-        foreach(var spriteRenderData in hotRenderStack.SpriteRenderDataSet)
-            DrawSprite(spriteRenderData);
-
-        foreach(var lineRenderData in hotRenderStack.LineRenderDataSet)
-            DrawLine(lineRenderData);
+        DrawRenderStack(renderStack);
+        DrawRenderStack(hotRenderStack);
 
         spriteBatch.End();
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private void DrawSprite(InstanceSprite spriteRenderData)
+    private void DrawRenderStack(RenderStack renderStack)
+    {
+        int i = 0;
+        for (i = 0; i < renderStack.SpriteCount; i++)
+            DrawSprite(ref renderStack.SpriteRenderDataSet[i]);
+
+        for (i = 0; i < renderStack.LineCount; i++)
+            DrawLine(ref renderStack.LineRenderDataSet[i]);
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private void DrawSprite(ref InstanceSprite spriteRenderData)
     {
         spriteBatch.Draw(
             spriteRenderData.Sprite.TextureRegion.Texture,
@@ -43,7 +45,7 @@ internal class FrameRenderer
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private void DrawLine(InstanceLine lineRenderData)
+    private void DrawLine(ref InstanceLine lineRenderData)
     {
         
     }

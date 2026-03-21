@@ -61,6 +61,11 @@ public sealed class DenseList<T> : ICollection
         count = 0;
     }
 
+    public Type GetValueType()
+    {
+        return typeof(T);
+    }
+
     public void CopyTo(Array array, int index)
     {
         items.CopyTo(array, index);

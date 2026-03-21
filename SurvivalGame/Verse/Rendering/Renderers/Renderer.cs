@@ -10,6 +10,9 @@ public abstract class Renderer
     public abstract void RenderOn(RenderStack renderStack);
     internal abstract void Assign(ICollection list, Type renderableType);
     internal abstract void Optimize();
+
+    public abstract int GetSpriteRenderableCount();
+    public abstract int GetLineRenderableCount();
 }
 
 public abstract class Renderer<T> : Renderer
@@ -17,7 +20,7 @@ public abstract class Renderer<T> : Renderer
     private DenseList<T>[] renderables;
     private int count = 0;
 
-    internal override void Assign(ICollection renderables, Type renderableType)
+    internal sealed override void Assign(ICollection renderables, Type renderableType)
     {
         if(renderables is not DenseList<T> typedRenderables)
             throw new ArgumentException($"Expected a DenseList<{typeof(T).FullName}> but got {renderables.GetType().FullName}.");
@@ -33,7 +36,7 @@ public abstract class Renderer<T> : Renderer
         count++;
     }
 
-    internal override void Optimize()
+    internal sealed override void Optimize()
     {
         // resize renderables array to fit count
         if(renderables == null || count == renderables.Length)
@@ -45,14 +48,14 @@ public abstract class Renderer<T> : Renderer
     }
 
 
-    public override void RenderOn(RenderStack renderStack)
+    public sealed override void RenderOn(RenderStack renderStack)
     {
         
     }
 
     public abstract void Render(T renderable, RenderStack renderStack);
 
-    public virtual int GetSpriteRenderableCount()
+    public override int GetSpriteRenderableCount()
     {
         int total = 0;
         for (int i = 0; i < count; i++)
@@ -61,7 +64,7 @@ public abstract class Renderer<T> : Renderer
         return total;
     }
 
-    public virtual int GetLineRenderableCount()
+    public override int GetLineRenderableCount()
     {
         return 0;
     }
