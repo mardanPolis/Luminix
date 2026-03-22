@@ -7,19 +7,19 @@ namespace Verse.Rendering;
 internal static class RenderingSystem
 {
     private static FrameRenderer FrameRenderer;
+    private static SpriteBatch spriteBatch;
+    private static GraphicsDeviceManager graphics;
+
 
     private static RenderStack writeStack;
-    private static RenderStack currReadStack;
+    private static volatile RenderStack currReadStack;
     private static RenderStack prevReadStack;
+
+    private static volatile bool pendingStack = false;
 
     private static RenderStack readStack; // the stack currently used to draw frames
     private static RenderStack hotRenderStack; // the stack that is used for hot rendering (e.g. UI, debug, etc.)
 
-    private static SpriteBatch spriteBatch;
-    private static GraphicsDeviceManager graphics;
-
-    private static float partialTick = 0f;
-    private static bool pendingStack = false;
 
     public static void Initialize(GraphicsDeviceManager graphics)
     {
@@ -34,20 +34,14 @@ internal static class RenderingSystem
         RenderingSystem.graphics = graphics;
     }
 
-    public static void BeginFrame(float partialTick)
-    {
-        RenderingSystem.partialTick = Math.Clamp(partialTick, 0f, 1f);
-
-        if(pendingStack && RenderingSystem.partialTick >= 1f)
-        {
-            readStack = currReadStack;
-            pendingStack = false;
-        }
-    }
-
-    public static void Render()
+    //CoreThread
+    public static void Render(float maxTime, float  time)
     {
         writeStack.Reset();
+        if(maxTime * 0.9f > time)
+            writeStack.Optimize();
+        else
+            writeStack.OnFailedOptimize();
         
         foreach(var renderer in RendererRegistry.GetRenderers())
             renderer.RenderOn(writeStack);
@@ -55,16 +49,37 @@ internal static class RenderingSystem
         SwapReadStacks();
     }
 
+
+    private static void SwapReadStacks()
+    {
+        var temp = currReadStack;   // store currReadStack ref as temp
+        currReadStack = writeStack; // currReadStack becomes writeStack
+        writeStack = prevReadStack; // writeStack becomes prevReadStack
+        prevReadStack = temp;       // prevReadStack becomes temp
+
+        pendingStack = true;
+    }
+
+    //RenderThread
     public static void HotRender()
     {
         hotRenderStack.Reset();
+        hotRenderStack.Optimize();
 
         foreach(var renderer in RendererRegistry.GetRenderers())
             renderer.RenderOn(hotRenderStack);
     }
 
-    public static void DrawFrame()
+    public static void DrawFrame(float partialTick)
     {
+        partialTick = Math.Clamp(partialTick, 0f, 1f);
+
+        if(pendingStack && partialTick >= 1f)
+        {
+            readStack = currReadStack;
+            pendingStack = false;
+        }
+
         FrameRenderer.DrawFrame(hotRenderStack, readStack);
     }
 
@@ -73,16 +88,6 @@ internal static class RenderingSystem
     {
         RenderingSystem.spriteBatch = spriteBatch;
         FrameRenderer.SetSpriteBatch(spriteBatch);
-    }
-
-
-    private static void SwapReadStacks()
-    {
-        var temp = prevReadStack;
-        prevReadStack = currReadStack;
-        currReadStack = temp;
-
-        pendingStack = true;
     }
 
 }

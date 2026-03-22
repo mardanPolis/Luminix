@@ -80,6 +80,12 @@ public sealed class RenderStack
         }
     }
 
+    internal void OnFailedOptimize()
+    {
+        unResizedCountSprite++;
+        unResizedCountLine++;
+    }
+
     private Array EnsureArrayCapacity(Array array, int requiredCapacity)
     {
         Array newArray = array;
