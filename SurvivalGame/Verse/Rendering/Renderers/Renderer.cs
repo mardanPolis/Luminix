@@ -10,9 +10,6 @@ public abstract class Renderer
     public abstract void RenderOn(RenderStack renderStack);
     internal abstract void Assign(ICollection list, Type renderableType);
     internal abstract void Optimize();
-
-    public abstract int GetSpriteRenderableCount();
-    public abstract int GetLineRenderableCount();
 }
 
 public abstract class Renderer<T> : Renderer
@@ -54,18 +51,4 @@ public abstract class Renderer<T> : Renderer
     }
 
     public abstract void Render(T renderable, RenderStack renderStack);
-
-    public override int GetSpriteRenderableCount()
-    {
-        int total = 0;
-        for (int i = 0; i < count; i++)
-            total += renderables[i].Count;
-
-        return total;
-    }
-
-    public override int GetLineRenderableCount()
-    {
-        return 0;
-    }
 }

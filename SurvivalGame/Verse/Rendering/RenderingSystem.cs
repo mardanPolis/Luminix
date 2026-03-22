@@ -36,8 +36,6 @@ internal static class RenderingSystem
 
     public static void BeginFrame(float partialTick)
     {
-        hotRenderStack.Reset();
-
         RenderingSystem.partialTick = Math.Clamp(partialTick, 0f, 1f);
 
         if(pendingStack && RenderingSystem.partialTick >= 1f)
@@ -57,29 +55,12 @@ internal static class RenderingSystem
         SwapReadStacks();
     }
 
-    private static void SwapReadStacks()
-    {
-        var temp = prevReadStack;
-        prevReadStack = currReadStack;
-        currReadStack = temp;
-
-        pendingStack = true;
-    }
-
     public static void HotRender()
     {
+        hotRenderStack.Reset();
+
         foreach(var renderer in RendererRegistry.GetRenderers())
             renderer.RenderOn(hotRenderStack);
-
-        int spriteCapacity = 0;
-        int lineCapacity = 0;
-        foreach(var renderer in RendererRegistry.GetHotRenderers())
-        {
-            spriteCapacity += renderer.GetSpriteRenderableCount();
-            lineCapacity += renderer.GetLineRenderableCount();
-        }
-
-        hotRenderStack.Resize(spriteCapacity, lineCapacity);
     }
 
     public static void DrawFrame()
@@ -93,4 +74,15 @@ internal static class RenderingSystem
         RenderingSystem.spriteBatch = spriteBatch;
         FrameRenderer.SetSpriteBatch(spriteBatch);
     }
+
+
+    private static void SwapReadStacks()
+    {
+        var temp = prevReadStack;
+        prevReadStack = currReadStack;
+        currReadStack = temp;
+
+        pendingStack = true;
+    }
+
 }

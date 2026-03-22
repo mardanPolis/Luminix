@@ -1,17 +1,26 @@
 using System;
-using System.Collections.Generic;
+using System.Linq;
 using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Graphics;
 using Verse.Rendering.RenderData;
 using Verse.Resources;
 
 namespace Verse.Rendering;
-public class RenderStack
+public sealed class RenderStack
 {
+    const int OPTIMIZATION_DELAY_TICKS = 60;
+    const int OPTIMIZING_THRESHOLD = 128;
+
     internal InstanceSprite[] SpriteRenderDataSet { get; private set; } = new InstanceSprite[1024];
     internal int SpriteCount = 0;
     internal InstanceLine[] LineRenderDataSet { get; private set; } = new InstanceLine[512];
     internal int LineCount = 0;
+
+    int[] prevSpriteRenderableCount = new int[OPTIMIZATION_DELAY_TICKS];
+    int[] prevLineRenderableCount = new int[OPTIMIZATION_DELAY_TICKS];
+    int currentIndex = 0;
+
+    int unResizedCountSprite = 0;
+    int unResizedCountLine = 0;
 
     public void PostSprite(Sprite sprite, Vector2 position, float rotation, Vector2 scale, float layerDepth = 0f)
     {
@@ -25,7 +34,6 @@ public class RenderStack
         spriteInstance.LayerDepth = layerDepth;
         SpriteCount++;
     }
-
     public void PostLine(Vector2 start, Vector2 end, Color color, float thickness)
     {
         LineRenderDataSet = (InstanceLine[])EnsureArrayCapacity(LineRenderDataSet, LineCount + 1);
@@ -36,6 +44,40 @@ public class RenderStack
         lineInstance.Color = color;
         lineInstance.Thickness = thickness;
         LineCount++;
+    }
+
+    internal void Reset()
+    {
+        prevSpriteRenderableCount[currentIndex] = SpriteCount;
+        prevLineRenderableCount[currentIndex] = LineCount;
+
+        currentIndex = (currentIndex + 1) % OPTIMIZATION_DELAY_TICKS;
+
+        SpriteCount = 0;
+        LineCount = 0;
+    }
+
+    internal void Optimize()
+    {
+        //Sprite
+        unResizedCountSprite++;
+        if(unResizedCountSprite > OPTIMIZATION_DELAY_TICKS)
+        {
+            if(TryOptimize(SpriteRenderDataSet, prevSpriteRenderableCount, 1024, out Array result))
+                SpriteRenderDataSet = (InstanceSprite[])result;
+
+            unResizedCountSprite = 0;
+        }
+
+
+        //Line
+        unResizedCountLine++;
+        if(unResizedCountLine > OPTIMIZATION_DELAY_TICKS)
+        {
+            if(TryOptimize(LineRenderDataSet, prevLineRenderableCount, 1024, out Array result))
+                LineRenderDataSet = (InstanceLine[])result;
+            unResizedCountLine = 0;
+        }
     }
 
     private Array EnsureArrayCapacity(Array array, int requiredCapacity)
@@ -49,29 +91,16 @@ public class RenderStack
 
         return newArray;
     }
-
-    internal void Reset()
+    private bool TryOptimize(Array array, int[] prevCapacities, int minLength, out Array result)
     {
-        SpriteCount = 0;
-        LineCount = 0;
-    }
+        result = array;
 
-    // used only after reset to ensure the arrays are large enough to hold new render data
-    internal void Resize(int SpriteCapacity, int LineCapacity)
-    {
-        if(SpriteCapacity > SpriteRenderDataSet.Length)
-            SpriteRenderDataSet = new InstanceSprite[SpriteCapacity];
+        var maxPrevCapacity = prevCapacities.Max();
+        if(array.Length - maxPrevCapacity < OPTIMIZING_THRESHOLD) // returns unoptimized array, because optimization unneeded, aka distance under threshold to optimize.
+            return false;
 
-        if(LineCapacity > LineRenderDataSet.Length)
-            LineRenderDataSet = new InstanceLine[LineCapacity];
-    }
-
-    internal void Optimize()
-    {   
-        var spriteCount = this.SpriteCount > 1024 ? this.SpriteCount : 1024;
-        var lineCount = this.LineCount > 512 ? this.LineCount : 512;
-
-        SpriteRenderDataSet = new InstanceSprite[spriteCount];
-        LineRenderDataSet = new InstanceLine[lineCount];
+        var length = maxPrevCapacity > minLength ? maxPrevCapacity : minLength;
+        result = Array.CreateInstance(array.GetType().GetElementType(), length);
+        return true;
     }
 }
