@@ -1,9 +1,11 @@
 ﻿using System;
+using System.Diagnostics;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 
 using Verse.Rendering;
+using Verse.Threads;
 
 using var game = new SurvivalGame.Main();
 game.Run();
@@ -14,6 +16,11 @@ namespace SurvivalGame
     {
         private GraphicsDeviceManager graphics;
         private SpriteBatch spriteBatch;
+
+        private CoreThread coreThread = null;
+
+        uint totalFrameCount = 0;
+        const uint TICK_RATE = 20;
 
         public Main()
         {
@@ -26,6 +33,10 @@ namespace SurvivalGame
         {
             // TODO: Add your initialization logic here
             RenderingSystem.Initialize(graphics);
+
+            coreThread = new CoreThread(TICK_RATE);
+            coreThread.Start();
+
             base.Initialize();
         }
 
@@ -33,7 +44,7 @@ namespace SurvivalGame
         {
             spriteBatch = new SpriteBatch(GraphicsDevice);
 
-            // TODO: use this.Content to load your game content here
+            // TODO: use this.Content to load your game content
 
             RenderingSystem.SetSpriteBatch(spriteBatch);
         }
@@ -49,19 +60,19 @@ namespace SurvivalGame
         {
             if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed || Keyboard.GetState().IsKeyDown(Keys.Escape))
                 Exit();
-            RenderingSystem.BeginFrame(0f);
+
+            totalFrameCount++;
 
             // TODO: Add your update logic here
 
-            RenderingSystem.HotRender();
+            RenderingSystem.HotRender(gameTime.TotalGameTime.Seconds / totalFrameCount, gameTime.ElapsedGameTime.Seconds);
             base.Update(gameTime);
         }
-
         protected override void Draw(GameTime gameTime)
         {
             GraphicsDevice.Clear(Color.CornflowerBlue);
 
-            RenderingSystem.DrawFrame();
+            RenderingSystem.DrawFrame(coreThread.PartialTick);
 
             base.Draw(gameTime);
         }

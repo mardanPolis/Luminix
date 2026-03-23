@@ -35,13 +35,11 @@ internal static class RenderingSystem
     }
 
     //CoreThread
-    public static void Render(float maxTime, float  time)
+    public static void Render(float maxTime, float time)
     {
         writeStack.Reset();
-        if(maxTime * 0.9f > time)
-            writeStack.Optimize();
-        else
-            writeStack.OnFailedOptimize();
+        if(maxTime * 0.9f > time) writeStack.Optimize();
+        else writeStack.SkipOptimization();
         
         foreach(var renderer in RendererRegistry.GetRenderers())
             renderer.RenderOn(writeStack);
@@ -61,10 +59,11 @@ internal static class RenderingSystem
     }
 
     //RenderThread
-    public static void HotRender()
+    public static void HotRender(float maxTime, float time)
     {
         hotRenderStack.Reset();
-        hotRenderStack.Optimize();
+        if(maxTime * 0.9f > time) hotRenderStack.Optimize();
+        else hotRenderStack.SkipOptimization();
 
         foreach(var renderer in RendererRegistry.GetRenderers())
             renderer.RenderOn(hotRenderStack);

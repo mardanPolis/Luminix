@@ -74,13 +74,13 @@ public sealed class RenderStack
         unResizedCountLine++;
         if(unResizedCountLine > OPTIMIZATION_DELAY_TICKS)
         {
-            if(TryOptimize(LineRenderDataSet, prevLineRenderableCount, 1024, out Array result))
+            if(TryOptimize(LineRenderDataSet, prevLineRenderableCount, 512, out Array result))
                 LineRenderDataSet = (InstanceLine[])result;
             unResizedCountLine = 0;
         }
     }
 
-    internal void OnFailedOptimize()
+    internal void SkipOptimization()
     {
         unResizedCountSprite++;
         unResizedCountLine++;
