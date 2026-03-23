@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using System.Threading;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
@@ -17,6 +18,7 @@ namespace SurvivalGame
         private GraphicsDeviceManager graphics;
         private SpriteBatch spriteBatch;
 
+        private Thread mainThread = Thread.CurrentThread;
         private CoreThread coreThread = null;
 
         uint totalFrameCount = 0;
@@ -34,7 +36,7 @@ namespace SurvivalGame
             // TODO: Add your initialization logic here
             RenderingSystem.Initialize(graphics);
 
-            coreThread = new CoreThread(TICK_RATE);
+            coreThread = new CoreThread(false, TICK_RATE);
             coreThread.Start();
 
             base.Initialize();
@@ -51,8 +53,6 @@ namespace SurvivalGame
 
         protected override void BeginRun()
         {
-            long usedBytes = GC.GetTotalMemory(forceFullCollection: false);
-            Console.WriteLine($"Managed memory: {usedBytes / 1024.0 / 1024.0:F2} MB");
             base.BeginRun();
         }
 

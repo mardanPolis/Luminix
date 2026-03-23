@@ -5,18 +5,26 @@ using Verse.Rendering;
 
 namespace Verse.Threads;
 
-public sealed class CoreThread
+internal sealed class CoreThread
 {
     private Thread thread;
+    private volatile bool running = true;
+
+    private Stopwatch stopwatch;
 
     uint tickRate = 0;
-    uint tickIntervalTicks = 0;
+    long tickIntervalTicks = 0;
     float tickIntervalSecond = 0;
 
-    private bool running = true;
-    public float PartialTick { get; private set; }
-    public CoreThread(uint tickRate)
-    {
+    // debug variables
+    private bool isDebug = false;
+    double avgTickTime = 0;
+    ulong tickCount = 0;
+
+    public CoreThread(bool isDebug, uint tickRate)
+    {   
+        this.isDebug = isDebug;
+
         this.tickRate = tickRate;
         this.tickIntervalTicks = (uint)(TimeSpan.TicksPerSecond / tickRate);
         this.tickIntervalSecond = tickIntervalTicks / TimeSpan.TicksPerSecond;
@@ -28,29 +36,60 @@ public sealed class CoreThread
 
     void Run()
     {
-        Stopwatch stopwatch = Stopwatch.StartNew();
+        stopwatch = Stopwatch.StartNew();
+        Stopwatch internalStopWatch = new Stopwatch();
         long nextTick = stopwatch.ElapsedTicks;
 
-        while(running)
+        float elapsedTimeSinceLastTick()
         {
-            long elapsedTicks = stopwatch.ElapsedTicks;
-            PartialTick = Math.Clamp(elapsedTicks % tickIntervalTicks / tickIntervalTicks, 0f, 1f);
-            if(elapsedTicks >= nextTick)
+            return internalStopWatch.ElapsedTicks % tickIntervalTicks / TimeSpan.TicksPerSecond;
+        }
+
+        if(!isDebug)
+        {
+            while(running)
             {
-                nextTick += tickIntervalTicks;
-                Tick(stopwatch);
-            }
-            else
-            {
-                Thread.SpinWait(50);
+                long elapsedTicks = stopwatch.ElapsedTicks;
+                if(elapsedTicks >= nextTick)
+                {
+                    nextTick += tickIntervalTicks;
+                    internalStopWatch.Restart();
+                    Update();
+                    Render(elapsedTimeSinceLastTick());
+                }
+                else
+                {
+                    Thread.SpinWait(50);
+                }
             }
         }
-    }
+        else // debug mode
+        {
+            float[] tickTimes = new float[500];
+            int currentIndex = 0;
 
-    void Tick(Stopwatch stopwatch)
-    {
-        Update();
-        Render(stopwatch.ElapsedTicks % tickIntervalTicks / TimeSpan.TicksPerSecond);
+            while(running)
+            {
+                long elapsedTicks = stopwatch.ElapsedTicks;
+                if(elapsedTicks >= nextTick)
+                {
+                    nextTick += tickIntervalTicks;
+                    Interlocked.Increment(ref tickCount);
+
+                    internalStopWatch.Restart();
+
+                    Update();
+                    Render(elapsedTimeSinceLastTick());
+
+                    tickTimes[currentIndex] = elapsedTimeSinceLastTick();
+                    currentIndex = (currentIndex + 1) % tickTimes.Length;
+                }
+                else
+                {
+                    Thread.SpinWait(50);
+                }
+            }
+        }
     }
 
     void Update()
@@ -61,5 +100,45 @@ public sealed class CoreThread
     void Render(float timeElapsed)
     {
         RenderingSystem.Render(tickIntervalSecond, timeElapsed);
+    }
+
+    public float PartialTick
+    {
+        get { return Math.Clamp(stopwatch.ElapsedTicks % tickIntervalTicks / tickIntervalTicks, 0f, 1f); }
+    }
+    public uint TickRate
+    {
+        set
+        {
+            this.tickRate = value;
+            this.tickIntervalTicks = (uint)(TimeSpan.TicksPerSecond / value);
+            this.tickIntervalSecond = tickIntervalTicks / TimeSpan.TicksPerSecond;
+        }
+        get
+        {
+            return tickRate;
+        }
+    }
+
+    public bool IsDebug
+    {
+        get
+        {
+            return isDebug;
+        }
+    }
+    public ulong TickCount
+    {
+        get
+        {
+            return tickCount; 
+        }
+    }
+    public double AvgTickTime
+    {
+        get
+        {
+            return avgTickTime;
+        }
     }
 }
