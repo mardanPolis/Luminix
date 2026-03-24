@@ -38,15 +38,20 @@ internal static class RenderingSystem
     public static void Render(float maxTime, float time)
     {
         writeStack.Reset();
-        if(maxTime * 0.9f > time) writeStack.Optimize();
-        else writeStack.SkipOptimization();
         
         foreach(var renderer in RendererRegistry.GetRenderers())
             renderer.RenderOn(writeStack);
 
+        if(maxTime * 0.9f > time) writeStack.Optimize();
+        else writeStack.SkipOptimization();
+
         SwapReadStacks();
     }
 
+    public static void DrawGizmos()
+    {
+        
+    }
 
     private static void SwapReadStacks()
     {
@@ -62,11 +67,13 @@ internal static class RenderingSystem
     public static void HotRender(float maxTime, float time)
     {
         hotRenderStack.Reset();
-        if(maxTime * 0.9f > time) hotRenderStack.Optimize();
-        else hotRenderStack.SkipOptimization();
 
         foreach(var renderer in RendererRegistry.GetRenderers())
             renderer.RenderOn(hotRenderStack);
+            
+        if(maxTime * 0.9f > time) hotRenderStack.Optimize();
+        else hotRenderStack.SkipOptimization();
+
     }
 
     public static void DrawFrame(float partialTick)
