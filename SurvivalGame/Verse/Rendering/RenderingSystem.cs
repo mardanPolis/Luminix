@@ -48,7 +48,7 @@ internal static class RenderingSystem
         SwapReadStacks();
     }
 
-    public static void DrawGizmos()
+    public static void RenderGizmos()
     {
         
     }
