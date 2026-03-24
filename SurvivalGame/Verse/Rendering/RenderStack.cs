@@ -63,7 +63,7 @@ public sealed class RenderStack
         unResizedCountSprite++;
         if(unResizedCountSprite > OPTIMIZATION_DELAY_TICKS)
         {
-            if(TryOptimize(SpriteRenderDataSet, prevSpriteRenderableCount, 1024, out Array result))
+            if(TryOptimize(SpriteRenderDataSet, SpriteCount, prevSpriteRenderableCount, 1024, out Array result))
                 SpriteRenderDataSet = (InstanceSprite[])result;
 
             unResizedCountSprite = 0;
@@ -74,7 +74,7 @@ public sealed class RenderStack
         unResizedCountLine++;
         if(unResizedCountLine > OPTIMIZATION_DELAY_TICKS)
         {
-            if(TryOptimize(LineRenderDataSet, prevLineRenderableCount, 512, out Array result))
+            if(TryOptimize(LineRenderDataSet, LineCount, prevLineRenderableCount, 512, out Array result))
                 LineRenderDataSet = (InstanceLine[])result;
             unResizedCountLine = 0;
         }
@@ -97,16 +97,19 @@ public sealed class RenderStack
 
         return newArray;
     }
-    private bool TryOptimize(Array array, int[] prevCapacities, int minLength, out Array result)
+    private bool TryOptimize(Array array, int currentCount, int[] prevCapacities, int minLength, out Array result)
     {
         result = array;
 
         var maxPrevCapacity = prevCapacities.Max();
-        if(array.Length - maxPrevCapacity < OPTIMIZING_THRESHOLD) // returns unoptimized array, because optimization unneeded, aka distance under threshold to optimize.
+        var maxCapacity = currentCount > maxPrevCapacity ? currentCount : maxPrevCapacity;
+
+        var lowerArrayLength = array.Length / 2;
+
+        if(lowerArrayLength < maxCapacity + OPTIMIZING_THRESHOLD) // return if lowerArrayLength is lower than current array count;
             return false;
 
-        var length = maxPrevCapacity > minLength ? maxPrevCapacity : minLength;
-        result = Array.CreateInstance(array.GetType().GetElementType(), length);
+        result = Array.CreateInstance(array.GetType().GetElementType(), lowerArrayLength);
         return true;
     }
 }
