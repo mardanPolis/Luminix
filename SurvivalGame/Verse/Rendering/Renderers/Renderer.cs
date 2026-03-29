@@ -8,6 +8,7 @@ namespace Verse.Rendering;
 public abstract class Renderer
 {
     public abstract void RenderOn(RenderStack renderStack);
+    public abstract void RenderGizmosOn(RenderStack renderStack);
     internal abstract void Assign(ICollection list, Type renderableType);
     internal abstract void Optimize();
 }
@@ -46,6 +47,11 @@ public abstract class Renderer<T> : Renderer
 
 
     public sealed override void RenderOn(RenderStack renderStack)
+    {
+        
+    }
+
+    public sealed override void RenderGizmosOn(RenderStack renderStack)
     {
         
     }

@@ -42,65 +42,63 @@ internal sealed class CoreThread
             return (uint)(internalStopWatch.ElapsedTicks % tickIntervalInTicks);
         }
 
-        if(!isDebug)
+        while(running && !isDebug)
         {
-            while(running)
+            long elapsedTicks = stopwatch.ElapsedTicks;
+            if(elapsedTicks < nextTick)
             {
-                long elapsedTicks = stopwatch.ElapsedTicks;
-                if(elapsedTicks >= nextTick)
-                {
-                    nextTick += tickIntervalInTicks;
-                    Interlocked.Increment(ref tickCount);
-
-                    internalStopWatch.Restart();
-
-                    Update();
-                    Render(elapsedTimeSinceLastTick() / TimeSpan.TicksPerSecond);
-                }
-                else
-                {
-                    Thread.SpinWait(50);
-                }
+                Thread.SpinWait(50);
+                continue;
             }
+
+            nextTick += tickIntervalInTicks;
+            Interlocked.Increment(ref tickCount);
+
+            internalStopWatch.Restart();
+
+            Update();
+            
+            RenderingSystem.Render();
+            RenderingSystem.SwapRenderStacks(tickIntervalInTicks, elapsedTimeSinceLastTick() / TimeSpan.TicksPerSecond);
         }
-        else // debug mode
+
+        //debug
+        uint[] tickTimes = new uint[500];
+        uint currentIndex = 0;
+
+        while(running && isDebug)
         {
-            uint[] tickTimes = new uint[500];
-            uint currentIndex = 0;
-
-            while(running)
+            long elapsedTicks = stopwatch.ElapsedTicks;
+            if(elapsedTicks < nextTick)
             {
-                long elapsedTicks = stopwatch.ElapsedTicks;
-                if(elapsedTicks >= nextTick)
-                {
-                    nextTick += tickIntervalInTicks;
-                    Interlocked.Increment(ref tickCount);
-
-                    internalStopWatch.Restart();
-
-                    Update();
-                    Render(elapsedTimeSinceLastTick() / TimeSpan.TicksPerSecond);
-
-                    //get current tick time
-                    var tickTimeInTicks = elapsedTimeSinceLastTick();
-
-                    //store current tickTime
-                    tickTimes[currentIndex] = tickTimeInTicks;
-                    currentIndex = (uint)((currentIndex + 1) % tickTimes.Length);
-
-                    // avg tick time
-                    uint combinedTickTime = 0;
-                    foreach(var tickTime in tickTimes)
-                        combinedTickTime += tickTime;
-                    
-                    tickTime = (uint)(tickTimeInTicks * 0.1); // turning ticks into microseconds
-                    avgTickTime = combinedTickTime / (tickCount > (ulong)tickTimes.Length ? (uint)tickTimes.Length : (uint)tickCount);
-                }
-                else
-                {
-                    Thread.SpinWait(50);
-                }
+                Thread.SpinWait(50);
+                continue;
             }
+            
+            nextTick += tickIntervalInTicks;
+            Interlocked.Increment(ref tickCount);
+
+            internalStopWatch.Restart();
+
+            Update();
+            
+            RenderingSystem.DebugRender();
+            RenderingSystem.SwapRenderStacks(tickIntervalInTicks, elapsedTimeSinceLastTick() / TimeSpan.TicksPerSecond);
+            
+            //get current tick time
+            var tickTimeInTicks = elapsedTimeSinceLastTick();
+
+            //store current tickTime
+            tickTimes[currentIndex] = tickTimeInTicks;
+            currentIndex = (uint)((currentIndex + 1) % tickTimes.Length);
+
+            // avg tick time
+            uint combinedTickTime = 0;
+            foreach(var tickTime in tickTimes)
+                combinedTickTime += tickTime;
+            
+            tickTime = (uint)(tickTimeInTicks * 0.1); // turning ticks into microseconds
+            avgTickTime = combinedTickTime / (tickCount > (ulong)tickTimes.Length ? (uint)tickTimes.Length : (uint)tickCount);
         }
     }
 
@@ -108,12 +106,6 @@ internal sealed class CoreThread
     {
         
     }
-
-    void Render(float timeElapsed)
-    {
-        RenderingSystem.Render(tickIntervalInTicks, timeElapsed);
-    }
-
     public float PartialTick
     {
         get 

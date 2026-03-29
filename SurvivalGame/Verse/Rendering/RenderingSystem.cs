@@ -35,26 +35,30 @@ internal static class RenderingSystem
     }
 
     //CoreThread
-    public static void Render(float maxTime, float time)
+    public static void Render()
+    {
+        writeStack.Reset();
+        
+        foreach(var renderer in RendererRegistry.GetRenderers())
+            renderer.RenderOn(writeStack);
+    }
+
+    public static void DebugRender()
     {
         writeStack.Reset();
         
         foreach(var renderer in RendererRegistry.GetRenderers())
             renderer.RenderOn(writeStack);
 
+        foreach(var renderer in RendererRegistry.GetRenderers())
+            renderer.RenderGizmosOn(writeStack);
+    }
+
+    public static void SwapRenderStacks(float maxTime, float time)
+    {
         if(maxTime * 0.9f > time) writeStack.Optimize();
         else writeStack.SkipOptimization();
 
-        SwapReadStacks();
-    }
-
-    public static void RenderGizmos()
-    {
-        
-    }
-
-    private static void SwapReadStacks()
-    {
         var temp = currReadStack;   // store currReadStack ref as temp
         currReadStack = writeStack; // currReadStack becomes writeStack
         writeStack = prevReadStack; // writeStack becomes prevReadStack
