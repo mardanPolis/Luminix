@@ -1,6 +1,4 @@
 using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Graphics;
-using Verse.Resources;
 
 namespace Verse.Rendering.RenderData;
 internal struct InstanceSprite
