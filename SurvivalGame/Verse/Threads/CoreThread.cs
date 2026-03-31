@@ -24,7 +24,7 @@ internal sealed class CoreThread
     {   
         this.isDebug = isDebug;
 
-        this.tickIntervalInTicks = (uint)(TimeSpan.TicksPerSecond / tickRate);
+        this.tickIntervalInTicks = (uint)(Stopwatch.Frequency / tickRate);
         this.thread = new Thread(Run);
     }
 
@@ -59,7 +59,7 @@ internal sealed class CoreThread
             Update();
             
             RenderingSystem.Render();
-            RenderingSystem.SwapRenderStacks(tickIntervalInTicks, elapsedTimeSinceLastTick() / TimeSpan.TicksPerSecond);
+            RenderingSystem.SwapRenderStacks(tickIntervalInTicks, elapsedTimeSinceLastTick() / Stopwatch.Frequency);
         }
 
         //debug
@@ -83,7 +83,7 @@ internal sealed class CoreThread
             Update();
             
             RenderingSystem.DebugRender();
-            RenderingSystem.SwapRenderStacks(tickIntervalInTicks, elapsedTimeSinceLastTick() / TimeSpan.TicksPerSecond);
+            RenderingSystem.SwapRenderStacks(tickIntervalInTicks, elapsedTimeSinceLastTick() / Stopwatch.Frequency);
             
             //get current tick time
             var tickTimeInTicks = elapsedTimeSinceLastTick();
@@ -111,13 +111,13 @@ internal sealed class CoreThread
         get 
         { 
             uint tickIntervalInTicks = this.tickIntervalInTicks;
-            return Math.Clamp(stopwatch.ElapsedTicks % tickIntervalInTicks / tickIntervalInTicks, 0f, 1f);
+            return Math.Clamp((float)(stopwatch.ElapsedTicks % tickIntervalInTicks) / tickIntervalInTicks, 0f, 1f);
         }
     }
     public uint TickRate
     {
-        set { tickIntervalInTicks = (uint)(TimeSpan.TicksPerSecond / value); }
-        get { return (uint)(TimeSpan.TicksPerSecond / tickIntervalInTicks); }
+        set { tickIntervalInTicks = (uint)(Stopwatch.Frequency / value); }
+        get { return (uint)(Stopwatch.Frequency / tickIntervalInTicks); }
     }
 
     public bool IsDebug

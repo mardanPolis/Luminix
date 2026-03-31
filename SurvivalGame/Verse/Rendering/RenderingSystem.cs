@@ -29,6 +29,8 @@ internal static class RenderingSystem
         currReadStack = new RenderStack();
         prevReadStack = new RenderStack();
 
+        readStack = currReadStack;
+
         hotRenderStack = new RenderStack();
 
         RenderingSystem.graphics = graphics;
@@ -68,7 +70,7 @@ internal static class RenderingSystem
     }
 
     //RenderThread
-    public static void HotRender(float maxTime, float time)
+    public static void HotRender(double maxTime, double time)
     {
         hotRenderStack.Reset();
 
@@ -89,7 +91,6 @@ internal static class RenderingSystem
             readStack = currReadStack;
             pendingStack = false;
         }
-
         FrameRenderer.DrawFrame(hotRenderStack, readStack);
     }
 

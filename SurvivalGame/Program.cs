@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
 using Microsoft.Xna.Framework;
@@ -34,10 +35,11 @@ namespace SurvivalGame
         protected override void Initialize()
         {
             // TODO: Add your initialization logic here
+            RendererRegistry.FinalizeRegistry();
+
             RenderingSystem.Initialize(graphics);
 
-            coreThread = new CoreThread(false, TICK_RATE);
-            coreThread.Start();
+            coreThread = new CoreThread(true, TICK_RATE);
 
             base.Initialize();
         }
@@ -53,19 +55,25 @@ namespace SurvivalGame
 
         protected override void BeginRun()
         {
+            Console.WriteLine($"TickRate:{coreThread.TickRate}");
+            Console.WriteLine($"tickIntervalInTicks:{TimeSpan.TicksPerSecond / coreThread.TickRate}\n");
+
+            coreThread.Start();
             base.BeginRun();
         }
-
+        
         protected override void Update(GameTime gameTime)
         {
             if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed || Keyboard.GetState().IsKeyDown(Keys.Escape))
                 Exit();
 
-            totalFrameCount++;
-
             // TODO: Add your update logic here
 
-            RenderingSystem.HotRender(gameTime.TotalGameTime.Seconds / totalFrameCount, gameTime.ElapsedGameTime.Seconds);
+            totalFrameCount++;
+    
+            Console.WriteLine($"FRAME : {totalFrameCount} \nTickTime:{coreThread.TickTimeInUS} \nAvgTickTime:{coreThread.AvgTickTimeInUS} \nTickCount:{coreThread.TickCount} \nPartialTick:{coreThread.PartialTick}");
+
+            RenderingSystem.HotRender(gameTime.TotalGameTime.TotalSeconds / totalFrameCount, gameTime.ElapsedGameTime.TotalSeconds);
             base.Update(gameTime);
         }
         protected override void Draw(GameTime gameTime)
