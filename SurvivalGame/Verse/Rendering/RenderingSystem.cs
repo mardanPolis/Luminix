@@ -25,13 +25,21 @@ internal static class RenderingSystem
     {
         FrameRenderer = new FrameRenderer();
 
-        writeStack = new RenderStack();
-        currReadStack = new RenderStack();
-        prevReadStack = new RenderStack();
+        int[] interpSpritePrevCount = new int[RenderStack.OPTIMIZATION_DELAY_TICKS];
+        int[] spritePrevCount = new int[RenderStack.OPTIMIZATION_DELAY_TICKS];
+        int[] linePrevCount = new int[RenderStack.OPTIMIZATION_DELAY_TICKS];
+
+        writeStack = new RenderStack(interpSpritePrevCount, spritePrevCount, linePrevCount);
+        currReadStack = new RenderStack(interpSpritePrevCount, spritePrevCount, linePrevCount);
+        prevReadStack = new RenderStack(interpSpritePrevCount, spritePrevCount, linePrevCount);
 
         readStack = currReadStack;
 
-        hotRenderStack = new RenderStack();
+        int[] interpSpritePrevCountHot = new int[RenderStack.OPTIMIZATION_DELAY_TICKS];
+        int[] spritePrevCountHot = new int[RenderStack.OPTIMIZATION_DELAY_TICKS];
+        int[] linePrevCountHot = new int[RenderStack.OPTIMIZATION_DELAY_TICKS];
+
+        hotRenderStack = new RenderStack(interpSpritePrevCountHot, spritePrevCountHot, linePrevCountHot);
 
         RenderingSystem.graphics = graphics;
     }
