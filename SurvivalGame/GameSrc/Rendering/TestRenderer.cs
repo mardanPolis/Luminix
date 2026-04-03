@@ -23,19 +23,20 @@ public class TestRenderer : Renderer<Test>
         sprite = new Sprite(textureRegion, origin: new Vector2(textureRegion.Width / 2f, textureRegion.Height / 2f));
     }
 
-    Vector2 position0 = Vector2.Zero;
-    float rotation0 = 0f;
+    Vector2 oldPos1 = Vector2.Zero;
+    Vector2 oldPos2 = Vector2.Zero;
 
     public override void Render(Test renderable, RenderStack renderStack)
     {
-        Vector2 position = Vector2.Zero;
-        position.Y = (TriangleWave(World.TickCount, 60) - 0.5f) * 50;
-        var rotation = TriangleWave(World.TickCount, 60);
+        Vector2 position1 = new Vector2(-1, (TriangleWave(World.TickCount, 60) - 0.5f) * 2);
+        Vector2 position2 = new Vector2(1, (TriangleWave(World.TickCount, 60) - 0.5f) * -2);
 
-        renderStack.PostSprite(sprite,  position,  rotation, Vector2.One, 1);
+        renderStack.PostSprite(sprite,  oldPos1, position1, 0,  0, Vector2.One, Vector2.One, 1);
+        renderStack.PostSprite(sprite,  Vector2.Zero,  0, Vector2.One, 1);
+        renderStack.PostSprite(sprite,  oldPos2, position2, 0,  0, Vector2.One, Vector2.One, 1);
 
-        position0 = position;
-        rotation0 = rotation;
+        oldPos1 = position1;
+        oldPos2 = position2;
     }
 
     public override void RenderGizmo(Test renderable, RenderStack renderStack)

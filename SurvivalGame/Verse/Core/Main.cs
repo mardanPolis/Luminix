@@ -23,7 +23,7 @@ public class Main : Game
     private CoreThread coreThread = null;
 
     private const bool IS_DEBUG = true;
-    private const uint TICK_RATE = 120;
+    private const uint TICK_RATE = 20;
 
     private DenseList<Test> testList = new DenseList<Test>();
 
@@ -114,20 +114,20 @@ public class Main : Game
 
         if (Keyboard.GetState().IsKeyDown(Keys.Q))
         {
-            camera.Zoom += 0.01f;
+            camera.OrthographicSize += 0.1f;
         }
         if (Keyboard.GetState().IsKeyDown(Keys.E))
-            camera.Zoom -= 0.01f;
+            camera.OrthographicSize -= 0.1f;
 
         if (Keyboard.GetState().IsKeyDown(Keys.A))
-            camera.X -= 1f;
+            camera.PosX -= 0.1f;
         if (Keyboard.GetState().IsKeyDown(Keys.D))
-            camera.X += 1f;
+            camera.PosX += 0.1f;
 
         if (Keyboard.GetState().IsKeyDown(Keys.W))
-            camera.Y += 1f;
+            camera.PosY += 0.1f;
         if (Keyboard.GetState().IsKeyDown(Keys.S))
-            camera.Y -= 1f;
+            camera.PosY -= 0.1f;
 
         // TODO: Add your update logic here
 
@@ -137,7 +137,6 @@ public class Main : Game
     protected override void Draw(GameTime gameTime)
     {
         RenderingSystem.DrawFrame(coreThread.PartialTick);
-        Console.WriteLine(RenderingSystem.DrawCalls);
         base.Draw(gameTime);
     }
 }

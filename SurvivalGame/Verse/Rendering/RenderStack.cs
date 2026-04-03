@@ -110,8 +110,8 @@ public sealed class RenderStack
         instanceSprite.Position = position;
         instanceSprite.Rotation0 = rotation0;
         instanceSprite.Rotation = rotation;
-        instanceSprite.Scale0 = scale0;
-        instanceSprite.Scale = scale;
+        instanceSprite.Scale0 = new Vector2(scale0.X * sprite.TextureRegion.WidthCoefficient, scale0.Y * sprite.TextureRegion.HeightCoefficient);
+        instanceSprite.Scale = new Vector2(scale.X * sprite.TextureRegion.WidthCoefficient, scale.Y * sprite.TextureRegion.HeightCoefficient);
         instanceSprite.LayerDepth = layerDepth;
     }
     public void PostSprite(Sprite sprite, Vector2 position, float rotation, Vector2 scale, float layerDepth = 0f)
@@ -121,7 +121,7 @@ public sealed class RenderStack
         instanceSprite.Sprite = sprite;
         instanceSprite.Position = position;
         instanceSprite.Rotation = rotation;
-        instanceSprite.Scale = scale;
+        instanceSprite.Scale = new Vector2(scale.X * sprite.TextureRegion.WidthCoefficient, scale.Y * sprite.TextureRegion.HeightCoefficient);
         instanceSprite.LayerDepth = layerDepth;
     }
     public void PostLine(Vector2 start, Vector2 end, Color color, float thickness)

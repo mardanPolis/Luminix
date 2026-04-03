@@ -63,14 +63,19 @@ internal sealed class FrameRenderer : IFrameRenderer
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void DrawSprite(ref InstanceInterpolatedSprite spriteRenderData, float t)
     {
+        var pos = spriteRenderData.Position0 + (spriteRenderData.Position - spriteRenderData.Position0) * t;
+        pos.Y = -pos.Y;
+        var rot = spriteRenderData.Rotation0 + (spriteRenderData.Rotation - spriteRenderData.Rotation0) * t;
+        var scale = spriteRenderData.Scale0 + (spriteRenderData.Scale - spriteRenderData.Scale0) * t;
+
         spriteBatch.Draw(
             spriteRenderData.Sprite.TextureRegion.Texture,
-            spriteRenderData.Position0 + (spriteRenderData.Position - spriteRenderData.Position0) * t,
+            pos,
             spriteRenderData.Sprite.TextureRegion.SourceRectangle,
             spriteRenderData.Sprite.Color,
-            spriteRenderData.Rotation0 + (spriteRenderData.Rotation - spriteRenderData.Rotation0) * t,
+            rot,
             spriteRenderData.Sprite.Origin,
-            spriteRenderData.Scale0 + (spriteRenderData.Scale - spriteRenderData.Scale0) * t,
+            scale,
             spriteRenderData.Sprite.Effects,
             spriteRenderData.LayerDepth
         );
@@ -78,9 +83,12 @@ internal sealed class FrameRenderer : IFrameRenderer
 
     private void DrawSprite(ref InstanceSprite spriteRenderData)
     {
+        var pos = spriteRenderData.Position;
+        pos.Y = -pos.Y;
+
         spriteBatch.Draw(
             spriteRenderData.Sprite.TextureRegion.Texture,
-            spriteRenderData.Position,
+            pos,
             spriteRenderData.Sprite.TextureRegion.SourceRectangle,
             spriteRenderData.Sprite.Color,
             spriteRenderData.Rotation,
@@ -155,15 +163,20 @@ internal sealed class DebugFrameRenderer : IFrameRenderer
     private void DrawSprite(ref InstanceInterpolatedSprite spriteRenderData, float t)
     {
         DrawCall(spriteRenderData.Sprite.TextureRegion.Texture);
+        
+        var pos = spriteRenderData.Position0 + (spriteRenderData.Position - spriteRenderData.Position0) * t;
+        pos.Y = -pos.Y;
+        var rot = spriteRenderData.Rotation0 + (spriteRenderData.Rotation - spriteRenderData.Rotation0) * t;
+        var scale = spriteRenderData.Scale0 + (spriteRenderData.Scale - spriteRenderData.Scale0) * t;
 
         spriteBatch.Draw(
             spriteRenderData.Sprite.TextureRegion.Texture,
-            spriteRenderData.Position0 + (spriteRenderData.Position - spriteRenderData.Position0) * t,
+            pos,
             spriteRenderData.Sprite.TextureRegion.SourceRectangle,
             spriteRenderData.Sprite.Color,
-            spriteRenderData.Rotation0 + (spriteRenderData.Rotation - spriteRenderData.Rotation0) * t,
+            rot,
             spriteRenderData.Sprite.Origin,
-            spriteRenderData.Scale0 + (spriteRenderData.Scale - spriteRenderData.Scale0) * t,
+            scale,
             spriteRenderData.Sprite.Effects,
             spriteRenderData.LayerDepth
         );
@@ -173,9 +186,12 @@ internal sealed class DebugFrameRenderer : IFrameRenderer
     {
         DrawCall(spriteRenderData.Sprite.TextureRegion.Texture);
 
+        var pos = spriteRenderData.Position;
+        pos.Y = -pos.Y;
+
         spriteBatch.Draw(
             spriteRenderData.Sprite.TextureRegion.Texture,
-            spriteRenderData.Position,
+            pos,
             spriteRenderData.Sprite.TextureRegion.SourceRectangle,
             spriteRenderData.Sprite.Color,
             spriteRenderData.Rotation,
