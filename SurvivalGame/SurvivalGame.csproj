@@ -27,6 +27,8 @@
     <PackageReference Include="MonoGame.Content.Builder.Task" Version="3.8.*" />
   </ItemGroup>
   <ItemGroup>
+    <Folder Include="GameSrc/" />
+    <Folder Include="Verse/Simulation/" />
     <Folder Include="Verse\Threads\" />
   </ItemGroup>
 </Project>

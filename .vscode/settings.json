@@ -2,6 +2,7 @@
     "dotnet.defaultSolution": "Monogame.sln",
     "cSpell.words": [
         "indegree",
+        "Interp",
         "Renderable",
         "renderables"
     ]

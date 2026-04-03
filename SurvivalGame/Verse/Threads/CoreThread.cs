@@ -8,15 +8,16 @@ namespace Verse.Threads;
 internal sealed class CoreThread
 {
     private Thread thread;
-    private volatile bool running = true;
-
     private Stopwatch stopwatch;
+
+    private volatile bool running = true;
 
     private ulong tickCount = 0;
     private volatile uint tickIntervalInTicks;
 
     // debug variables
     private readonly bool isDebug = false;
+
     private uint tickTime = 0;
     private uint avgTickTime = 0;
 
@@ -47,7 +48,7 @@ internal sealed class CoreThread
             long elapsedTicks = stopwatch.ElapsedTicks;
             if(elapsedTicks < nextTick)
             {
-                Thread.SpinWait(50);
+                Thread.SpinWait(25);
                 continue;
             }
 
@@ -106,19 +107,6 @@ internal sealed class CoreThread
     {
         
     }
-    public float PartialTick
-    {
-        get 
-        { 
-            uint tickIntervalInTicks = this.tickIntervalInTicks;
-            return Math.Clamp((float)(stopwatch.ElapsedTicks % tickIntervalInTicks) / tickIntervalInTicks, 0f, 1f);
-        }
-    }
-    public uint TickRate
-    {
-        set { tickIntervalInTicks = (uint)(Stopwatch.Frequency / value); }
-        get { return (uint)(Stopwatch.Frequency / tickIntervalInTicks); }
-    }
 
     public bool IsDebug
     {
@@ -127,7 +115,27 @@ internal sealed class CoreThread
             return isDebug;
         }
     }
+
+    public uint TickRate
+    {
+        set { tickIntervalInTicks = (uint)(Stopwatch.Frequency / value); }
+        get { return (uint)(Stopwatch.Frequency / tickIntervalInTicks); }
+    }
+
     public ulong TickCount => Interlocked.Read(ref tickCount);
+
+    public float PartialTick
+    {
+        get 
+        { 
+            uint tickIntervalInTicks = this.tickIntervalInTicks;
+            return Math.Clamp(
+                (float)(stopwatch.ElapsedTicks % tickIntervalInTicks) / tickIntervalInTicks, 
+                0f, 1f
+            );
+        }
+    }
+
     public uint TickTimeInUS => tickTime;
     public uint AvgTickTimeInUS => avgTickTime;
 }

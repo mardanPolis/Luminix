@@ -1,19 +1,24 @@
+using System;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Verse.Resources;
 
 namespace Verse.Rendering;
-public class Sprite(TextureRegion textureRegion, SpriteEffects effects = SpriteEffects.None, Vector2 origin = default)
+public sealed class Sprite
 {
-    public readonly TextureRegion TextureRegion = textureRegion;
-    public SpriteEffects Effects { get; set; } = effects;
-    public Vector2 Origin { get; set; } = origin;
-    public Color Color { get; set; } = Color.White;
-
-    public void CenterOrigin()
+    public Sprite(TextureRegion textureRegion, SpriteEffects effects = SpriteEffects.None, Vector2 origin = default)
     {
-        Origin = new Vector2(TextureRegion.Width / 2f, TextureRegion.Height / 2f);
+        if(textureRegion == null) throw new ArgumentNullException(nameof(textureRegion));
+
+        TextureRegion = textureRegion;
+        Effects = effects;
+        Origin = origin;
     }
+
+    public readonly TextureRegion TextureRegion;
+    public readonly SpriteEffects Effects;
+    public readonly Vector2 Origin;
+    public readonly Color Color = Color.White;
 
     public float Width => TextureRegion.Width;
     public float Height => TextureRegion.Height;

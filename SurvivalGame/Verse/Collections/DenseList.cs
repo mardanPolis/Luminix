@@ -4,7 +4,7 @@ using System.Collections.Generic;
 
 namespace Verse.Collections;
 
-public sealed class DenseList<T> : ICollection
+public sealed class DenseList<T> : ICollection, IEnumerable<T>
 {
     private T[] items;
     private int count;
@@ -78,4 +78,11 @@ public sealed class DenseList<T> : ICollection
     }
 
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+
+    public T[] ToArray()
+    {
+        T[] result = new T[count];
+        Array.Copy(items, result, count);
+        return result;
+    }
 }

@@ -7,15 +7,15 @@ using Verse.Resources;
 namespace Verse.Rendering;
 public sealed class RenderStack
 {
-    internal RenderStack(int[] interpSpritePrevCount, int[] spritePrevCount, int[] linePrevCount)
+    internal RenderStack(StackSharedData interpSpriteSharedData, StackSharedData spritePrevSharedData, StackSharedData linePrevSharedData)
     {
         interpolatedSpriteRenderDataStack = new Stack<InstanceInterpolatedSprite>(1024);
         spriteRenderDataStack = new Stack<InstanceSprite>(1024);
         lineRenderDataStack = new Stack<InstanceLine>(512);
 
-        interpolatedSpriteRenderDataStack.prevCounts = interpSpritePrevCount;
-        spriteRenderDataStack.prevCounts = spritePrevCount;
-        lineRenderDataStack.prevCounts = linePrevCount;
+        interpolatedSpriteRenderDataStack.sharedData = interpSpriteSharedData;
+        spriteRenderDataStack.sharedData = spritePrevSharedData;
+        lineRenderDataStack.sharedData = linePrevSharedData;
     }
 
     internal const int OPTIMIZATION_DELAY_TICKS = 60;
@@ -23,9 +23,10 @@ public sealed class RenderStack
 
     internal class StackSharedData
     {
-        public int[] prevCounts;
+        public readonly int[] prevCounts = new int[OPTIMIZATION_DELAY_TICKS];
         int currentIndex = 0;
-        int biggestCountIndex = -1;
+        int biggestCountIndex = 0;
+        public int unResizedCount = 0;
 
         public void NextCount(int count)
         {
@@ -40,7 +41,6 @@ public sealed class RenderStack
                 index = maxIndex;
             }
             
-
             prevCounts[currentIndex] = count;
             if (count > prevCounts[biggestCountIndex])
                 biggestCountIndex = currentIndex;
@@ -48,6 +48,11 @@ public sealed class RenderStack
                 GetBiggest(prevCounts, out biggestCountIndex);
 
             currentIndex = (currentIndex + 1) % OPTIMIZATION_DELAY_TICKS;
+        }
+
+        public int GetBiggestCount()
+        {
+            return prevCounts[biggestCountIndex];
         }
     }
     private struct Stack<T>(int size) where T : struct
@@ -57,24 +62,21 @@ public sealed class RenderStack
 
         public StackSharedData sharedData;
 
-        int unResizedCount = 0;
-
-        public void Next(ref T data)
+        public ref T Next()
         {
             if (DataSet.Length < Count + 1)
                 Array.Resize(ref DataSet, DataSet.Length * 2);
 
-            data = ref DataSet[Count];
-            Count++;
+            return ref DataSet[Count++];
         }
 
         public void TryOptimize()
         {
-            unResizedCount++;
-            if(unResizedCount < OPTIMIZATION_DELAY_TICKS)
+            sharedData.unResizedCount++;
+            if(sharedData.unResizedCount < OPTIMIZATION_DELAY_TICKS)
                 return;
 
-            var maxPrevCapacity = prevCounts[biggestCountIndex];
+            var maxPrevCapacity = sharedData.GetBiggestCount();
             var maxCapacity = Count > maxPrevCapacity ? Count : maxPrevCapacity;
 
             var lowerArrayLength = DataSet.Length / 2;
@@ -82,11 +84,11 @@ public sealed class RenderStack
             if(lowerArrayLength < maxCapacity + OPTIMIZING_THRESHOLD)
                 DataSet = new T[lowerArrayLength];
 
-            unResizedCount = 0;
+            sharedData.unResizedCount = 0;
         }
         internal void SkippedOptimization()
         {
-            unResizedCount++;
+            sharedData.unResizedCount++;
         }
         internal void Reset()
         {
@@ -101,8 +103,7 @@ public sealed class RenderStack
 
     public void PostSprite(Sprite sprite, Vector2 position0, Vector2 position, float rotation0, float rotation, Vector2 scale0, Vector2 scale, float layerDepth = 0f)
     {
-        InstanceInterpolatedSprite instanceSprite = default;
-        interpolatedSpriteRenderDataStack.Next(ref instanceSprite);
+        ref var instanceSprite = ref interpolatedSpriteRenderDataStack.Next();
 
         instanceSprite.Sprite = sprite;
         instanceSprite.Position0 = position0;
@@ -115,8 +116,7 @@ public sealed class RenderStack
     }
     public void PostSprite(Sprite sprite, Vector2 position, float rotation, Vector2 scale, float layerDepth = 0f)
     {
-        InstanceSprite instanceSprite = default;
-        spriteRenderDataStack.Next(ref instanceSprite);
+        ref var instanceSprite = ref spriteRenderDataStack.Next();
 
         instanceSprite.Sprite = sprite;
         instanceSprite.Position = position;
@@ -126,8 +126,7 @@ public sealed class RenderStack
     }
     public void PostLine(Vector2 start, Vector2 end, Color color, float thickness)
     {
-        InstanceLine instanceLine = default;
-        lineRenderDataStack.Next(ref instanceLine);
+        ref var instanceLine = ref lineRenderDataStack.Next();
 
         instanceLine.Start = start;
         instanceLine.End = end;
@@ -155,4 +154,11 @@ public sealed class RenderStack
         spriteRenderDataStack.Reset();
         lineRenderDataStack.Reset();
     }
+
+    internal InstanceInterpolatedSprite[] InstanceInterpolatedSprites => interpolatedSpriteRenderDataStack.DataSet;
+    internal int InterpolatedSpriteCount => interpolatedSpriteRenderDataStack.Count;
+    internal InstanceSprite[] InstanceSprites => spriteRenderDataStack.DataSet;
+    internal int SpriteCount => spriteRenderDataStack.Count;
+    internal InstanceLine[] InstanceLines => lineRenderDataStack.DataSet;
+    internal int LineCount => lineRenderDataStack.Count;
 }

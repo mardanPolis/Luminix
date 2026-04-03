@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using Verse.Collections;
 using Verse.Identifiers;
 
@@ -8,6 +9,7 @@ namespace Verse.Rendering;
 
 public abstract class Renderer
 {
+    public abstract void Initialize();
     public abstract void RenderOn(RenderStack renderStack);
     public abstract void RenderGizmosOn(RenderStack renderStack);
     internal abstract void Assign(IEnumerable list);
@@ -22,7 +24,7 @@ public abstract class Renderer<T> : Renderer
         RenderableType = typeof(T);
     }
 
-    private IEnumerable<T>[] renderables;
+    private IEnumerable<T>[] renderables = [];
     private int count = 0;
 
     internal sealed override void Assign(IEnumerable list)
@@ -31,14 +33,11 @@ public abstract class Renderer<T> : Renderer
 
         // Only allow collections that already implement IEnumerable<T>
         if (list is not IEnumerable<T> typedEnumerable)
-        {
-            throw new InvalidOperationException(
-                $"Renderer<{typeof(T)}> can only accept IEnumerable<{typeof(T)}> collections.");
-        }
+            throw new InvalidOperationException($"Renderer<{typeof(T)}> can only accept IEnumerable<{typeof(T)}> collections got {list.GetType().Name}.");
 
-        if (this.renderables == null || count == this.renderables.Length)
+        if (count >= this.renderables.Length)
         {
-            var newRenderables = new IEnumerable<T>[this.renderables.Length + 2];
+            var newRenderables = new IEnumerable<T>[count + 2];
             Array.Copy(this.renderables, newRenderables, count);
             this.renderables = newRenderables;
         }

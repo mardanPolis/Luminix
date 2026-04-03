@@ -82,6 +82,9 @@ public static class RendererRegistry
         RendererRegistry.allRenderers = allRenderers.ToArray();
         RendererRegistry.hotRenderers = hotRenderers.ToArray();
         RendererRegistry.renderers = renderers.ToArray();
+
+        foreach(var renderer in allRenderers)
+            renderer.Optimize();
     }
 
     public static Renderer[] GetRenderers()

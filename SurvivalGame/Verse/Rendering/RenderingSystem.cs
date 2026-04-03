@@ -1,4 +1,6 @@
 using System;
+using System.Collections;
+using System.Diagnostics;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 
@@ -6,9 +8,10 @@ namespace Verse.Rendering;
 
 internal static class RenderingSystem
 {
-    private static FrameRenderer FrameRenderer;
-    private static SpriteBatch spriteBatch;
+    private static IFrameRenderer FrameRenderer;
+    private static DebugFrameRenderer DebugFrameRenderer;
     private static GraphicsDeviceManager graphics;
+    public static SpriteBatch SpriteBatch { get; private set; }
 
 
     private static RenderStack writeStack;
@@ -20,26 +23,33 @@ internal static class RenderingSystem
     private static RenderStack readStack; // the stack currently used to draw frames
     private static RenderStack hotRenderStack; // the stack that is used for hot rendering (e.g. UI, debug, etc.)
 
+    private static ulong frameCount = 0;
 
-    public static void Initialize(GraphicsDeviceManager graphics)
+    public static void Initialize(GraphicsDeviceManager graphics, Camera camera, bool isDebug)
     {
-        FrameRenderer = new FrameRenderer();
+        if (isDebug)
+        {
+            DebugFrameRenderer = new DebugFrameRenderer(camera, new SpriteBatch(graphics.GraphicsDevice));
+            FrameRenderer = DebugFrameRenderer;
+        }
+        else
+            FrameRenderer = new FrameRenderer(camera, new SpriteBatch(graphics.GraphicsDevice));
 
-        int[] interpSpritePrevCount = new int[RenderStack.OPTIMIZATION_DELAY_TICKS];
-        int[] spritePrevCount = new int[RenderStack.OPTIMIZATION_DELAY_TICKS];
-        int[] linePrevCount = new int[RenderStack.OPTIMIZATION_DELAY_TICKS];
+        RenderStack.StackSharedData sharedDataInterpSprite = new RenderStack.StackSharedData();
+        RenderStack.StackSharedData sharedDataSprite = new RenderStack.StackSharedData();
+        RenderStack.StackSharedData sharedDataLine = new RenderStack.StackSharedData();
 
-        writeStack = new RenderStack(interpSpritePrevCount, spritePrevCount, linePrevCount);
-        currReadStack = new RenderStack(interpSpritePrevCount, spritePrevCount, linePrevCount);
-        prevReadStack = new RenderStack(interpSpritePrevCount, spritePrevCount, linePrevCount);
+        writeStack = new RenderStack(sharedDataInterpSprite, sharedDataSprite, sharedDataLine);
+        currReadStack = new RenderStack(sharedDataInterpSprite, sharedDataSprite, sharedDataLine);
+        prevReadStack = new RenderStack(sharedDataInterpSprite, sharedDataSprite, sharedDataLine);
 
         readStack = currReadStack;
 
-        int[] interpSpritePrevCountHot = new int[RenderStack.OPTIMIZATION_DELAY_TICKS];
-        int[] spritePrevCountHot = new int[RenderStack.OPTIMIZATION_DELAY_TICKS];
-        int[] linePrevCountHot = new int[RenderStack.OPTIMIZATION_DELAY_TICKS];
+        RenderStack.StackSharedData sharedDataInterpSpriteHot = new RenderStack.StackSharedData();
+        RenderStack.StackSharedData sharedDataSpriteHot = new RenderStack.StackSharedData();
+        RenderStack.StackSharedData sharedDataLineHot = new RenderStack.StackSharedData();
 
-        hotRenderStack = new RenderStack(interpSpritePrevCountHot, spritePrevCountHot, linePrevCountHot);
+        hotRenderStack = new RenderStack(sharedDataInterpSpriteHot, sharedDataSpriteHot, sharedDataLineHot);
 
         RenderingSystem.graphics = graphics;
     }
@@ -94,19 +104,29 @@ internal static class RenderingSystem
     {
         partialTick = Math.Clamp(partialTick, 0f, 1f);
 
-        if(pendingStack && partialTick >= 1f)
+        if(pendingStack)
         {
             readStack = currReadStack;
             pendingStack = false;
         }
-        FrameRenderer.DrawFrame(hotRenderStack, readStack);
+
+        FrameRenderer.DrawFrame(hotRenderStack, readStack, partialTick);
+        frameCount++;
+
+
     }
 
-
-    public static void SetSpriteBatch(SpriteBatch spriteBatch)
+    public static GraphicsDeviceManager GraphicsDeviceManager => graphics;
+    public static GraphicsDevice GraphicsDevice => graphics.GraphicsDevice;
+    public static ulong FrameCount => frameCount;
+    public static ulong DrawCalls
     {
-        RenderingSystem.spriteBatch = spriteBatch;
-        FrameRenderer.SetSpriteBatch(spriteBatch);
+        get
+        {
+            if(DebugFrameRenderer != null)
+                return DebugFrameRenderer.DrawCalls;
+            else
+                return 0;
+        }
     }
-
 }
