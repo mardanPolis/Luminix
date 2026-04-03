@@ -26,13 +26,16 @@ internal sealed class CoreThread
         this.isDebug = isDebug;
 
         this.tickIntervalInTicks = (uint)(Stopwatch.Frequency / tickRate);
-        this.thread = new Thread(Run);
+        if(isDebug)
+            this.thread = new Thread(DebugRun);
+        else
+            this.thread = new Thread(Run);
     }
 
     public void Start() => thread.Start();
     public void Stop() => running = false;
 
-    void Run()
+    void DebugRun()
     {
         Stopwatch internalStopWatch = new Stopwatch();
         stopwatch = Stopwatch.StartNew();
@@ -43,31 +46,10 @@ internal sealed class CoreThread
             return (uint)(internalStopWatch.ElapsedTicks % tickIntervalInTicks);
         }
 
-        while(running && !isDebug)
-        {
-            long elapsedTicks = stopwatch.ElapsedTicks;
-            if(elapsedTicks < nextTick)
-            {
-                Thread.SpinWait(25);
-                continue;
-            }
-
-            nextTick += tickIntervalInTicks;
-            Interlocked.Increment(ref tickCount);
-
-            internalStopWatch.Restart();
-
-            Update();
-            
-            RenderingSystem.Render();
-            RenderingSystem.SwapRenderStacks(tickIntervalInTicks, elapsedTimeSinceLastTick() / Stopwatch.Frequency);
-        }
-
-        //debug
         uint[] tickTimes = new uint[500];
         uint currentIndex = 0;
 
-        while(running && isDebug)
+        while(running)
         {
             long elapsedTicks = stopwatch.ElapsedTicks;
             if(elapsedTicks < nextTick)
@@ -100,6 +82,38 @@ internal sealed class CoreThread
             
             tickTime = (uint)(tickTimeInTicks * 0.1); // turning ticks into microseconds
             avgTickTime = combinedTickTime / (tickCount > (ulong)tickTimes.Length ? (uint)tickTimes.Length : (uint)tickCount);
+        }
+    }
+
+    void Run()
+    {
+        Stopwatch internalStopWatch = new Stopwatch();
+        stopwatch = Stopwatch.StartNew();
+        long nextTick = stopwatch.ElapsedTicks;
+
+        uint elapsedTimeSinceLastTick()
+        {
+            return (uint)(internalStopWatch.ElapsedTicks % tickIntervalInTicks);
+        }
+
+        while(running)
+        {
+            long elapsedTicks = stopwatch.ElapsedTicks;
+            if(elapsedTicks < nextTick)
+            {
+                Thread.SpinWait(25);
+                continue;
+            }
+
+            nextTick += tickIntervalInTicks;
+            Interlocked.Increment(ref tickCount);
+
+            internalStopWatch.Restart();
+
+            Update();
+            
+            RenderingSystem.Render();
+            RenderingSystem.SwapRenderStacks(tickIntervalInTicks, elapsedTimeSinceLastTick() / Stopwatch.Frequency);
         }
     }
 
