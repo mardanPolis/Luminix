@@ -38,9 +38,4 @@ public class TestRenderer : Renderer<Test>
         oldPos1 = position1;
         oldPos2 = position2;
     }
-
-    public override void RenderGizmo(Test renderable, RenderStack renderStack)
-    { 
-        
-    }
 }

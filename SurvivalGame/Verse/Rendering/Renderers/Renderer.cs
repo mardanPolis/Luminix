@@ -9,12 +9,12 @@ namespace Verse.Rendering;
 
 public abstract class Renderer
 {
+    public Type RenderableType { get; protected internal set; }
     public abstract void Initialize();
     public abstract void RenderOn(RenderStack renderStack);
     public abstract void RenderGizmosOn(RenderStack renderStack);
     internal abstract void Assign(IEnumerable list);
     internal abstract void Optimize();
-    public Type RenderableType { get; protected internal set; }
 }
 
 public abstract class Renderer<T> : Renderer
@@ -81,5 +81,5 @@ public abstract class Renderer<T> : Renderer
     }
 
     public abstract void Render(T renderable, RenderStack renderStack);
-    public abstract void RenderGizmo(T renderable, RenderStack renderStack);
+    public virtual void RenderGizmo(T renderable, RenderStack renderStack) {}
 }

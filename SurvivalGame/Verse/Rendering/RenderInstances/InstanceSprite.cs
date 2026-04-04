@@ -3,12 +3,6 @@ using Microsoft.Xna.Framework;
 namespace Verse.Rendering.RenderData;
 internal struct InstanceSprite
 {
-    public Sprite Sprite;
-    public Vector2 Position;
-    public Vector2 Scale;
-    public float Rotation;
-    public float LayerDepth;
-
     public InstanceSprite(Sprite sprite, Vector2 position, Vector2 scale, float rotation, float layerDepth)
     {
         Sprite = sprite;
@@ -17,4 +11,10 @@ internal struct InstanceSprite
         Rotation = rotation;
         LayerDepth = layerDepth;
     }
+
+    public Sprite Sprite;
+    public Vector2 Position;
+    public Vector2 Scale;
+    public float Rotation;
+    public float LayerDepth;
 }

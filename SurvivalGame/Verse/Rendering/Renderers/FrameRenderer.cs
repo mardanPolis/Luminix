@@ -123,6 +123,7 @@ internal sealed class DebugFrameRenderer : BaseFrameRenderer
     private Texture2D currTexture;
     private ulong drawCalls;
 
+    public ulong DrawCalls => drawCalls;
     public override void DrawFrame(RenderStack hotRenderStack, RenderStack renderStack, float partialTick)
     {
         drawCalls = 0;
@@ -141,7 +142,6 @@ internal sealed class DebugFrameRenderer : BaseFrameRenderer
         DrawHotRenderStack(hotRenderStack);
         spriteBatch.End();
     }
-
     protected sealed override void DrawRenderStack(RenderStack renderStack, float t)
     {
         for (int i = 0; i < renderStack.InterpolatedSpriteCount; i++)
@@ -153,7 +153,6 @@ internal sealed class DebugFrameRenderer : BaseFrameRenderer
         for (int i = 0; i < renderStack.LineCount; i++)
             DrawLine(ref renderStack.InstanceLines[i]);
     }
-
     protected sealed override void DrawHotRenderStack(RenderStack renderStack)
     {
         for (int i = 0; i < renderStack.SpriteCount; i++)
@@ -221,6 +220,4 @@ internal sealed class DebugFrameRenderer : BaseFrameRenderer
             drawCalls++;
         }
     }
-
-    public ulong DrawCalls => drawCalls;
 }

@@ -12,8 +12,6 @@ internal static class RenderingSystem
     private static IFrameRenderer FrameRenderer;
     private static DebugFrameRenderer DebugFrameRenderer;
     private static GraphicsDeviceManager graphics;
-    public static SpriteBatch SpriteBatch { get; private set; }
-
 
     private static RenderStack writeStack;
     private static volatile RenderStack currReadStack;
@@ -25,6 +23,22 @@ internal static class RenderingSystem
     private static RenderStack hotRenderStack; // the stack that is used for hot rendering (e.g. UI, debug, etc.)
 
     private static ulong frameCount = 0;
+
+    public static SpriteBatch SpriteBatch { get; private set; }
+    
+    public static GraphicsDeviceManager GraphicsDeviceManager => graphics;
+    public static GraphicsDevice GraphicsDevice => graphics.GraphicsDevice;
+    public static ulong FrameCount => frameCount;
+    public static ulong DrawCalls
+    {
+        get
+        {
+            if(DebugFrameRenderer != null)
+                return DebugFrameRenderer.DrawCalls;
+            else
+                return 0;
+        }
+    }
 
     public static void Initialize(GraphicsDeviceManager graphics, bool isDebug)
     {
@@ -120,19 +134,5 @@ internal static class RenderingSystem
 
         FrameRenderer.DrawFrame(hotRenderStack, readStack, partialTick);
         frameCount++;
-    }
-
-    public static GraphicsDeviceManager GraphicsDeviceManager => graphics;
-    public static GraphicsDevice GraphicsDevice => graphics.GraphicsDevice;
-    public static ulong FrameCount => frameCount;
-    public static ulong DrawCalls
-    {
-        get
-        {
-            if(DebugFrameRenderer != null)
-                return DebugFrameRenderer.DrawCalls;
-            else
-                return 0;
-        }
     }
 }

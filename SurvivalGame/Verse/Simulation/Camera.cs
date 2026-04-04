@@ -25,16 +25,20 @@ public class Camera
     public static Camera MainCamera { get; set; } = null;
 
     public Vector2 Position { get {return position0; } set { position0 = value; position = value; } }
+    internal Vector2 TPosition => position;
     public float PosX { get { return position0.X; } set { position0.X = value; position.X = value; } }
     public float PosY { get { return position0.Y; } set { position0.Y = value; position.Y = value; } }
-
+    public float ScaleX { get { return ScaleY; }}
+    public float ScaleY { get { return viewport.Height / orthoSize0; } }
     public float OrthographicSize { get { return orthoSize0; } set { orthoSize0 = value > 0.01f ? value : 0.01f; orthoSize = orthoSize0;  } }
+    internal float TOrthographicSize => orthoSize;
 
     public float Zoom
     {
         get => viewport.Height / orthoSize0;
         set => orthoSize0 = viewport.Height / MathF.Max(value, 0.01f);
     }
+
 
     public virtual Matrix GetViewMatrix()
     {
@@ -94,9 +98,4 @@ public class Camera
     {
         cameras.ForEach(camera => camera.Tick());
     }
-
-    public float ScaleX { get { return ScaleY; }}
-    public float ScaleY { get { return viewport.Height / orthoSize0; } }
-    internal Vector2 TPosition => position;
-    internal float TOrthographicSize => orthoSize;
 } 

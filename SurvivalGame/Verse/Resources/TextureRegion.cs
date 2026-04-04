@@ -5,9 +5,6 @@ using Microsoft.Xna.Framework.Graphics;
 namespace Verse.Resources;
 public class TextureRegion
 {
-    private float widthCoefficient;
-    private float heightCoefficient;
-
     public TextureRegion(Texture2D texture, int x, int y, int width, int height)
     {
         if(texture == null) throw new ArgumentNullException(nameof(texture));
@@ -17,6 +14,9 @@ public class TextureRegion
         widthCoefficient = 1f / width;
         heightCoefficient = 1f / height;
     }
+
+    private float widthCoefficient;
+    private float heightCoefficient;
 
     public readonly Texture2D Texture;
     public readonly Rectangle SourceRectangle;

@@ -8,6 +8,17 @@ namespace Verse.Threads;
 
 internal sealed class CoreThread
 {
+    public CoreThread(bool isDebug, uint tickRate)
+    {   
+        this.isDebug = isDebug;
+
+        this.tickIntervalInTicks = (uint)(Stopwatch.Frequency / tickRate);
+        if(isDebug)
+            this.thread = new Thread(DebugRun);
+        else
+            this.thread = new Thread(Run);
+    }
+    
     private Thread thread;
     private Stopwatch stopwatch;
 
@@ -24,16 +35,33 @@ internal sealed class CoreThread
     private uint tickTime = 0;
     private uint avgTickTime = 0;
 
-    public CoreThread(bool isDebug, uint tickRate)
-    {   
-        this.isDebug = isDebug;
-
-        this.tickIntervalInTicks = (uint)(Stopwatch.Frequency / tickRate);
-        if(isDebug)
-            this.thread = new Thread(DebugRun);
-        else
-            this.thread = new Thread(Run);
+    public bool IsDebug
+    {
+        get
+        {
+            return isDebug;
+        }
     }
+
+    public uint TickRate
+    {
+        set { tickIntervalInTicks = (uint)(Stopwatch.Frequency / value); }
+        get { return (uint)(Stopwatch.Frequency / tickIntervalInTicks); }
+    }
+
+    public long TickCount => Interlocked.Read(ref tickCount);
+
+    public float PartialTick
+    {
+        get 
+        { 
+            uint tickIntervalInTicks = this.tickIntervalInTicks;
+            return (float)(stopwatch.ElapsedTicks % tickIntervalInTicks) / tickIntervalInTicks;
+        }
+    }
+
+    public uint TickTimeInUS => tickTime;
+    public uint AvgTickTimeInUS => avgTickTime;
 
     public void Start() => thread.Start();
     public void Stop() => running = false;
@@ -126,32 +154,4 @@ internal sealed class CoreThread
         foreach(var component in World.WorldComponents)
             component.Tick();
     }
-
-    public bool IsDebug
-    {
-        get
-        {
-            return isDebug;
-        }
-    }
-
-    public uint TickRate
-    {
-        set { tickIntervalInTicks = (uint)(Stopwatch.Frequency / value); }
-        get { return (uint)(Stopwatch.Frequency / tickIntervalInTicks); }
-    }
-
-    public long TickCount => Interlocked.Read(ref tickCount);
-
-    public float PartialTick
-    {
-        get 
-        { 
-            uint tickIntervalInTicks = this.tickIntervalInTicks;
-            return (float)(stopwatch.ElapsedTicks % tickIntervalInTicks) / tickIntervalInTicks;
-        }
-    }
-
-    public uint TickTimeInUS => tickTime;
-    public uint AvgTickTimeInUS => avgTickTime;
 }

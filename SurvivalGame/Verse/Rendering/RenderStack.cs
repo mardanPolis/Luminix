@@ -17,9 +17,6 @@ public sealed class RenderStack
         lineRenderDataStack.sharedData = linePrevSharedData;
     }
 
-    internal const int OPTIMIZATION_DELAY_TICKS = 60;
-    internal const int OPTIMIZING_THRESHOLD = 128;
-
     internal class StackSharedData
     {
         public readonly int[] prevCounts = new int[OPTIMIZATION_DELAY_TICKS];
@@ -96,6 +93,9 @@ public sealed class RenderStack
         }
     }
 
+    internal const int OPTIMIZATION_DELAY_TICKS = 60;
+    internal const int OPTIMIZING_THRESHOLD = 128;
+
     private Stack<InstanceInterpolatedSprite> interpolatedSpriteRenderDataStack;
     private Stack<InstanceSprite> spriteRenderDataStack;
     private Stack<InstanceLine> lineRenderDataStack;
@@ -107,6 +107,15 @@ public sealed class RenderStack
 
     private float OrthoSize0;
     private float OrthoSize;
+
+    private Viewport viewport => RenderingSystem.GraphicsDevice.Viewport;
+
+    internal InstanceInterpolatedSprite[] InstanceInterpolatedSprites => interpolatedSpriteRenderDataStack.DataSet;
+    internal int InterpolatedSpriteCount => interpolatedSpriteRenderDataStack.Count;
+    internal InstanceSprite[] InstanceSprites => spriteRenderDataStack.DataSet;
+    internal int SpriteCount => spriteRenderDataStack.Count;
+    internal InstanceLine[] InstanceLines => lineRenderDataStack.DataSet;
+    internal int LineCount => lineRenderDataStack.Count;
 
     internal void PostCameraData(Camera camera)
     {
@@ -184,6 +193,7 @@ public sealed class RenderStack
 
     internal Matrix GenerateCameraViewMatrix(float t)
     {
+        var viewport = this.viewport;
         var tarPos = cameraPosition0 + (cameraPosition - cameraPosition0) * t;
         var tarOrthoSize = OrthoSize0 + (OrthoSize - OrthoSize0) * t;
 
@@ -193,13 +203,4 @@ public sealed class RenderStack
         Matrix.CreateScale(tarScale, tarScale, 1f) *
         Matrix.CreateTranslation(new Vector3(viewport.Width * 0.5f, viewport.Height * 0.5f, 0f));
     }
-
-    private Viewport viewport => RenderingSystem.GraphicsDevice.Viewport;
-
-    internal InstanceInterpolatedSprite[] InstanceInterpolatedSprites => interpolatedSpriteRenderDataStack.DataSet;
-    internal int InterpolatedSpriteCount => interpolatedSpriteRenderDataStack.Count;
-    internal InstanceSprite[] InstanceSprites => spriteRenderDataStack.DataSet;
-    internal int SpriteCount => spriteRenderDataStack.Count;
-    internal InstanceLine[] InstanceLines => lineRenderDataStack.DataSet;
-    internal int LineCount => lineRenderDataStack.Count;
 }

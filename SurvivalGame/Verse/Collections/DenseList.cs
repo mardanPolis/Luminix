@@ -6,6 +6,13 @@ namespace Verse.Collections;
 
 public sealed class DenseList<T> : ICollection, IEnumerable<T>
 {
+    public DenseList(int capacity = 16)
+    {
+        items = new T[capacity];
+        indexMap = new Dictionary<T, int>();
+        count = 0;
+    }
+
     private T[] items;
     private int count;
     private Dictionary<T, int> indexMap;
@@ -13,13 +20,6 @@ public sealed class DenseList<T> : ICollection, IEnumerable<T>
     public int Count => count;
     public bool IsSynchronized => false;
     public object SyncRoot => items;
-
-    public DenseList(int capacity = 16)
-    {
-        items = new T[capacity];
-        indexMap = new Dictionary<T, int>();
-        count = 0;
-    }
     
     public bool Add(T item)
     {

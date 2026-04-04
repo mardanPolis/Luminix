@@ -9,8 +9,22 @@ public class World
 {
     private static List<WorldComponent> worldComponents = new List<WorldComponent>();
     private static HashSet<Type> initializedComponentTypes = new HashSet<Type>();
-
     private static CoreThread coreThread;
+    
+    public static IReadOnlyList<WorldComponent> WorldComponents => worldComponents;
+
+    public static uint TickRate
+    {
+        set { coreThread.TickRate = value; }
+        get { return coreThread.TickRate; }
+    }
+
+    public static long TickCount => coreThread.TickCount;
+    public static uint TickTimeInUS => coreThread.TickTimeInUS;
+    public static uint AvgTickTimeInUS => coreThread.AvgTickTimeInUS;
+
+    public static float PartialTick => coreThread.PartialTick;
+
     internal static void Initialize(CoreThread coreThread)
     {
         World.coreThread = coreThread;
@@ -27,17 +41,4 @@ public class World
         initializedComponentTypes.Add(component.GetType());
     }
 
-    public static IReadOnlyList<WorldComponent> WorldComponents => worldComponents;
-
-    public static uint TickRate
-    {
-        set { coreThread.TickRate = value; }
-        get { return coreThread.TickRate; }
-    }
-
-    public static long TickCount => coreThread.TickCount;
-    public static uint TickTimeInUS => coreThread.TickTimeInUS;
-    public static uint AvgTickTimeInUS => coreThread.AvgTickTimeInUS;
-
-    public static float PartialTick => coreThread.PartialTick;
 }

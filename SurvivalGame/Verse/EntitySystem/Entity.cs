@@ -6,15 +6,16 @@ namespace Verse.EntitySystem;
 
 public abstract class Entity : IIdentifiable, IVariant
 {
-    private readonly ID id;
-    private readonly Variant variant;
-    private bool isDestroyed = false;
     public Entity(ID iD, Variant variant)
     {
         this.id = iD;
         this.variant = variant;
     }
 
+    private readonly ID id;
+    private readonly Variant variant;
+    private bool isDestroyed = false;
+    
     public Vector2 Position { get; set; } = Vector2.Zero;
     public float Rotation { get; set; } = 0;
     public Vector2 Scale { get; set; } = Vector2.One;
