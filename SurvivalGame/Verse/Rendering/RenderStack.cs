@@ -1,8 +1,7 @@
 using System;
-using System.Linq;
 using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
 using Verse.Rendering.RenderData;
-using Verse.Resources;
 
 namespace Verse.Rendering;
 public sealed class RenderStack
@@ -101,6 +100,27 @@ public sealed class RenderStack
     private Stack<InstanceSprite> spriteRenderDataStack;
     private Stack<InstanceLine> lineRenderDataStack;
 
+    private bool cameraDataPosted = false;
+
+    private Vector2 cameraPosition0;
+    private Vector2 cameraPosition;
+
+    private float OrthoSize0;
+    private float OrthoSize;
+
+    internal void PostCameraData(Camera camera)
+    {
+        if(camera == null)
+            return;
+
+        cameraDataPosted = true;
+
+        cameraPosition0 = camera.Position;
+        cameraPosition = camera.TPosition;
+        OrthoSize0 = camera.OrthographicSize;
+        OrthoSize = camera.TOrthographicSize;
+    }
+
     public void PostSprite(Sprite sprite, Vector2 position0, Vector2 position, float rotation0, float rotation, Vector2 scale0, Vector2 scale, float layerDepth = 0f)
     {
         ref var instanceSprite = ref interpolatedSpriteRenderDataStack.Next();
@@ -150,10 +170,31 @@ public sealed class RenderStack
 
     public void Reset()
     {
+        cameraDataPosted = false;
+
         interpolatedSpriteRenderDataStack.Reset();
         spriteRenderDataStack.Reset();
         lineRenderDataStack.Reset();
     }
+
+    internal bool CanRender()
+    {
+        return cameraDataPosted;
+    }
+
+    internal Matrix GenerateCameraViewMatrix(float t)
+    {
+        var tarPos = cameraPosition0 + (cameraPosition - cameraPosition0) * t;
+        var tarOrthoSize = OrthoSize0 + (OrthoSize - OrthoSize0) * t;
+
+        var tarScale = viewport.Height / tarOrthoSize;
+
+        return Matrix.CreateTranslation(new Vector3(-tarPos.X, tarPos.Y, 0f)) *
+        Matrix.CreateScale(tarScale, tarScale, 1f) *
+        Matrix.CreateTranslation(new Vector3(viewport.Width * 0.5f, viewport.Height * 0.5f, 0f));
+    }
+
+    private Viewport viewport => RenderingSystem.GraphicsDevice.Viewport;
 
     internal InstanceInterpolatedSprite[] InstanceInterpolatedSprites => interpolatedSpriteRenderDataStack.DataSet;
     internal int InterpolatedSpriteCount => interpolatedSpriteRenderDataStack.Count;

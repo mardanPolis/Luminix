@@ -3,6 +3,7 @@ using System.Collections;
 using System.Diagnostics;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using Verse.Simulation;
 
 namespace Verse.Rendering;
 
@@ -25,15 +26,18 @@ internal static class RenderingSystem
 
     private static ulong frameCount = 0;
 
-    public static void Initialize(GraphicsDeviceManager graphics, Camera camera, bool isDebug)
+    public static void Initialize(GraphicsDeviceManager graphics, bool isDebug)
     {
         if (isDebug)
         {
-            DebugFrameRenderer = new DebugFrameRenderer(camera, new SpriteBatch(graphics.GraphicsDevice));
+            DebugFrameRenderer = new DebugFrameRenderer(new SpriteBatch(graphics.GraphicsDevice));
             FrameRenderer = DebugFrameRenderer;
         }
         else
-            FrameRenderer = new FrameRenderer(camera, new SpriteBatch(graphics.GraphicsDevice));
+            FrameRenderer = new FrameRenderer(new SpriteBatch(graphics.GraphicsDevice));
+
+        graphics.SynchronizeWithVerticalRetrace = false;
+        graphics.ApplyChanges();
 
         RenderStack.StackSharedData sharedDataInterpSprite = new RenderStack.StackSharedData();
         RenderStack.StackSharedData sharedDataSprite = new RenderStack.StackSharedData();
@@ -59,6 +63,8 @@ internal static class RenderingSystem
     {
         writeStack.Reset();
         
+        writeStack.PostCameraData(Camera.MainCamera);
+        
         foreach(var renderer in RendererRegistry.GetRenderers())
             renderer.RenderOn(writeStack);
     }
@@ -67,6 +73,8 @@ internal static class RenderingSystem
     {
         writeStack.Reset();
         
+        writeStack.PostCameraData(Camera.MainCamera);
+
         foreach(var renderer in RendererRegistry.GetRenderers())
             renderer.RenderOn(writeStack);
 
@@ -102,18 +110,16 @@ internal static class RenderingSystem
 
     public static void DrawFrame(float partialTick)
     {
-        partialTick = Math.Clamp(partialTick, 0f, 1f);
-
-        if(pendingStack)
+        if (pendingStack)
         {
+            if(readStack != currReadStack)
+                partialTick -= (int)partialTick;
             readStack = currReadStack;
             pendingStack = false;
         }
 
         FrameRenderer.DrawFrame(hotRenderStack, readStack, partialTick);
         frameCount++;
-
-
     }
 
     public static GraphicsDeviceManager GraphicsDeviceManager => graphics;

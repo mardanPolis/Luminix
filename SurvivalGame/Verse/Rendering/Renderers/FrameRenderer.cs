@@ -11,205 +11,211 @@ internal interface IFrameRenderer
 {
     void DrawFrame(RenderStack hotRenderStack, RenderStack renderStack, float partialTick);
 }
-
-internal sealed class FrameRenderer : IFrameRenderer
+internal abstract class BaseFrameRenderer : IFrameRenderer
 {
-    private Camera camera;
-    private SpriteBatch spriteBatch;
-
-    public FrameRenderer(Camera camera, SpriteBatch spriteBatch)
+    protected BaseFrameRenderer(SpriteBatch spriteBatch)
     {
-        this.camera = camera;
         this.spriteBatch = spriteBatch;
     }
 
-    public void DrawFrame(RenderStack hotRenderStack, RenderStack renderStack, float partialTick)
+    protected SpriteBatch spriteBatch;
+
+    public virtual void DrawFrame(RenderStack hotRenderStack, RenderStack renderStack, float partialTick)
     {
         RenderingSystem.GraphicsDevice.Clear(Color.CornflowerBlue);
-
-        spriteBatch.Begin(transformMatrix: camera.GetViewMatrix());
-
+        spriteBatch.Begin(transformMatrix: renderStack.GenerateCameraViewMatrix(partialTick));
         DrawRenderStack(renderStack, partialTick);
-        DrawHotRenderStack(hotRenderStack);
+        spriteBatch.End();
 
+        spriteBatch.Begin();
+        DrawHotRenderStack(hotRenderStack);
         spriteBatch.End();
     }
 
-    private void DrawRenderStack(RenderStack renderStack, float partialTick)
+    protected abstract void DrawRenderStack(RenderStack renderStack, float t);
+    protected abstract void DrawHotRenderStack(RenderStack renderStack);
+
+    // Abstract hooks for per-class behavior
+    protected abstract void DrawSprite(ref InstanceInterpolatedSprite sprite, float t);
+    protected abstract void DrawSprite(ref InstanceSprite sprite);
+    protected abstract void DrawLine(ref InstanceLine line);
+}
+
+internal sealed class FrameRenderer : BaseFrameRenderer
+{
+    public FrameRenderer(SpriteBatch spriteBatch) 
+        : base(spriteBatch) { }
+
+    protected sealed override void DrawRenderStack(RenderStack renderStack, float t)
     {
-        int i = 0;
+        for (int i = 0; i < renderStack.InterpolatedSpriteCount; i++)
+            DrawSprite(ref renderStack.InstanceInterpolatedSprites[i], t);
 
-        for (i = 0; i < renderStack.InterpolatedSpriteCount; i++)
-            DrawSprite(ref renderStack.InstanceInterpolatedSprites[i], partialTick);
-
-        for (i = 0; i < renderStack.SpriteCount; i++)
+        for (int i = 0; i < renderStack.SpriteCount; i++)
             DrawSprite(ref renderStack.InstanceSprites[i]);
 
-        for (i = 0; i < renderStack.LineCount; i++)
+        for (int i = 0; i < renderStack.LineCount; i++)
             DrawLine(ref renderStack.InstanceLines[i]);
-        
-
     }
-    private void DrawHotRenderStack(RenderStack renderStack)
+
+
+    protected sealed override void DrawHotRenderStack(RenderStack renderStack)
     {
-        int i = 0;
-        for (i = 0; i < renderStack.SpriteCount; i++)
+        for (int i = 0; i < renderStack.SpriteCount; i++)
             DrawSprite(ref renderStack.InstanceSprites[i]);
 
-        for (i = 0; i < renderStack.LineCount; i++)
+        for (int i = 0; i < renderStack.LineCount; i++)
             DrawLine(ref renderStack.InstanceLines[i]);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private void DrawSprite(ref InstanceInterpolatedSprite spriteRenderData, float t)
+    protected override void DrawSprite(ref InstanceInterpolatedSprite sprite, float t)
     {
-        var pos = spriteRenderData.Position0 + (spriteRenderData.Position - spriteRenderData.Position0) * t;
+        var pos = sprite.Position0 + (sprite.Position - sprite.Position0) * t;
         pos.Y = -pos.Y;
-        var rot = spriteRenderData.Rotation0 + (spriteRenderData.Rotation - spriteRenderData.Rotation0) * t;
-        var scale = spriteRenderData.Scale0 + (spriteRenderData.Scale - spriteRenderData.Scale0) * t;
+
+        var rot = sprite.Rotation0 + (sprite.Rotation - sprite.Rotation0) * t;
+        var scale = sprite.Scale0 + (sprite.Scale - sprite.Scale0) * t;
 
         spriteBatch.Draw(
-            spriteRenderData.Sprite.TextureRegion.Texture,
+            sprite.Sprite.TextureRegion.Texture,
             pos,
-            spriteRenderData.Sprite.TextureRegion.SourceRectangle,
-            spriteRenderData.Sprite.Color,
+            sprite.Sprite.TextureRegion.SourceRectangle,
+            sprite.Sprite.Color,
             rot,
-            spriteRenderData.Sprite.Origin,
+            sprite.Sprite.Origin,
             scale,
-            spriteRenderData.Sprite.Effects,
-            spriteRenderData.LayerDepth
-        );
-    }
-
-    private void DrawSprite(ref InstanceSprite spriteRenderData)
-    {
-        var pos = spriteRenderData.Position;
-        pos.Y = -pos.Y;
-
-        spriteBatch.Draw(
-            spriteRenderData.Sprite.TextureRegion.Texture,
-            pos,
-            spriteRenderData.Sprite.TextureRegion.SourceRectangle,
-            spriteRenderData.Sprite.Color,
-            spriteRenderData.Rotation,
-            spriteRenderData.Sprite.Origin,
-            spriteRenderData.Scale,
-            spriteRenderData.Sprite.Effects,
-            spriteRenderData.LayerDepth
+            sprite.Sprite.Effects,
+            sprite.LayerDepth
         );
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private void DrawLine(ref InstanceLine lineRenderData)
+    protected override void DrawSprite(ref InstanceSprite sprite)
     {
-        
+        var pos = sprite.Position;
+        pos.Y = -pos.Y;
+
+        spriteBatch.Draw(
+            sprite.Sprite.TextureRegion.Texture,
+            pos,
+            sprite.Sprite.TextureRegion.SourceRectangle,
+            sprite.Sprite.Color,
+            sprite.Rotation,
+            sprite.Sprite.Origin,
+            sprite.Scale,
+            sprite.Sprite.Effects,
+            sprite.LayerDepth
+        );
+    }
+
+    protected override void DrawLine(ref InstanceLine line)
+    {
+        // implement line drawing
     }
 }
 
-internal sealed class DebugFrameRenderer : IFrameRenderer
+internal sealed class DebugFrameRenderer : BaseFrameRenderer
 {
-    private Camera camera;
-    private SpriteBatch spriteBatch;
+    public DebugFrameRenderer(SpriteBatch spriteBatch) 
+        : base(spriteBatch) { }
+
     private Texture2D currTexture;
-    private ulong drawCalls = 0;
+    private ulong drawCalls;
 
-    public DebugFrameRenderer(Camera camera, SpriteBatch spriteBatch)
-    {
-        this.camera = camera;
-        this.spriteBatch = spriteBatch;
-    }
-
-    public void DrawFrame(RenderStack hotRenderStack, RenderStack renderStack, float partialTick)
+    public override void DrawFrame(RenderStack hotRenderStack, RenderStack renderStack, float partialTick)
     {
         drawCalls = 0;
         currTexture = null;
-        RenderingSystem.GraphicsDevice.Clear(Color.CornflowerBlue);
 
-        spriteBatch.Begin(transformMatrix: camera.GetViewMatrix());
+        RenderingSystem.GraphicsDevice.Clear(Color.Black);
+        if(renderStack.CanRender())
+        {
+            RenderingSystem.GraphicsDevice.Clear(Color.CornflowerBlue);
+            spriteBatch.Begin(transformMatrix: renderStack.GenerateCameraViewMatrix(partialTick));
+            DrawRenderStack(renderStack, partialTick);
+            spriteBatch.End();
+        }
 
-        DrawRenderStack(renderStack, partialTick);
+        spriteBatch.Begin();
         DrawHotRenderStack(hotRenderStack);
-
         spriteBatch.End();
     }
 
-
-    private void DrawRenderStack(RenderStack renderStack, float partialTick)
+    protected sealed override void DrawRenderStack(RenderStack renderStack, float t)
     {
-        int i = 0;
+        for (int i = 0; i < renderStack.InterpolatedSpriteCount; i++)
+            DrawSprite(ref renderStack.InstanceInterpolatedSprites[i], t);
 
-        for (i = 0; i < renderStack.InterpolatedSpriteCount; i++)
-            DrawSprite(ref renderStack.InstanceInterpolatedSprites[i], partialTick);
-
-        for (i = 0; i < renderStack.SpriteCount; i++)
+        for (int i = 0; i < renderStack.SpriteCount; i++)
             DrawSprite(ref renderStack.InstanceSprites[i]);
 
-        for (i = 0; i < renderStack.LineCount; i++)
+        for (int i = 0; i < renderStack.LineCount; i++)
             DrawLine(ref renderStack.InstanceLines[i]);
-        
-
     }
-    private void DrawHotRenderStack(RenderStack renderStack)
+
+    protected sealed override void DrawHotRenderStack(RenderStack renderStack)
     {
-        int i = 0;
-        for (i = 0; i < renderStack.SpriteCount; i++)
+        for (int i = 0; i < renderStack.SpriteCount; i++)
             DrawSprite(ref renderStack.InstanceSprites[i]);
 
-        for (i = 0; i < renderStack.LineCount; i++)
+        for (int i = 0; i < renderStack.LineCount; i++)
             DrawLine(ref renderStack.InstanceLines[i]);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private void DrawSprite(ref InstanceInterpolatedSprite spriteRenderData, float t)
+    protected override void DrawSprite(ref InstanceInterpolatedSprite sprite, float t)
     {
-        DrawCall(spriteRenderData.Sprite.TextureRegion.Texture);
-        
-        var pos = spriteRenderData.Position0 + (spriteRenderData.Position - spriteRenderData.Position0) * t;
+        TrackDrawCall(sprite.Sprite.TextureRegion.Texture);
+
+        var pos = sprite.Position0 + (sprite.Position - sprite.Position0) * t;
         pos.Y = -pos.Y;
-        var rot = spriteRenderData.Rotation0 + (spriteRenderData.Rotation - spriteRenderData.Rotation0) * t;
-        var scale = spriteRenderData.Scale0 + (spriteRenderData.Scale - spriteRenderData.Scale0) * t;
+
+        var rot = sprite.Rotation0 + (sprite.Rotation - sprite.Rotation0) * t;
+        var scale = sprite.Scale0 + (sprite.Scale - sprite.Scale0) * t;
 
         spriteBatch.Draw(
-            spriteRenderData.Sprite.TextureRegion.Texture,
+            sprite.Sprite.TextureRegion.Texture,
             pos,
-            spriteRenderData.Sprite.TextureRegion.SourceRectangle,
-            spriteRenderData.Sprite.Color,
+            sprite.Sprite.TextureRegion.SourceRectangle,
+            sprite.Sprite.Color,
             rot,
-            spriteRenderData.Sprite.Origin,
+            sprite.Sprite.Origin,
             scale,
-            spriteRenderData.Sprite.Effects,
-            spriteRenderData.LayerDepth
-        );
-    }
-
-    private void DrawSprite(ref InstanceSprite spriteRenderData)
-    {
-        DrawCall(spriteRenderData.Sprite.TextureRegion.Texture);
-
-        var pos = spriteRenderData.Position;
-        pos.Y = -pos.Y;
-
-        spriteBatch.Draw(
-            spriteRenderData.Sprite.TextureRegion.Texture,
-            pos,
-            spriteRenderData.Sprite.TextureRegion.SourceRectangle,
-            spriteRenderData.Sprite.Color,
-            spriteRenderData.Rotation,
-            spriteRenderData.Sprite.Origin,
-            spriteRenderData.Scale,
-            spriteRenderData.Sprite.Effects,
-            spriteRenderData.LayerDepth
+            sprite.Sprite.Effects,
+            sprite.LayerDepth
         );
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private void DrawLine(ref InstanceLine lineRenderData)
+    protected override void DrawSprite(ref InstanceSprite sprite)
     {
+        TrackDrawCall(sprite.Sprite.TextureRegion.Texture);
+
+        var pos = sprite.Position;
+        pos.Y = -pos.Y;
+
+        spriteBatch.Draw(
+            sprite.Sprite.TextureRegion.Texture,
+            pos,
+            sprite.Sprite.TextureRegion.SourceRectangle,
+            sprite.Sprite.Color,
+            sprite.Rotation,
+            sprite.Sprite.Origin,
+            sprite.Scale,
+            sprite.Sprite.Effects,
+            sprite.LayerDepth
+        );
     }
 
-    private void DrawCall(Texture2D texture)
+    protected override void DrawLine(ref InstanceLine line)
     {
-        if(currTexture != texture)
+        // implement line drawing
+    }
+
+    private void TrackDrawCall(Texture2D texture)
+    {
+        if (currTexture != texture)
         {
             currTexture = texture;
             drawCalls++;

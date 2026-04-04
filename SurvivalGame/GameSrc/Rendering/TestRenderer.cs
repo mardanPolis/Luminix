@@ -9,7 +9,7 @@ namespace GameSrc.Rendering;
 public class TestRenderer : Renderer<Test>
 {
 
-    static float TriangleWave(ulong t, uint period)
+    static float TriangleWave(long t, uint period)
     {
         float cycle = (float)(t % period) / period; // normalize to [0,1)
         return 1f - Math.Abs(2f * cycle - 1f); // rises 0→1 then falls 1→0

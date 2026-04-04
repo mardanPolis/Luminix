@@ -28,7 +28,7 @@
   </ItemGroup>
   <ItemGroup>
     <Folder Include="GameSrc/" />
-    <Folder Include="Verse/Simulation/" />
+    <Folder Include="GameSrc/Simulation/" />
     <Folder Include="Verse\Threads\" />
   </ItemGroup>
 </Project>

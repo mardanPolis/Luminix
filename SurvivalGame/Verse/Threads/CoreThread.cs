@@ -1,8 +1,9 @@
 using System;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using Verse.Rendering;
-
+using Verse.Simulation;
 namespace Verse.Threads;
 
 internal sealed class CoreThread
@@ -12,8 +13,10 @@ internal sealed class CoreThread
 
     private volatile bool running = true;
 
-    private ulong tickCount = 0;
+    private long tickCount = 0;
     private volatile uint tickIntervalInTicks;
+
+    private long nextTick = 0;
 
     // debug variables
     private readonly bool isDebug = false;
@@ -39,7 +42,7 @@ internal sealed class CoreThread
     {
         Stopwatch internalStopWatch = new Stopwatch();
         stopwatch = Stopwatch.StartNew();
-        long nextTick = stopwatch.ElapsedTicks;
+        Interlocked.Exchange(ref nextTick, stopwatch.ElapsedTicks);
 
         uint elapsedTimeSinceLastTick()
         {
@@ -52,14 +55,13 @@ internal sealed class CoreThread
         while(running)
         {
             long elapsedTicks = stopwatch.ElapsedTicks;
-            if(elapsedTicks < nextTick)
+            if(elapsedTicks < Interlocked.Read(ref nextTick))
             {
-                Thread.SpinWait(50);
+                Thread.SpinWait(25);
                 continue;
             }
-            
-            nextTick += tickIntervalInTicks;
             Interlocked.Increment(ref tickCount);
+            Interlocked.Add(ref nextTick, tickIntervalInTicks);
 
             internalStopWatch.Restart();
 
@@ -67,7 +69,7 @@ internal sealed class CoreThread
             
             RenderingSystem.DebugRender();
             RenderingSystem.SwapRenderStacks(tickIntervalInTicks, elapsedTimeSinceLastTick() / Stopwatch.Frequency);
-            
+
             //get current tick time
             var tickTimeInTicks = elapsedTimeSinceLastTick();
 
@@ -81,7 +83,7 @@ internal sealed class CoreThread
                 combinedTickTime += tickTime;
             
             tickTime = (uint)(tickTimeInTicks * 0.1); // turning ticks into microseconds
-            avgTickTime = combinedTickTime / (tickCount > (ulong)tickTimes.Length ? (uint)tickTimes.Length : (uint)tickCount);
+            avgTickTime = combinedTickTime / (tickCount > tickTimes.Length ? (uint)tickTimes.Length : (uint)tickCount);
         }
     }
 
@@ -89,7 +91,7 @@ internal sealed class CoreThread
     {
         Stopwatch internalStopWatch = new Stopwatch();
         stopwatch = Stopwatch.StartNew();
-        long nextTick = stopwatch.ElapsedTicks;
+        Interlocked.Exchange(ref nextTick, stopwatch.ElapsedTicks);
 
         uint elapsedTimeSinceLastTick()
         {
@@ -99,19 +101,19 @@ internal sealed class CoreThread
         while(running)
         {
             long elapsedTicks = stopwatch.ElapsedTicks;
-            if(elapsedTicks < nextTick)
+            if(elapsedTicks < Interlocked.Read(ref nextTick))
             {
                 Thread.SpinWait(25);
                 continue;
             }
 
-            nextTick += tickIntervalInTicks;
             Interlocked.Increment(ref tickCount);
+            Interlocked.Add(ref nextTick, tickIntervalInTicks);
 
             internalStopWatch.Restart();
 
             Update();
-            
+
             RenderingSystem.Render();
             RenderingSystem.SwapRenderStacks(tickIntervalInTicks, elapsedTimeSinceLastTick() / Stopwatch.Frequency);
         }
@@ -119,7 +121,10 @@ internal sealed class CoreThread
 
     void Update()
     {
-        
+        Camera.TickAll();
+
+        foreach(var component in World.WorldComponents)
+            component.Tick();
     }
 
     public bool IsDebug
@@ -136,17 +141,14 @@ internal sealed class CoreThread
         get { return (uint)(Stopwatch.Frequency / tickIntervalInTicks); }
     }
 
-    public ulong TickCount => Interlocked.Read(ref tickCount);
+    public long TickCount => Interlocked.Read(ref tickCount);
 
     public float PartialTick
     {
         get 
         { 
             uint tickIntervalInTicks = this.tickIntervalInTicks;
-            return Math.Clamp(
-                (float)(stopwatch.ElapsedTicks % tickIntervalInTicks) / tickIntervalInTicks, 
-                0f, 1f
-            );
+            return (float)(stopwatch.ElapsedTicks % tickIntervalInTicks) / tickIntervalInTicks;
         }
     }
 

@@ -6,6 +6,7 @@ using GameSrc.Rendering;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
+using SurvivalGame.GameSrc.Simulation;
 using Verse.Collections;
 using Verse.Rendering;
 using Verse.Resources;
@@ -16,8 +17,6 @@ namespace Verse;
 public class Main : Game
 {
     private GraphicsDeviceManager graphics;
-
-    private Camera camera;
 
     private Thread mainThread = Thread.CurrentThread;
     private CoreThread coreThread = null;
@@ -39,14 +38,19 @@ public class Main : Game
         try
         {
             Console.WriteLine($"Started: Initialize");
-            // TODO: Add your initialization logic here
+
+            //set fps to 500
+            IsFixedTimeStep = true;
+            TargetElapsedTime = TimeSpan.FromSeconds(1.0 / 144.0);
+
+            coreThread = new CoreThread(IS_DEBUG, TICK_RATE);
+
             RendererRegistry.Register(typeof(TestRenderer));
             RendererRegistry.Assign(testList, typeof(TestRenderer));
             RendererRegistry.FinalizeRegistry();
 
             ResourceManager.Initialize(Content.RootDirectory, Content);
 
-            coreThread = new CoreThread(IS_DEBUG, TICK_RATE);
             World.Initialize(coreThread);
 
             base.Initialize();
@@ -56,7 +60,7 @@ public class Main : Game
         catch (Exception ex)
         {
             Console.WriteLine($"Exception during Initialize: {ex}");
-            Exit();
+            throw;
         }
     }
 
@@ -65,9 +69,8 @@ public class Main : Game
         try
         {
             Console.WriteLine($"Started: LoadContent");
-            camera = new Camera(GraphicsDevice.Viewport);
 
-            RenderingSystem.Initialize(graphics, camera, IS_DEBUG);
+            RenderingSystem.Initialize(graphics, IS_DEBUG);
 
             ResourceManager.LoadTexture("null_texture.png");
             ResourceManager.NewTextureRegion("null_texture", "null_texture.png", 0, 0, 32, 32);
@@ -79,7 +82,7 @@ public class Main : Game
         catch (Exception ex)
         {
             Console.WriteLine($"Exception during LoadContent: {ex}");
-            Exit();
+            throw;
         }
     }
 
@@ -88,11 +91,18 @@ public class Main : Game
         try
         {
             Console.WriteLine($"Started: BeginRun");
+            //TEST
             var testObject = new Test();
             testList.Add(testObject);
 
+            new CameraMover();
+            //END TEST
+
             foreach(var renderer in RendererRegistry.GetRenderers())
                 renderer.Initialize();
+
+            foreach(var component in World.WorldComponents)
+                component.Initialize();
 
             coreThread.Start();
             
@@ -103,7 +113,7 @@ public class Main : Game
         catch (Exception ex)
         {
             Console.WriteLine($"Exception during BeginRun: {ex}");
-            Exit();
+            throw;
         }
     }
 
@@ -111,23 +121,6 @@ public class Main : Game
     {
         if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed || Keyboard.GetState().IsKeyDown(Keys.Escape))
             Exit();
-
-        if (Keyboard.GetState().IsKeyDown(Keys.Q))
-        {
-            camera.OrthographicSize += 0.1f;
-        }
-        if (Keyboard.GetState().IsKeyDown(Keys.E))
-            camera.OrthographicSize -= 0.1f;
-
-        if (Keyboard.GetState().IsKeyDown(Keys.A))
-            camera.PosX -= 0.1f;
-        if (Keyboard.GetState().IsKeyDown(Keys.D))
-            camera.PosX += 0.1f;
-
-        if (Keyboard.GetState().IsKeyDown(Keys.W))
-            camera.PosY += 0.1f;
-        if (Keyboard.GetState().IsKeyDown(Keys.S))
-            camera.PosY -= 0.1f;
 
         // TODO: Add your update logic here
 
