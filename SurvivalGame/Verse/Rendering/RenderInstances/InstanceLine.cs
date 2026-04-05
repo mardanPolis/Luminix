@@ -1,6 +1,6 @@
 using Microsoft.Xna.Framework;
 
-namespace Verse.Rendering;
+namespace Verse.Rendering.RenderInstances;
 internal struct InstanceLine
 {
     public InstanceLine(Vector2 start, Vector2 end, Color color, float thickness)

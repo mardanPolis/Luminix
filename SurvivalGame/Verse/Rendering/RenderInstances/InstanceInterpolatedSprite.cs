@@ -1,8 +1,6 @@
 using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Graphics;
-using Verse.Resources;
 
-namespace Verse.Rendering.RenderData;
+namespace Verse.Rendering.RenderInstances;
 internal struct InstanceInterpolatedSprite
 {
     public InstanceInterpolatedSprite(Sprite sprite, Vector2 position, Vector2 scale, float rotation, float layerDepth)

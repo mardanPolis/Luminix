@@ -1,75 +1,42 @@
-
 using System;
 using System.Runtime.CompilerServices;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using Verse.Rendering.RenderData;
+using Verse.Rendering.RenderInstances;
+using Verse.Resources;
 
 namespace Verse.Rendering;
 
-internal interface IFrameRenderer
+internal sealed class FrameRenderer
 {
-    void DrawFrame(RenderStack hotRenderStack, RenderStack renderStack, float partialTick);
-}
-internal abstract class BaseFrameRenderer : IFrameRenderer
-{
-    protected BaseFrameRenderer(SpriteBatch spriteBatch)
+    public FrameRenderer(SpriteBatch spriteBatch)
     {
         this.spriteBatch = spriteBatch;
     }
 
-    protected SpriteBatch spriteBatch;
-
-    public virtual void DrawFrame(RenderStack hotRenderStack, RenderStack renderStack, float partialTick)
+    private SpriteBatch spriteBatch;
+    public void DrawFrame(RenderStack renderStack, Viewport viewport, float partialTick)
     {
         RenderingSystem.GraphicsDevice.Clear(Color.CornflowerBlue);
-        spriteBatch.Begin(transformMatrix: renderStack.GenerateCameraViewMatrix(partialTick));
-        DrawRenderStack(renderStack, partialTick);
-        spriteBatch.End();
+        spriteBatch.Begin(samplerState: SamplerState.PointClamp, sortMode: SpriteSortMode.FrontToBack, transformMatrix: renderStack.GenerateCameraViewMatrix(partialTick, viewport.Height, viewport.Width));
 
-        spriteBatch.Begin();
-        DrawHotRenderStack(hotRenderStack);
-        spriteBatch.End();
-    }
-
-    protected abstract void DrawRenderStack(RenderStack renderStack, float t);
-    protected abstract void DrawHotRenderStack(RenderStack renderStack);
-
-    // Abstract hooks for per-class behavior
-    protected abstract void DrawSprite(ref InstanceInterpolatedSprite sprite, float t);
-    protected abstract void DrawSprite(ref InstanceSprite sprite);
-    protected abstract void DrawLine(ref InstanceLine line);
-}
-
-internal sealed class FrameRenderer : BaseFrameRenderer
-{
-    public FrameRenderer(SpriteBatch spriteBatch) 
-        : base(spriteBatch) { }
-
-    protected sealed override void DrawRenderStack(RenderStack renderStack, float t)
-    {
         for (int i = 0; i < renderStack.InterpolatedSpriteCount; i++)
-            DrawSprite(ref renderStack.InstanceInterpolatedSprites[i], t);
+            DrawSprite(ref renderStack.InstanceInterpolatedSprites[i], partialTick);
 
         for (int i = 0; i < renderStack.SpriteCount; i++)
             DrawSprite(ref renderStack.InstanceSprites[i]);
 
         for (int i = 0; i < renderStack.LineCount; i++)
             DrawLine(ref renderStack.InstanceLines[i]);
-    }
 
+        for (int i = 0; i < renderStack.TextCount; i++)
+            DrawText(ref renderStack.InstanceText[i]);
 
-    protected sealed override void DrawHotRenderStack(RenderStack renderStack)
-    {
-        for (int i = 0; i < renderStack.SpriteCount; i++)
-            DrawSprite(ref renderStack.InstanceSprites[i]);
-
-        for (int i = 0; i < renderStack.LineCount; i++)
-            DrawLine(ref renderStack.InstanceLines[i]);
+        spriteBatch.End();
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    protected override void DrawSprite(ref InstanceInterpolatedSprite sprite, float t)
+    private void DrawSprite(ref InstanceInterpolatedSprite sprite, float t)
     {
         var pos = sprite.Position0 + (sprite.Position - sprite.Position0) * t;
         pos.Y = -pos.Y;
@@ -91,7 +58,7 @@ internal sealed class FrameRenderer : BaseFrameRenderer
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    protected override void DrawSprite(ref InstanceSprite sprite)
+    private void DrawSprite(ref InstanceSprite sprite)
     {
         var pos = sprite.Position;
         pos.Y = -pos.Y;
@@ -109,115 +76,19 @@ internal sealed class FrameRenderer : BaseFrameRenderer
         );
     }
 
-    protected override void DrawLine(ref InstanceLine line)
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private void DrawLine(ref InstanceLine line)
     {
-        // implement line drawing
-    }
-}
-
-internal sealed class DebugFrameRenderer : BaseFrameRenderer
-{
-    public DebugFrameRenderer(SpriteBatch spriteBatch) 
-        : base(spriteBatch) { }
-
-    private Texture2D currTexture;
-    private ulong drawCalls;
-
-    public ulong DrawCalls => drawCalls;
-    public override void DrawFrame(RenderStack hotRenderStack, RenderStack renderStack, float partialTick)
-    {
-        drawCalls = 0;
-        currTexture = null;
-
-        RenderingSystem.GraphicsDevice.Clear(Color.Black);
-        if(renderStack.CanRender())
-        {
-            RenderingSystem.GraphicsDevice.Clear(Color.CornflowerBlue);
-            spriteBatch.Begin(transformMatrix: renderStack.GenerateCameraViewMatrix(partialTick));
-            DrawRenderStack(renderStack, partialTick);
-            spriteBatch.End();
-        }
-
-        spriteBatch.Begin();
-        DrawHotRenderStack(hotRenderStack);
-        spriteBatch.End();
-    }
-    protected sealed override void DrawRenderStack(RenderStack renderStack, float t)
-    {
-        for (int i = 0; i < renderStack.InterpolatedSpriteCount; i++)
-            DrawSprite(ref renderStack.InstanceInterpolatedSprites[i], t);
-
-        for (int i = 0; i < renderStack.SpriteCount; i++)
-            DrawSprite(ref renderStack.InstanceSprites[i]);
-
-        for (int i = 0; i < renderStack.LineCount; i++)
-            DrawLine(ref renderStack.InstanceLines[i]);
-    }
-    protected sealed override void DrawHotRenderStack(RenderStack renderStack)
-    {
-        for (int i = 0; i < renderStack.SpriteCount; i++)
-            DrawSprite(ref renderStack.InstanceSprites[i]);
-
-        for (int i = 0; i < renderStack.LineCount; i++)
-            DrawLine(ref renderStack.InstanceLines[i]);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    protected override void DrawSprite(ref InstanceInterpolatedSprite sprite, float t)
+    private void DrawText(ref InstanceText instance)
     {
-        TrackDrawCall(sprite.Sprite.TextureRegion.Texture);
-
-        var pos = sprite.Position0 + (sprite.Position - sprite.Position0) * t;
-        pos.Y = -pos.Y;
-
-        var rot = sprite.Rotation0 + (sprite.Rotation - sprite.Rotation0) * t;
-        var scale = sprite.Scale0 + (sprite.Scale - sprite.Scale0) * t;
-
-        spriteBatch.Draw(
-            sprite.Sprite.TextureRegion.Texture,
-            pos,
-            sprite.Sprite.TextureRegion.SourceRectangle,
-            sprite.Sprite.Color,
-            rot,
-            sprite.Sprite.Origin,
-            scale,
-            sprite.Sprite.Effects,
-            sprite.LayerDepth
+        spriteBatch.DrawString(
+            instance.Bold ? ResourceManager.GenericFontBold : ResourceManager.GenericFontMedium,
+            instance.Text,
+            instance.Position,
+            instance.Color
         );
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    protected override void DrawSprite(ref InstanceSprite sprite)
-    {
-        TrackDrawCall(sprite.Sprite.TextureRegion.Texture);
-
-        var pos = sprite.Position;
-        pos.Y = -pos.Y;
-
-        spriteBatch.Draw(
-            sprite.Sprite.TextureRegion.Texture,
-            pos,
-            sprite.Sprite.TextureRegion.SourceRectangle,
-            sprite.Sprite.Color,
-            sprite.Rotation,
-            sprite.Sprite.Origin,
-            sprite.Scale,
-            sprite.Sprite.Effects,
-            sprite.LayerDepth
-        );
-    }
-
-    protected override void DrawLine(ref InstanceLine line)
-    {
-        // implement line drawing
-    }
-
-    private void TrackDrawCall(Texture2D texture)
-    {
-        if (currTexture != texture)
-        {
-            currTexture = texture;
-            drawCalls++;
-        }
     }
 }

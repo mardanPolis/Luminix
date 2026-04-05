@@ -1,6 +1,5 @@
 using System;
 using System.Diagnostics;
-using System.Runtime.CompilerServices;
 using System.Threading;
 using Verse.Rendering;
 using Verse.Simulation;
@@ -17,8 +16,9 @@ internal sealed class CoreThread
             this.thread = new Thread(DebugRun);
         else
             this.thread = new Thread(Run);
+        this.thread.IsBackground = true;
     }
-    
+
     private Thread thread;
     private Stopwatch stopwatch;
 
@@ -28,6 +28,8 @@ internal sealed class CoreThread
     private volatile uint tickIntervalInTicks;
 
     private long nextTick = 0;
+
+    private RenderStack currWriteStack = null;
 
     // debug variables
     private readonly bool isDebug = false;
@@ -88,15 +90,18 @@ internal sealed class CoreThread
                 Thread.SpinWait(25);
                 continue;
             }
+            
+            currWriteStack = Bridges.CoreToRender.CurrentWriteStack;
+
             Interlocked.Increment(ref tickCount);
             Interlocked.Add(ref nextTick, tickIntervalInTicks);
 
             internalStopWatch.Restart();
 
             Update();
-            
-            RenderingSystem.DebugRender();
-            RenderingSystem.SwapRenderStacks(tickIntervalInTicks, elapsedTimeSinceLastTick() / Stopwatch.Frequency);
+            Render();
+            Optimize(tickIntervalInTicks, elapsedTimeSinceLastTick() / Stopwatch.Frequency);
+            Bridges.CoreToRender.Swap();
 
             //get current tick time
             var tickTimeInTicks = elapsedTimeSinceLastTick();
@@ -134,6 +139,8 @@ internal sealed class CoreThread
                 Thread.SpinWait(25);
                 continue;
             }
+            
+            currWriteStack = Bridges.CoreToRender.CurrentWriteStack;
 
             Interlocked.Increment(ref tickCount);
             Interlocked.Add(ref nextTick, tickIntervalInTicks);
@@ -141,17 +148,32 @@ internal sealed class CoreThread
             internalStopWatch.Restart();
 
             Update();
-
-            RenderingSystem.Render();
-            RenderingSystem.SwapRenderStacks(tickIntervalInTicks, elapsedTimeSinceLastTick() / Stopwatch.Frequency);
+            Render();
+            Optimize(tickIntervalInTicks, elapsedTimeSinceLastTick() / Stopwatch.Frequency);
+            Bridges.CoreToRender.Swap();
         }
     }
 
-    void Update()
+    private void Update()
     {
-        Camera.TickAll();
-
+        Camera.MainCamera.Tick();
+        
         foreach(var component in World.WorldComponents)
             component.Tick();
     }
+    private void Render()
+    {
+        currWriteStack.Reset();
+        
+        currWriteStack.PostCameraData(Camera.MainCamera);
+        
+        foreach(var renderer in RendererRegistry.GetRenderers())
+            renderer.RenderOn(currWriteStack);
+    }
+    private void Optimize(float maxTime, float time)
+    {
+        if(maxTime * 0.9f > time) currWriteStack.Optimize();
+        else currWriteStack.SkipOptimization();
+    }
+
 }

@@ -1,15 +1,12 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
-using Verse.Collections;
-using Verse.Identifiers;
 
 namespace Verse.Rendering;
 
 public abstract class Renderer
 {
-    public Type RenderableType { get; protected internal set; }
+    public Type RenderableType { get; protected internal init; }
     public abstract void Initialize();
     public abstract void RenderOn(RenderStack renderStack);
     public abstract void RenderGizmosOn(RenderStack renderStack);
@@ -26,6 +23,27 @@ public abstract class Renderer<T> : Renderer
 
     private IEnumerable<T>[] renderables = [];
     private int count = 0;
+
+    public sealed override void RenderOn(RenderStack renderStack)
+    {
+        foreach (var collection in renderables)
+        {
+            foreach (T renderable in collection)
+            {
+                Render(renderable, renderStack);
+            }
+        }
+    }
+    public sealed override void RenderGizmosOn(RenderStack renderStack)
+    {
+        foreach (var collection in renderables)
+        {
+            foreach (T renderable in collection)
+            {
+                RenderGizmo(renderable, renderStack);
+            }
+        }
+    }
 
     internal sealed override void Assign(IEnumerable list)
     {
@@ -45,7 +63,6 @@ public abstract class Renderer<T> : Renderer
         this.renderables[count] = typedEnumerable;
         count++;
     }
-
     internal sealed override void Optimize()
     {
         // resize renderables array to fit count
@@ -57,29 +74,24 @@ public abstract class Renderer<T> : Renderer
         this.renderables = newRenderables; 
     }
 
-
-    public sealed override void RenderOn(RenderStack renderStack)
-    {
-        foreach (var collection in renderables)
-        {
-            foreach (T renderable in collection)
-            {
-                Render(renderable, renderStack);
-            }
-        }
-    }
-
-    public sealed override void RenderGizmosOn(RenderStack renderStack)
-    {
-        foreach (var collection in renderables)
-        {
-            foreach (T renderable in collection)
-            {
-                RenderGizmo(renderable, renderStack);
-            }
-        }
-    }
-
     public abstract void Render(T renderable, RenderStack renderStack);
     public virtual void RenderGizmo(T renderable, RenderStack renderStack) {}
+}
+
+public abstract class GlobalRenderer : Renderer
+{
+    public GlobalRenderer()
+    {
+        RenderableType = null;
+    }
+
+    internal sealed override void Assign(IEnumerable list)
+    {
+        Console.WriteLine($"Cant assign '{list.GetType().Name}' to this '{this.GetType().Name}'! Reason: GlobalRenderer");
+    }
+
+    internal sealed override void Optimize()
+    {
+        Console.WriteLine($"Cant optimize '{this.GetType().Name}'! Reason: GlobalRenderer");
+    }
 }

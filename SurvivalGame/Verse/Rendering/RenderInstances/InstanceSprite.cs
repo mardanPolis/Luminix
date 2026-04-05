@@ -1,6 +1,6 @@
 using Microsoft.Xna.Framework;
 
-namespace Verse.Rendering.RenderData;
+namespace Verse.Rendering.RenderInstances;
 internal struct InstanceSprite
 {
     public InstanceSprite(Sprite sprite, Vector2 position, Vector2 scale, float rotation, float layerDepth)

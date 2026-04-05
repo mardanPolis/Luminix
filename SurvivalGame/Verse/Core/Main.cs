@@ -7,6 +7,7 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using SurvivalGame.GameSrc.Simulation;
+using Verse.Bridges;
 using Verse.Collections;
 using Verse.Rendering;
 using Verse.Resources;
@@ -26,8 +27,11 @@ public class Main : Game
 
     private DenseList<Test> testList = new DenseList<Test>();
 
+    private Stopwatch stopwatch;
+
     public Main()
     {
+        stopwatch = Stopwatch.StartNew();
         graphics = new GraphicsDeviceManager(this);
         Content.RootDirectory = "Content";
         IsMouseVisible = true;
@@ -39,7 +43,6 @@ public class Main : Game
         {
             Console.WriteLine($"Started: Initialize");
 
-            //set fps to 500
             IsFixedTimeStep = true;
             TargetElapsedTime = TimeSpan.FromSeconds(1.0 / 144.0);
 
@@ -49,11 +52,16 @@ public class Main : Game
             RendererRegistry.Assign(testList, typeof(TestRenderer));
             RendererRegistry.FinalizeRegistry();
 
+            //initialize thread bridges
+            CoreToRender.Initialize();
+
             ResourceManager.Initialize(Content.RootDirectory, Content);
 
             World.Initialize(coreThread);
 
             base.Initialize();
+
+            RenderingSystem.Initialize(graphics, IS_DEBUG);
 
             Console.WriteLine($"Successful: Initialize");
         }
@@ -70,14 +78,19 @@ public class Main : Game
         {
             Console.WriteLine($"Started: LoadContent");
 
-            RenderingSystem.Initialize(graphics, IS_DEBUG);
+            int assetLoadStart = stopwatch.Elapsed.Milliseconds;
+
+            ResourceManager.LoadDefaultData();
 
             ResourceManager.LoadTexture("null_texture.png");
             ResourceManager.NewTextureRegion("null_texture", "null_texture.png", 0, 0, 32, 32);
 
+            Console.WriteLine($"Loaded Game assets in {stopwatch.Elapsed.Milliseconds - assetLoadStart}ms");
+
             // TODO: use this.Content to load your game content
 
             Console.WriteLine($"Successful: LoadContent");
+            base.LoadContent();
         }
         catch (Exception ex)
         {
@@ -90,7 +103,7 @@ public class Main : Game
     {
         try
         {
-            Console.WriteLine($"Started: BeginRun");
+            Console.WriteLine($"Started: Start");
             //TEST
             var testObject = new Test();
             testList.Add(testObject);
@@ -106,9 +119,8 @@ public class Main : Game
 
             coreThread.Start();
             
-            base.BeginRun();
-
-            Console.WriteLine($"Successful: BeginRun");
+            Console.WriteLine($"Successful: Start");
+            Console.WriteLine($"Game fully initialized in {stopwatch.Elapsed.Milliseconds}ms");
         }
         catch (Exception ex)
         {
@@ -119,17 +131,17 @@ public class Main : Game
 
     protected override void Update(GameTime gameTime)
     {
-        if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed || Keyboard.GetState().IsKeyDown(Keys.Escape))
-            Exit();
-
-        // TODO: Add your update logic here
-
-        RenderingSystem.HotRender(gameTime.TotalGameTime.TotalSeconds / 1, gameTime.ElapsedGameTime.TotalSeconds);
         base.Update(gameTime);
     }
     protected override void Draw(GameTime gameTime)
     {
         RenderingSystem.DrawFrame(coreThread.PartialTick);
         base.Draw(gameTime);
+    }
+
+    protected override void OnExiting(object sender, ExitingEventArgs args)
+    {
+        coreThread.Stop();
+        //save current world
     }
 }

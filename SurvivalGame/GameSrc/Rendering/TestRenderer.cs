@@ -25,17 +25,26 @@ public class TestRenderer : Renderer<Test>
 
     Vector2 oldPos1 = Vector2.Zero;
     Vector2 oldPos2 = Vector2.Zero;
+    Vector2 oldPos3 = Vector2.Zero;
+    Vector2 oldPos4 = Vector2.Zero;
 
     public override void Render(Test renderable, RenderStack renderStack)
     {
-        Vector2 position1 = new Vector2(-1, (TriangleWave(World.TickCount, 60) - 0.5f) * 2);
-        Vector2 position2 = new Vector2(1, (TriangleWave(World.TickCount, 60) - 0.5f) * -2);
+        Vector2 position1 = new(-1, (TriangleWave(World.TickCount, 60) - 0.5f) * 2);
+        Vector2 position2 = new(1,  (TriangleWave(World.TickCount, 60) - 0.5f) * -2);
+        Vector2 position3 = new((TriangleWave(World.TickCount, 60) - 0.5f) * 2, 1);
+        Vector2 position4 = new((TriangleWave(World.TickCount, 60) - 0.5f) * -2, -1);
 
-        renderStack.PostSprite(sprite,  oldPos1, position1, 0,  0, Vector2.One, Vector2.One, 1);
-        renderStack.PostSprite(sprite,  Vector2.Zero,  0, Vector2.One, 1);
-        renderStack.PostSprite(sprite,  oldPos2, position2, 0,  0, Vector2.One, Vector2.One, 1);
+        renderStack.PostSprite(sprite,  Vector2.Zero,  0, Vector2.One * 2, layerDepth:0.2f);
+
+        renderStack.PostSprite(sprite,  oldPos1, position1, 0,  0, Vector2.One, Vector2.One, layerDepth:0.1f);
+        renderStack.PostSprite(sprite,  oldPos2, position2, 0,  0, Vector2.One, Vector2.One, layerDepth:0.1f);
+        renderStack.PostSprite(sprite,  oldPos3, position3, 0,  0, Vector2.One, Vector2.One, layerDepth:0.1f);
+        renderStack.PostSprite(sprite,  oldPos4, position4, 0,  0, Vector2.One, Vector2.One, layerDepth:0.1f);
 
         oldPos1 = position1;
         oldPos2 = position2;
+        oldPos3 = position3;
+        oldPos4 = position4;
     }
 }

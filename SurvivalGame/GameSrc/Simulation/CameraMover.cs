@@ -16,7 +16,7 @@ public class CameraMover : WorldComponent
 
     public override void Tick()
     {
-        float speed = 0.5f;
+        float speed = 0.1f;
 
         var cameraPos = camera.Position;
 
@@ -31,9 +31,9 @@ public class CameraMover : WorldComponent
             cameraPos.X += speed;
 
         if(Keyboard.GetState().IsKeyDown(Keys.Q))
-            camera.ScaleTo(camera.OrthographicSize - speed * 0.5f);
+            camera.ScaleTo(camera.OrthographicSize - speed * 5f);
         if(Keyboard.GetState().IsKeyDown(Keys.E))
-            camera.ScaleTo(camera.OrthographicSize + speed * 0.5f);
+            camera.ScaleTo(camera.OrthographicSize + speed * 5f);
 
         camera.MoveTo(cameraPos);
     }

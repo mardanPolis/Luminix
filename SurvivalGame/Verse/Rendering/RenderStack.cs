@@ -1,20 +1,23 @@
 using System;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using Verse.Rendering.RenderData;
+using Verse.Rendering.RenderInstances;
 
 namespace Verse.Rendering;
+
 public sealed class RenderStack
 {
-    internal RenderStack(StackSharedData interpSpriteSharedData, StackSharedData spritePrevSharedData, StackSharedData linePrevSharedData)
+    internal RenderStack(StackSharedData interpSpriteSharedData, StackSharedData spriteSharedData, StackSharedData lineSharedData, StackSharedData textSharedData)
     {
         interpolatedSpriteRenderDataStack = new Stack<InstanceInterpolatedSprite>(1024);
         spriteRenderDataStack = new Stack<InstanceSprite>(1024);
         lineRenderDataStack = new Stack<InstanceLine>(512);
+        textRenderDataStack = new Stack<InstanceText>(128);
 
         interpolatedSpriteRenderDataStack.sharedData = interpSpriteSharedData;
-        spriteRenderDataStack.sharedData = spritePrevSharedData;
-        lineRenderDataStack.sharedData = linePrevSharedData;
+        spriteRenderDataStack.sharedData = spriteSharedData;
+        lineRenderDataStack.sharedData = lineSharedData;
+        textRenderDataStack.sharedData = textSharedData;
     }
 
     internal class StackSharedData
@@ -88,7 +91,7 @@ public sealed class RenderStack
         }
         internal void Reset()
         {
-            sharedData.NextCount(Count);                                                                 
+            sharedData.NextCount(Count);                                                   
             Count = 0;
         }
     }
@@ -99,6 +102,7 @@ public sealed class RenderStack
     private Stack<InstanceInterpolatedSprite> interpolatedSpriteRenderDataStack;
     private Stack<InstanceSprite> spriteRenderDataStack;
     private Stack<InstanceLine> lineRenderDataStack;
+    private Stack<InstanceText> textRenderDataStack;
 
     private bool cameraDataPosted = false;
 
@@ -108,14 +112,14 @@ public sealed class RenderStack
     private float OrthoSize0;
     private float OrthoSize;
 
-    private Viewport viewport => RenderingSystem.GraphicsDevice.Viewport;
-
     internal InstanceInterpolatedSprite[] InstanceInterpolatedSprites => interpolatedSpriteRenderDataStack.DataSet;
     internal int InterpolatedSpriteCount => interpolatedSpriteRenderDataStack.Count;
     internal InstanceSprite[] InstanceSprites => spriteRenderDataStack.DataSet;
     internal int SpriteCount => spriteRenderDataStack.Count;
     internal InstanceLine[] InstanceLines => lineRenderDataStack.DataSet;
     internal int LineCount => lineRenderDataStack.Count;
+    internal InstanceText[] InstanceText => textRenderDataStack.DataSet;
+    internal int TextCount => textRenderDataStack.Count;
 
     internal void PostCameraData(Camera camera)
     {
@@ -163,18 +167,19 @@ public sealed class RenderStack
         instanceLine.Thickness = thickness;
     }
 
-    public void Optimize()
+    internal void Optimize()
     {
         interpolatedSpriteRenderDataStack.TryOptimize();
         spriteRenderDataStack.TryOptimize();
         lineRenderDataStack.TryOptimize();
+        textRenderDataStack.TryOptimize();
     }
-
-    public void SkipOptimization()
+    internal void SkipOptimization()
     {
         interpolatedSpriteRenderDataStack.SkippedOptimization();
         spriteRenderDataStack.SkippedOptimization();
         lineRenderDataStack.SkippedOptimization();
+        textRenderDataStack.SkippedOptimization();
     }
 
     public void Reset()
@@ -184,6 +189,7 @@ public sealed class RenderStack
         interpolatedSpriteRenderDataStack.Reset();
         spriteRenderDataStack.Reset();
         lineRenderDataStack.Reset();
+        textRenderDataStack.Reset();
     }
 
     internal bool CanRender()
@@ -191,16 +197,15 @@ public sealed class RenderStack
         return cameraDataPosted;
     }
 
-    internal Matrix GenerateCameraViewMatrix(float t)
+    internal Matrix GenerateCameraViewMatrix(float t, float viewportHeight, float viewportWidth)
     {
-        var viewport = this.viewport;
         var tarPos = cameraPosition0 + (cameraPosition - cameraPosition0) * t;
         var tarOrthoSize = OrthoSize0 + (OrthoSize - OrthoSize0) * t;
 
-        var tarScale = viewport.Height / tarOrthoSize;
+        var tarScale = viewportHeight / tarOrthoSize;
 
         return Matrix.CreateTranslation(new Vector3(-tarPos.X, tarPos.Y, 0f)) *
         Matrix.CreateScale(tarScale, tarScale, 1f) *
-        Matrix.CreateTranslation(new Vector3(viewport.Width * 0.5f, viewport.Height * 0.5f, 0f));
+        Matrix.CreateTranslation(new Vector3(viewportWidth * 0.5f, viewportHeight * 0.5f, 0f));
     }
 }

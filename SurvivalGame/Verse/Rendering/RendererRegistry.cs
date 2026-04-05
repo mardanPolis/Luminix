@@ -7,21 +7,18 @@ namespace Verse.Rendering;
 
 public static class RendererRegistry
 {
-    private readonly struct RegistryEntry(Renderer renderer, Type renderableType, bool isHot)
+    private readonly struct RegistryEntry(Renderer renderer, Type renderableType)
     {
         public readonly Renderer Renderer = renderer;
         public readonly Type RenderableType = renderableType;
-        public readonly bool IsHot = isHot;
     } 
 
     private static Dictionary<Type, ID> registeredTypes = new Dictionary<Type, ID>();
     private static Dictionary<ID, RegistryEntry> registry = new Dictionary<ID, RegistryEntry>();
 
-    private static Renderer[] allRenderers;
-    private static Renderer[] hotRenderers;
     private static Renderer[] renderers;
 
-    public static void Register(Type rendererType, bool isHot = false)
+    public static void Register(Type rendererType)
     {
         bool InheritsRenderer(Type type)
         {
@@ -40,7 +37,7 @@ public static class RendererRegistry
 
         Renderer renderer = (Renderer)Activator.CreateInstance(rendererType);
         ID id = new ID((uint)registeredTypes.Count);
-        RegistryEntry registryEntry = new (renderer, renderer.RenderableType, isHot);
+        RegistryEntry registryEntry = new (renderer, renderer.RenderableType);
         registeredTypes.TryAdd(rendererType, id);
         registry.TryAdd(id, registryEntry);
     }
@@ -60,45 +57,22 @@ public static class RendererRegistry
 
     internal static void FinalizeRegistry()
     {
-        List<Renderer> allRenderers = new List<Renderer>();
-        List<Renderer> hotRenderers = new List<Renderer>();
         List<Renderer> renderers = new List<Renderer>();
 
         foreach(var entry in registry.Values)
         {
-            var renderer = entry.Renderer;
-            var isHot = entry.IsHot;
-
-            if(renderer is null)
-                throw new NullReferenceException("Null Renderer has been registered!");
-
-            allRenderers.Add(renderer);
-            if(isHot)
-                hotRenderers.Add(renderer);
-            else
-                renderers.Add(renderer);
+            var renderer = entry.Renderer ?? throw new NullReferenceException("Null Renderer has been registered!");
+            renderers.Add(renderer);
         }
 
-        RendererRegistry.allRenderers = allRenderers.ToArray();
-        RendererRegistry.hotRenderers = hotRenderers.ToArray();
         RendererRegistry.renderers = renderers.ToArray();
 
-        foreach(var renderer in allRenderers)
+        foreach(var renderer in renderers)
             renderer.Optimize();
     }
 
     public static Renderer[] GetRenderers()
     {
         return renderers;
-    }
-
-    public static Renderer[] GetHotRenderers()
-    {
-        return hotRenderers;
-    }
-
-    public static Renderer[] GetAllRenderers()
-    {
-        return allRenderers;
     }
 }

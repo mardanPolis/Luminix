@@ -14,10 +14,21 @@ public static class ResourceManager
 
     public static string RootDirectory {get; private set;}
 
+    private static SpriteFont IBMPlexMono_Bold;
+    private static SpriteFont IBMPlexMono_Medium;
+    private static SpriteFont IBMPlexMono_Regular;
+
     internal static void Initialize(string rootDirectory, ContentManager content)
     {
         RootDirectory = rootDirectory;
         ContentManager = content;
+    }
+
+    internal static void LoadDefaultData()
+    {
+        IBMPlexMono_Bold = ContentManager.Load<SpriteFont>("Fonts/IBMPlexMono-Bold");
+        IBMPlexMono_Medium = ContentManager.Load<SpriteFont>("Fonts/IBMPlexMono-Medium");
+        IBMPlexMono_Regular = ContentManager.Load<SpriteFont>("Fonts/IBMPlexMono-Regular");
     }
 
     public static Texture2D LoadTexture(string name)
@@ -56,5 +67,9 @@ public static class ResourceManager
 
         return textureRegion;
     }
+
+    public static SpriteFont GenericFontBold => IBMPlexMono_Regular;
+    public static SpriteFont GenericFontMedium => IBMPlexMono_Regular;
+    public static SpriteFont GenericFontRegular => IBMPlexMono_Regular;
 
 }

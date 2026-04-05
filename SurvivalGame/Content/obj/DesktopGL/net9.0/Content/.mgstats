@@ -1,1 +1,4 @@
 Source File,Dest File,Processor Type,Content Type,Source File Size,Dest File Size,Build Seconds
+"/home/markuss/Dev/Monogame/SurvivalGame/Content/Fonts/IBMPlexMono-Bold.spritefont","/home/markuss/Dev/Monogame/SurvivalGame/Content/bin/DesktopGL/Content/Fonts/IBMPlexMono-Bold.xnb","FontDescriptionProcessor","SpriteFontContent",2019,21530,0.1060592
+"/home/markuss/Dev/Monogame/SurvivalGame/Content/Fonts/IBMPlexMono-Medium.spritefont","/home/markuss/Dev/Monogame/SurvivalGame/Content/bin/DesktopGL/Content/Fonts/IBMPlexMono-Medium.xnb","FontDescriptionProcessor","SpriteFontContent",2021,21530,0.0162998
+"/home/markuss/Dev/Monogame/SurvivalGame/Content/Fonts/IBMPlexMono-Regular.spritefont","/home/markuss/Dev/Monogame/SurvivalGame/Content/bin/DesktopGL/Content/Fonts/IBMPlexMono-Regular.xnb","FontDescriptionProcessor","SpriteFontContent",2022,21530,0.0128565

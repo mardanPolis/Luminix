@@ -7,22 +7,19 @@ namespace Verse.Rendering;
 
 public class Camera
 {
-    private static List<Camera> cameras = new List<Camera>();
-
     public Camera()
     {
-        cameras.Add(this);
         MainCamera ??= this;
         viewport = RenderingSystem.GraphicsDevice.Viewport;
     }
 
+    public static Camera MainCamera { get; set; } = null;
+
     private Viewport viewport;
     private Vector2 position0 = Vector2.Zero;
     private Vector2 position = Vector2.Zero;
-    private float orthoSize0 = 7f;
-    private float orthoSize = 7f;
-
-    public static Camera MainCamera { get; set; } = null;
+    private float orthoSize0 = 15f;
+    private float orthoSize = 15f;
 
     public Vector2 Position { get {return position0; } set { position0 = value; position = value; } }
     internal Vector2 TPosition => position;
@@ -30,15 +27,13 @@ public class Camera
     public float PosY { get { return position0.Y; } set { position0.Y = value; position.Y = value; } }
     public float ScaleX { get { return ScaleY; }}
     public float ScaleY { get { return viewport.Height / orthoSize0; } }
-    public float OrthographicSize { get { return orthoSize0; } set { orthoSize0 = value > 0.01f ? value : 0.01f; orthoSize = orthoSize0;  } }
-    internal float TOrthographicSize => orthoSize;
-
     public float Zoom
     {
         get => viewport.Height / orthoSize0;
         set => orthoSize0 = viewport.Height / MathF.Max(value, 0.01f);
     }
-
+    public float OrthographicSize { get { return orthoSize0; } set { orthoSize0 = value > 0.01f ? value : 0.01f; orthoSize = orthoSize0;  } }
+    internal float TOrthographicSize => orthoSize;
 
     public virtual Matrix GetViewMatrix()
     {
@@ -88,14 +83,13 @@ public class Camera
         this.orthoSize = Math.Max(orthoSize, 0.01f);
     }
 
-    public void Tick()
+    internal void TickStart(Viewport viewport)
+    {
+        this.viewport = viewport;
+    }
+    internal void Tick()
     {
         position0 = position;
         orthoSize0 = orthoSize;
-    }
-
-    public static void TickAll()
-    {
-        cameras.ForEach(camera => camera.Tick());
     }
 } 
