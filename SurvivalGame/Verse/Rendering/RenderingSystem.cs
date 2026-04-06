@@ -1,12 +1,16 @@
+using System;
+using System.Threading;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Verse.Bridges;
+using Verse.Rendering.Renderers;
 
 namespace Verse.Rendering;
 
 internal static class RenderingSystem
 {
-    private static FrameRenderer FrameRenderer;
+    private static FrameRenderer frameRenderer;
+    private static DebugRenderer debugRenderer;
     private static GraphicsDeviceManager graphics;
 
     private static RenderStack readStack; // the stack currently used to draw frames
@@ -16,21 +20,17 @@ internal static class RenderingSystem
 
     static float prevPartialTick = 0;
 
-    public static SpriteBatch SpriteBatch { get; private set; }
-
     public static GraphicsDeviceManager GraphicsDeviceManager => graphics;
     public static GraphicsDevice GraphicsDevice => graphics.GraphicsDevice;
-    public static ulong FrameCount => frameCount;
-    public static long DrawCount => drawCount;
+    public static ulong FrameCount => Interlocked.Read(ref frameCount);
+    public static long DrawCount => Interlocked.Read(ref drawCount);
 
-    public static void Initialize(GraphicsDeviceManager graphics, bool isDebug)
+    public static void Initialize(GraphicsDeviceManager graphics)
     {
-        FrameRenderer = new FrameRenderer(new SpriteBatch(graphics.GraphicsDevice));
-
         graphics.PreferredBackBufferWidth = 1920;
         graphics.PreferredBackBufferHeight = 1080;
         graphics.IsFullScreen = false;
-        graphics.SynchronizeWithVerticalRetrace = true;
+        graphics.SynchronizeWithVerticalRetrace = false;
         graphics.ApplyChanges();
 
         readStack = CoreToRender.Read();
@@ -38,16 +38,29 @@ internal static class RenderingSystem
         RenderingSystem.graphics = graphics;
     }
 
+    public static void InitializeRenderers(bool isDebug)
+    {
+        var spriteBatch = new SpriteBatch(graphics.GraphicsDevice);
+        frameRenderer = new FrameRenderer(spriteBatch);
+        if (isDebug) debugRenderer = new DebugRenderer(spriteBatch);
+    }
+
     public static void DrawFrame(float partialTick)
     {
-        if (CoreToRender.PendingStack && partialTick <= prevPartialTick)
+        if (CoreToRender.PendingStack)
             readStack = CoreToRender.Read();
 
-        FrameRenderer.DrawFrame(readStack, graphics.GraphicsDevice.Viewport, partialTick);
-        frameCount++;
+        partialTick = Math.Clamp(partialTick, 0f, 1f);
 
-        drawCount = GraphicsDevice.Metrics.DrawCount;
+        frameRenderer.DrawFrame(readStack, graphics.GraphicsDevice.Viewport, partialTick);
+
+        if(debugRenderer is not null) debugRenderer.Render();
+        
+        Interlocked.Increment(ref frameCount);
+        Interlocked.Exchange(ref drawCount, GraphicsDevice.Metrics.DrawCount);
 
         prevPartialTick = partialTick;
     }
+
+    public static DebugRenderer DebugRenderer => debugRenderer;
 }

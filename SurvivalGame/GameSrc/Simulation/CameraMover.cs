@@ -16,23 +16,25 @@ public class CameraMover : WorldComponent
 
     public override void Tick()
     {
-        float speed = 0.1f;
+        float speed = (float)(5f * World.TickDeltaTime);
 
         var cameraPos = camera.Position;
 
-        if(Keyboard.GetState().IsKeyDown(Keys.W))
+        KeyboardState state = Keyboard.GetState();
+
+        if(state.IsKeyDown(Keys.W))
             cameraPos.Y += speed;
-        if(Keyboard.GetState().IsKeyDown(Keys.S))
+        if(state.IsKeyDown(Keys.S))
             cameraPos.Y -= speed;
 
-        if(Keyboard.GetState().IsKeyDown(Keys.A))
+        if(state.IsKeyDown(Keys.A))
             cameraPos.X -= speed;
-        if(Keyboard.GetState().IsKeyDown(Keys.D))
+        if(state.IsKeyDown(Keys.D))
             cameraPos.X += speed;
 
-        if(Keyboard.GetState().IsKeyDown(Keys.Q))
+        if(state.IsKeyDown(Keys.Q))
             camera.ScaleTo(camera.OrthographicSize - speed * 5f);
-        if(Keyboard.GetState().IsKeyDown(Keys.E))
+        if(state.IsKeyDown(Keys.E))
             camera.ScaleTo(camera.OrthographicSize + speed * 5f);
 
         camera.MoveTo(cameraPos);

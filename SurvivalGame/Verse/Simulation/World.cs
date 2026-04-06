@@ -20,8 +20,8 @@ public class World
     }
 
     public static long TickCount => coreThread.TickCount;
-    public static uint TickTimeInUS => coreThread.TickTimeInUS;
-    public static uint AvgTickTimeInUS => coreThread.AvgTickTimeInUS;
+
+    public static double TickDeltaTime => coreThread.TickDeltaTimeSec;
 
     public static float PartialTick => coreThread.PartialTick;
 

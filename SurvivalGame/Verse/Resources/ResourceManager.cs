@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.IO;
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 using Verse.Rendering;
@@ -26,6 +27,13 @@ public static class ResourceManager
 
     internal static void LoadDefaultData()
     {
+        Texture2D pixel = new Texture2D(RenderingSystem.GraphicsDevice, 1, 1);
+        pixel.SetData(new[] { Color.White });
+        textures["pixel"] = pixel;
+
+        LoadTexture("null_texture.png");
+        NewTextureRegion("null_texture", "null_texture.png", 0, 0, 32, 32);
+
         IBMPlexMono_Bold = ContentManager.Load<SpriteFont>("Fonts/IBMPlexMono-Bold");
         IBMPlexMono_Medium = ContentManager.Load<SpriteFont>("Fonts/IBMPlexMono-Medium");
         IBMPlexMono_Regular = ContentManager.Load<SpriteFont>("Fonts/IBMPlexMono-Regular");
@@ -68,8 +76,8 @@ public static class ResourceManager
         return textureRegion;
     }
 
-    public static SpriteFont GenericFontBold => IBMPlexMono_Regular;
-    public static SpriteFont GenericFontMedium => IBMPlexMono_Regular;
+    public static SpriteFont GenericFontBold => IBMPlexMono_Bold;
+    public static SpriteFont GenericFontMedium => IBMPlexMono_Medium;
     public static SpriteFont GenericFontRegular => IBMPlexMono_Regular;
 
 }

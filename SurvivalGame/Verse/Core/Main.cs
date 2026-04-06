@@ -4,8 +4,6 @@ using System.Threading;
 using GameSrc;
 using GameSrc.Rendering;
 using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Graphics;
-using Microsoft.Xna.Framework.Input;
 using SurvivalGame.GameSrc.Simulation;
 using Verse.Bridges;
 using Verse.Collections;
@@ -25,9 +23,17 @@ public class Main : Game
     private const bool IS_DEBUG = true;
     private const uint TICK_RATE = 20;
 
+    public const string VERSION = "1.0v";
+
     private DenseList<Test> testList = new DenseList<Test>();
 
+    private double frameTime;
+
     private Stopwatch stopwatch;
+    private GameTime time;
+
+    public double FrameTime => frameTime;
+    public double FrameDeltaTime => time != null ? time.ElapsedGameTime.TotalMilliseconds : 0;
 
     public Main()
     {
@@ -36,6 +42,8 @@ public class Main : Game
         Content.RootDirectory = "Content";
         IsMouseVisible = true;
     }
+
+    public GameTime GameTime => time;
 
     protected override void Initialize()
     {
@@ -55,13 +63,13 @@ public class Main : Game
             //initialize thread bridges
             CoreToRender.Initialize();
 
+            RenderingSystem.Initialize(graphics);
             ResourceManager.Initialize(Content.RootDirectory, Content);
-
             World.Initialize(coreThread);
 
             base.Initialize();
 
-            RenderingSystem.Initialize(graphics, IS_DEBUG);
+            RenderingSystem.InitializeRenderers(IS_DEBUG);
 
             Console.WriteLine($"Successful: Initialize");
         }
@@ -82,9 +90,6 @@ public class Main : Game
 
             ResourceManager.LoadDefaultData();
 
-            ResourceManager.LoadTexture("null_texture.png");
-            ResourceManager.NewTextureRegion("null_texture", "null_texture.png", 0, 0, 32, 32);
-
             Console.WriteLine($"Loaded Game assets in {stopwatch.Elapsed.Milliseconds - assetLoadStart}ms");
 
             // TODO: use this.Content to load your game content
@@ -104,12 +109,16 @@ public class Main : Game
         try
         {
             Console.WriteLine($"Started: Start");
+
             //TEST
             var testObject = new Test();
             testList.Add(testObject);
 
             new CameraMover();
             //END TEST
+
+            if(IS_DEBUG)
+                RenderingSystem.DebugRenderer.Initialize(this, coreThread);
 
             foreach(var renderer in RendererRegistry.GetRenderers())
                 renderer.Initialize();
@@ -131,12 +140,17 @@ public class Main : Game
 
     protected override void Update(GameTime gameTime)
     {
+        stopwatch.Restart();
+
         base.Update(gameTime);
     }
     protected override void Draw(GameTime gameTime)
     {
         RenderingSystem.DrawFrame(coreThread.PartialTick);
         base.Draw(gameTime);
+
+        frameTime = stopwatch.Elapsed.TotalNanoseconds;
+        time = gameTime;
     }
 
     protected override void OnExiting(object sender, ExitingEventArgs args)
