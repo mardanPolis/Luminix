@@ -1,16 +1,15 @@
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Verse.Bridges;
-using Verse.Rendering.Renderers;
 
 namespace Verse.Rendering;
 
 internal static class RenderingSystem
 {
     private static FrameRenderer frameRenderer;
-    private static DebugRenderer debugRenderer;
     private static GraphicsDeviceManager graphics;
 
     private static RenderStack readStack; // the stack currently used to draw frames
@@ -24,6 +23,8 @@ internal static class RenderingSystem
     public static GraphicsDevice GraphicsDevice => graphics.GraphicsDevice;
     public static ulong FrameCount => Interlocked.Read(ref frameCount);
     public static long DrawCount => Interlocked.Read(ref drawCount);
+
+    private static List<DebugRenderer> debugRenderers;
 
     public static void Initialize(GraphicsDeviceManager graphics)
     {
@@ -42,7 +43,17 @@ internal static class RenderingSystem
     {
         var spriteBatch = new SpriteBatch(graphics.GraphicsDevice);
         frameRenderer = new FrameRenderer(spriteBatch);
-        if (isDebug) debugRenderer = new DebugRenderer(spriteBatch);
+
+        if (isDebug)
+        {
+            debugRenderers = RendererRegistry.GetDebugRenderers();
+            if(debugRenderers != null)
+                foreach(var renderer in debugRenderers)
+                    renderer.Initialize(spriteBatch);
+        }
+
+        foreach(var renderer in RendererRegistry.GetRenderers())
+            renderer.Initialize();
     }
 
     public static void DrawFrame(float partialTick)
@@ -54,13 +65,13 @@ internal static class RenderingSystem
 
         frameRenderer.DrawFrame(readStack, graphics.GraphicsDevice.Viewport, partialTick);
 
-        if(debugRenderer is not null) debugRenderer.Render();
-        
+        if(debugRenderers != null)
+            for (int i = 0; i < debugRenderers.Count; i++)
+                debugRenderers[i].Render();
+
         Interlocked.Increment(ref frameCount);
         Interlocked.Exchange(ref drawCount, GraphicsDevice.Metrics.DrawCount);
 
         prevPartialTick = partialTick;
     }
-
-    public static DebugRenderer DebugRenderer => debugRenderer;
 }

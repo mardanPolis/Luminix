@@ -27,13 +27,18 @@ public class Main : Game
 
     private DenseList<Test> testList = new DenseList<Test>();
 
+    private long startBytes = 0;
+    private long allocated = 0;
     private double frameTime;
 
     private Stopwatch stopwatch;
     private GameTime time;
 
     public double FrameTime => frameTime;
-    public double FrameDeltaTime => time != null ? time.ElapsedGameTime.TotalMilliseconds : 0;
+    public double FrameDeltaTime => time != null ? time.ElapsedGameTime.TotalSeconds : 0;
+    public double FPS => FrameDeltaTime > 0 ? 1000.0 / FrameDeltaTime : double.MaxValue;
+    public long FrameRate => (long)(1.0 / TargetElapsedTime.TotalSeconds);
+    public long FrameAllocationAmount => allocated;
 
     public Main()
     {
@@ -51,11 +56,12 @@ public class Main : Game
         {
             Console.WriteLine($"Started: Initialize");
 
-            IsFixedTimeStep = true;
+            IsFixedTimeStep = false;
             TargetElapsedTime = TimeSpan.FromSeconds(1.0 / 144.0);
 
             coreThread = new CoreThread(IS_DEBUG, TICK_RATE);
 
+            RendererRegistry.Register(typeof(GameDebugRenderer));
             RendererRegistry.Register(typeof(TestRenderer));
             RendererRegistry.Assign(testList, typeof(TestRenderer));
             RendererRegistry.FinalizeRegistry();
@@ -68,6 +74,9 @@ public class Main : Game
             World.Initialize(coreThread);
 
             base.Initialize();
+
+            if(RendererRegistry.TryGetDebugRenderer(typeof(GameDebugRenderer), out DebugRenderer renderer))
+                ((GameDebugRenderer)renderer).Initialize(this, coreThread);
 
             RenderingSystem.InitializeRenderers(IS_DEBUG);
 
@@ -117,12 +126,6 @@ public class Main : Game
             new CameraMover();
             //END TEST
 
-            if(IS_DEBUG)
-                RenderingSystem.DebugRenderer.Initialize(this, coreThread);
-
-            foreach(var renderer in RendererRegistry.GetRenderers())
-                renderer.Initialize();
-
             foreach(var component in World.WorldComponents)
                 component.Initialize();
 
@@ -140,6 +143,7 @@ public class Main : Game
 
     protected override void Update(GameTime gameTime)
     {
+        startBytes = GC.GetAllocatedBytesForCurrentThread();
         stopwatch.Restart();
 
         base.Update(gameTime);
@@ -151,6 +155,8 @@ public class Main : Game
 
         frameTime = stopwatch.Elapsed.TotalNanoseconds;
         time = gameTime;
+        long endBytes = GC.GetAllocatedBytesForCurrentThread();
+        allocated = endBytes - startBytes;
     }
 
     protected override void OnExiting(object sender, ExitingEventArgs args)

@@ -20,6 +20,24 @@ public sealed class DenseList<T> : ICollection, IEnumerable<T>
     public int Count => count;
     public bool IsSynchronized => false;
     public object SyncRoot => items;
+
+    public T this[int index]
+    {
+        get
+        {
+            if (index < 0 || index >= count)
+                throw new IndexOutOfRangeException($"Index {index} is out of range for DenseList<{typeof(T).Name}> with count {count}.");
+
+            return items[index];
+        }
+        set
+        {
+            if (index < 0 || index >= count)
+                throw new IndexOutOfRangeException($"Index {index} is out of range for DenseList<{typeof(T).Name}> with count {count}.");
+
+            items[index] = value;
+        }
+    }
     
     public bool Add(T item)
     {

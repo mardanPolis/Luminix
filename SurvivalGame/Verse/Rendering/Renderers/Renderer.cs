@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using Verse.Collections;
 
 namespace Verse.Rendering;
 
@@ -21,57 +22,87 @@ public abstract class Renderer<T> : Renderer
         RenderableType = typeof(T);
     }
 
-    private IEnumerable<T>[] renderables = [];
+    internal interface IFastRenderable<TBase>
+    {
+        void ExecuteRender(Renderer<TBase> renderer, RenderStack stack);
+        void ExecuteGizmosRender(Renderer<TBase> renderer, RenderStack stack);
+    }
+
+    private sealed class DenseListWrapper<TSub, TBase> : IFastRenderable<TBase> 
+        where TSub : TBase
+    {
+        private readonly DenseList<TSub> _list;
+
+        public DenseListWrapper(DenseList<TSub> list) => _list = list;
+
+        public void ExecuteRender(Renderer<TBase> renderer, RenderStack stack)
+        {
+            for (int i = 0; i < _list.Count; i++)
+                renderer.Render(_list[i], stack); 
+        }
+        public void ExecuteGizmosRender(Renderer<TBase> renderer, RenderStack stack)
+        {
+            for (int i = 0; i < _list.Count; i++)
+                renderer.RenderGizmo(_list[i], stack); 
+        }
+    }
+
+    private IFastRenderable<T>[] renderables = [];
     private int count = 0;
 
     public sealed override void RenderOn(RenderStack renderStack)
     {
-        foreach (var collection in renderables)
-        {
-            foreach (T renderable in collection)
-            {
-                Render(renderable, renderStack);
-            }
-        }
+        for (int i = 0; i < renderables.Length; i++)
+            renderables[i].ExecuteRender(this, renderStack);
     }
     public sealed override void RenderGizmosOn(RenderStack renderStack)
     {
-        foreach (var collection in renderables)
-        {
-            foreach (T renderable in collection)
-            {
-                RenderGizmo(renderable, renderStack);
-            }
-        }
+        for (int i = 0; i < renderables.Length; i++)
+            renderables[i].ExecuteGizmosRender(this, renderStack);
     }
 
     internal sealed override void Assign(IEnumerable list)
     {
-        if (list == null) throw new ArgumentNullException(nameof(list));
-
-        // Only allow collections that already implement IEnumerable<T>
-        if (list is not IEnumerable<T> typedEnumerable)
-            throw new InvalidOperationException($"Renderer<{typeof(T)}> can only accept IEnumerable<{typeof(T)}> collections got {list.GetType().Name}.");
-
-        if (count >= this.renderables.Length)
+        var listType = list.GetType();
+        
+        if (listType.IsGenericType && listType.GetGenericTypeDefinition() == typeof(DenseList<>))
         {
-            var newRenderables = new IEnumerable<T>[count + 2];
-            Array.Copy(this.renderables, newRenderables, count);
-            this.renderables = newRenderables;
+            var itemType = listType.GetGenericArguments()[0];
+            
+            if (typeof(T).IsAssignableFrom(itemType))
+            {
+                var method = typeof(Renderer<T>).GetMethod("AssignSub", 
+                    System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                var genericMethod = method.MakeGenericMethod(itemType);
+                genericMethod.Invoke(this, new object[] { list });
+            }
+        }
+    }
+    private void AssignSub<TSub>(DenseList<TSub> list) where TSub : T
+    {
+       ArgumentNullException.ThrowIfNull(list, nameof(list));
+
+        // Fix: If the array is empty, give it a size of 4. Otherwise, double it.
+        if (count >= renderables.Length)
+        {
+            int newSize = renderables.Length == 0 ? 4 : renderables.Length * 2;
+            Array.Resize(ref renderables, newSize);
         }
 
-        this.renderables[count] = typedEnumerable;
+        renderables[count] = new DenseListWrapper<TSub, T>(list);
         count++;
     }
+
     internal sealed override void Optimize()
     {
-        // resize renderables array to fit count
-        if(renderables == null || count == renderables.Length)
+        if (renderables == null || count == renderables.Length)
             return;
 
-        var newRenderables = new IEnumerable<T>[count];
-        Array.Copy(this.renderables, newRenderables, count);
-        this.renderables = newRenderables; 
+        var trimmedRenderables = new IFastRenderable<T>[count];
+        
+        Array.Copy(this.renderables, trimmedRenderables, count);
+        
+        this.renderables = trimmedRenderables;
     }
 
     public abstract void Render(T renderable, RenderStack renderStack);

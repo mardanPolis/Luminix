@@ -39,12 +39,17 @@ internal sealed class CoreThread
 
     private long lastTickTime;
 
+    private long allocated;
+
     private double deltaTime = 0;
     private double deltaTimeSec = 0;
     private double tickTime = 0;
     private double tickUpdateTime = 0;
     private double tickRenderTime = 0;
     private double tickOptimizeTime = 0;
+
+    private double[] tickTimesBuffer1 = new double[100];
+    private double[] tickTimesBuffer2 = new double[100];
 
     public bool IsDebug
     {
@@ -80,6 +85,9 @@ internal sealed class CoreThread
     public double TickUpdateTime => Volatile.Read(ref tickUpdateTime);
     public double TickRenderTime => Volatile.Read(ref tickRenderTime);
     public double TickOptimizeTime => Volatile.Read(ref tickOptimizeTime);
+    public long Allocated => Volatile.Read(ref allocated);
+
+    public double[] TickTimes => tickTimesBuffer1;
 
     public void Start() => thread.Start();
     public void Stop() => running = false;
@@ -89,6 +97,8 @@ internal sealed class CoreThread
         Stopwatch internalStopwatch = new Stopwatch();
         stopwatch = Stopwatch.StartNew();
         Interlocked.Exchange(ref nextTick, stopwatch.ElapsedTicks);
+        
+        long startBytes = 0;
 
         while(running)
         {
@@ -98,8 +108,14 @@ internal sealed class CoreThread
                 Thread.SpinWait(25);
                 continue;
             }
+            startBytes = GC.GetAllocatedBytesForCurrentThread();
             Bridges.CoreToRender.Swap();
 
+            var temp = tickTimesBuffer1;
+            tickTimesBuffer1 = tickTimesBuffer2;
+            tickTimesBuffer2 = temp;
+
+            
             Interlocked.Exchange(ref deltaTime, internalStopwatch.Elapsed.TotalMicroseconds);
             Interlocked.Exchange(ref deltaTimeSec, internalStopwatch.Elapsed.TotalSeconds);
             
@@ -118,15 +134,24 @@ internal sealed class CoreThread
             Optimize(tickIntervalInTicks, internalStopwatch.ElapsedTicks);
             long optimizeTime = internalStopwatch.ElapsedTicks;
 
+            long endBytes = GC.GetAllocatedBytesForCurrentThread();
             //avg tick time
             TimeSpan elapsedUpdateTime = Stopwatch.GetElapsedTime(0, updateTime);
             TimeSpan elapsedRenderTime = Stopwatch.GetElapsedTime(updateTime, renderTime);
             TimeSpan elapsedOptimizeTime = Stopwatch.GetElapsedTime(renderTime, optimizeTime);
 
+            var currentIndex = Math.Clamp((int)((tickCount - 2) % tickTimesBuffer2.Length), 0, tickTimesBuffer2.Length);
+            tickTimesBuffer2[currentIndex] = tickTime;
+
             Interlocked.Exchange(ref tickTime, internalStopwatch.Elapsed.TotalMicroseconds);
             Interlocked.Exchange(ref tickUpdateTime, elapsedUpdateTime.TotalMicroseconds);
             Interlocked.Exchange(ref tickRenderTime, elapsedRenderTime.TotalMicroseconds);
             Interlocked.Exchange(ref tickOptimizeTime, elapsedOptimizeTime.TotalMicroseconds);
+
+            currentIndex = Math.Clamp((int)((tickCount - 1) % tickTimesBuffer2.Length), 0, tickTimesBuffer2.Length);
+            tickTimesBuffer2[currentIndex] = tickTime;
+
+            Interlocked.Exchange(ref allocated, endBytes - startBytes);
         }
     }
 
@@ -169,8 +194,8 @@ internal sealed class CoreThread
     {
         Camera.MainCamera.Tick();
         
-        foreach(var component in World.WorldComponents)
-            component.Tick();
+        for(int i = 0; i < World.WorldComponents.Count; i++)
+            World.WorldComponents[i].Tick();
     }
     private void Render()
     {
@@ -178,8 +203,10 @@ internal sealed class CoreThread
         
         currWriteStack.PostCameraData(Camera.MainCamera);
         
-        foreach(var renderer in RendererRegistry.GetRenderers())
-            renderer.RenderOn(currWriteStack);
+        var renderers = RendererRegistry.GetRenderers();
+
+        for(int i = 0; i < renderers.Length; i++)
+            renderers[i].RenderOn(currWriteStack);
     }
     private void Optimize(long maxTime, long time)
     {

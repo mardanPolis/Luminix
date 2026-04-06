@@ -17,31 +17,39 @@ public static class RendererRegistry
     private static Dictionary<ID, RegistryEntry> registry = new Dictionary<ID, RegistryEntry>();
 
     private static Renderer[] renderers;
+    private static List<DebugRenderer> debugRenderers;
 
     public static void Register(Type rendererType)
     {
-        bool InheritsRenderer(Type type)
+        if(!typeof(DebugRenderer).IsAssignableFrom(rendererType))
         {
-            Type current = type.BaseType;
-            while (current != null && current != typeof(object))
+            bool InheritsRenderer(Type type)
             {
-                if (current.IsGenericType && current.GetGenericTypeDefinition() == typeof(Renderer<>))
-                    return true;
-                current = current.BaseType;
+                Type current = type.BaseType;
+                while (current != null && current != typeof(object))
+                {
+                    if (current.IsGenericType && current.GetGenericTypeDefinition() == typeof(Renderer<>))
+                        return true;
+                    current = current.BaseType;
+                }
+                return false;
             }
-            return false;
+
+            if(!InheritsRenderer(rendererType))
+                throw new ArgumentException($"Type {rendererType.FullName} must inherit from Renderer<T>.");
+
+            Renderer renderer = (Renderer)Activator.CreateInstance(rendererType);
+            ID id = new ID((uint)registeredTypes.Count);
+            RegistryEntry registryEntry = new (renderer, renderer.RenderableType);
+            registeredTypes.TryAdd(rendererType, id);
+            registry.TryAdd(id, registryEntry);
+            
+            return;
         }
 
-        if(!InheritsRenderer(rendererType))
-            throw new ArgumentException($"Type {rendererType.FullName} must inherit from Renderer<T>.");
+        (debugRenderers ??= []).Add((DebugRenderer)Activator.CreateInstance(rendererType));
 
-        Renderer renderer = (Renderer)Activator.CreateInstance(rendererType);
-        ID id = new ID((uint)registeredTypes.Count);
-        RegistryEntry registryEntry = new (renderer, renderer.RenderableType);
-        registeredTypes.TryAdd(rendererType, id);
-        registry.TryAdd(id, registryEntry);
     }
-
     public static void Assign<T>(DenseList<T> list, Type rendererType)
     {
         if(!registeredTypes.TryGetValue(rendererType, out var iD))
@@ -53,7 +61,6 @@ public static class RendererRegistry
         var renderer = entry.Renderer;
         renderer.Assign(list);
     }
-
 
     internal static void FinalizeRegistry()
     {
@@ -70,9 +77,33 @@ public static class RendererRegistry
         foreach(var renderer in renderers)
             renderer.Optimize();
     }
+    
+    public static bool TryGetDebugRenderer(Type rendererType, out DebugRenderer renderer)
+    {
+        renderer = null;
+
+        if (!typeof(DebugRenderer).IsAssignableFrom(rendererType))
+        {
+            throw new ArgumentException($"Type {rendererType.Name} does not inherit from DebugRenderer.");
+        }
+
+        if(debugRenderers == null)
+            return false;
+
+        renderer = debugRenderers.Find(r => r.GetType() == rendererType);
+
+        if (renderer == null)
+            return false;
+        
+        return true;
+    }
 
     public static Renderer[] GetRenderers()
     {
         return renderers;
+    }
+    internal static List<DebugRenderer> GetDebugRenderers()
+    {
+        return debugRenderers;
     }
 }
