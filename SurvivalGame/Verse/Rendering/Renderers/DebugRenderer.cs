@@ -166,6 +166,7 @@ internal sealed class GameDebugRenderer : DebugRenderer
     double[] managedMemoryAmounts = new double[100];
     private StringBuilder sb = new StringBuilder();
 
+    private double frameTime = 0;
     private double elapsedForFps = 0;
     private double fps = 0;
 
@@ -181,7 +182,6 @@ internal sealed class GameDebugRenderer : DebugRenderer
         var tickTimes = coreThread.TickTimes;
         var currentIndex = (int)((coreThread.TickCount - 1) % tickTimes.Length);
 
-        double frameTime = main.FrameTime; 
         double frameDeltaTime = main.FrameDeltaTime; 
         double tickTime = coreThread.TickTime;
         double tickDeltaTime = coreThread.TickDeltaTime;
@@ -198,6 +198,7 @@ internal sealed class GameDebugRenderer : DebugRenderer
         if (elapsedForFps >= 0.5) 
         {
             fps = 1.0 / frameDeltaTime;
+            frameTime = main.FrameTime; 
             elapsedForFps = 0;
         }
 

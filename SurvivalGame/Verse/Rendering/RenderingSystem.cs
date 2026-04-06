@@ -31,7 +31,7 @@ internal static class RenderingSystem
         graphics.PreferredBackBufferWidth = 1920;
         graphics.PreferredBackBufferHeight = 1080;
         graphics.IsFullScreen = false;
-        graphics.SynchronizeWithVerticalRetrace = false;
+        graphics.SynchronizeWithVerticalRetrace = true;
         graphics.ApplyChanges();
 
         readStack = CoreToRender.Read();

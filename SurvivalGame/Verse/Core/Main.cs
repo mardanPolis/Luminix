@@ -56,7 +56,7 @@ public class Main : Game
         {
             Console.WriteLine($"Started: Initialize");
 
-            IsFixedTimeStep = false;
+            IsFixedTimeStep = true;
             TargetElapsedTime = TimeSpan.FromSeconds(1.0 / 144.0);
 
             coreThread = new CoreThread(IS_DEBUG, TICK_RATE);
@@ -143,6 +143,8 @@ public class Main : Game
 
     protected override void Update(GameTime gameTime)
     {
+        long endBytes = GC.GetAllocatedBytesForCurrentThread();
+        allocated = endBytes - startBytes;
         startBytes = GC.GetAllocatedBytesForCurrentThread();
         stopwatch.Restart();
 
@@ -155,8 +157,6 @@ public class Main : Game
 
         frameTime = stopwatch.Elapsed.TotalNanoseconds;
         time = gameTime;
-        long endBytes = GC.GetAllocatedBytesForCurrentThread();
-        allocated = endBytes - startBytes;
     }
 
     protected override void OnExiting(object sender, ExitingEventArgs args)
