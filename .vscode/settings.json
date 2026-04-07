@@ -4,6 +4,7 @@
         "indegree",
         "Interp",
         "Lerp",
+        "mgstats",
         "Renderable",
         "renderables"
     ]
