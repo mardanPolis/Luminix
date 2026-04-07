@@ -21,7 +21,7 @@ public class World
 
     public static long TickCount => coreThread.TickCount;
 
-    public static double TickDeltaTime => coreThread.TickDeltaTimeSec;
+    public static double TickDeltaTime => coreThread.TickDeltaTime;
 
     public static float PartialTick => coreThread.PartialTick;
 

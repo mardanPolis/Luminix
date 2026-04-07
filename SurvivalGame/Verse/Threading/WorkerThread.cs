@@ -60,7 +60,7 @@ public class WorkerThread
     private long tickCount = 0;
     private volatile uint tickIntervalInTicks = 0;
 
-    private double deltaTimeSec = 0;
+    private double deltaTime = 0;
     private long lastTickTime = 0;
     protected uint TickIntervalInTicks => tickIntervalInTicks;
     protected long CurrentElapsedTicks => internalStopwatch.ElapsedTicks;
@@ -88,20 +88,18 @@ public class WorkerThread
             return (float)(current - start) / interval;
         }
     }
-    public double TickDeltaTimeSec => Volatile.Read(ref deltaTimeSec);
+    public double TickDeltaTime => Volatile.Read(ref deltaTime);
 
 
 
     // debug variables
     private long allocated = 0;
-    private double deltaTime = 0;
     private double tickTime = 0;
 
-    private double[] tickTimesBuffer1 = new double[100];
-    private double[] tickTimesBuffer2 = new double[100];
+    private double[] tickTimesBuffer1 = new double[128];
+    private double[] tickTimesBuffer2 = new double[128];
 
     public double TickTime => Volatile.Read(ref tickTime);
-    public double TickDeltaTime => Volatile.Read(ref deltaTime);
     public long TickAllocatedAmount => Volatile.Read(ref allocated);
 
     public double[] TickTimes => tickTimesBuffer1;
@@ -139,7 +137,7 @@ public class WorkerThread
                     long elapsedTicks = stopwatch.ElapsedTicks;
                     if(elapsedTicks < Interlocked.Read(ref nextTick))
                     {
-                        Thread.SpinWait(50);
+                        Thread.SpinWait(20);
                         continue;
                     }
                     
@@ -150,8 +148,7 @@ public class WorkerThread
                     internalStopwatch.Stop(); // OLD TICK STOP
                     
                     //Setting deltaTime
-                    Interlocked.Exchange(ref deltaTime, internalStopwatch.Elapsed.TotalMicroseconds);
-                    Interlocked.Exchange(ref deltaTimeSec, internalStopwatch.Elapsed.TotalSeconds);
+                    Interlocked.Exchange(ref deltaTime, internalStopwatch.Elapsed.TotalSeconds);
                     
                     internalStopwatch.Restart(); // NEW TICK
 
@@ -172,7 +169,7 @@ public class WorkerThread
                     Interlocked.Exchange(ref allocated, endBytes - startBytes);
                     Interlocked.Exchange(ref tickTime, internalStopwatch.Elapsed.TotalMicroseconds);
 
-                    currentIndex = Math.Clamp((int)(tickCount % tickTimesBuffer2.Length), 0, tickTimesBuffer2.Length);
+                    currentIndex = Math.Clamp((int)(tickCount & 127), 0, tickTimesBuffer2.Length);
                     tickTimesBuffer2[currentIndex] = tickTime;
 
                 }
@@ -204,13 +201,13 @@ public class WorkerThread
                     long elapsedTicks = stopwatch.ElapsedTicks;
                     if(elapsedTicks < Interlocked.Read(ref nextTick))
                     {
-                        System.Threading.Thread.SpinWait(25);
+                        Thread.SpinWait(20);
                         continue;
                     }
                     
                     internalStopwatch.Stop();
 
-                    Interlocked.Exchange(ref deltaTimeSec, internalStopwatch.Elapsed.TotalSeconds);
+                    Interlocked.Exchange(ref deltaTime, internalStopwatch.Elapsed.TotalSeconds);
                     
                     internalStopwatch.Restart();
 
