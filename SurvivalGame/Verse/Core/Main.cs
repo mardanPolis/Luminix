@@ -4,13 +4,14 @@ using System.Threading;
 using GameSrc;
 using GameSrc.Rendering;
 using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Input;
 using SurvivalGame.GameSrc.Simulation;
 using Verse.Bridges;
 using Verse.Collections;
 using Verse.Rendering;
 using Verse.Resources;
 using Verse.Simulation;
-using Verse.Threads;
+using Verse.Threading;
 
 namespace Verse;
 public class Main : Game
@@ -61,9 +62,9 @@ public class Main : Game
             logger.Log($"Started: Initialize");
 
             IsFixedTimeStep = true;
-            TargetElapsedTime = TimeSpan.FromSeconds(1.0 / 60.0);
+            TargetElapsedTime = TimeSpan.FromSeconds(1.0 / 144.0);
 
-            coreThread = new CoreThread(IS_DEBUG, TICK_RATE);
+            coreThread = new CoreThread(TICK_RATE, IS_DEBUG);
 
             RendererRegistry.Register(typeof(GameDebugRenderer));
             RendererRegistry.Register(typeof(TestRenderer));
@@ -86,9 +87,9 @@ public class Main : Game
 
             logger.Log($"Successful: Initialize");
         }
-        catch (Exception ex)
+        catch
         {
-            Logger.Get().Log($"Exception during Initialize: {ex}");
+            Logger.Get().Log($"Exception happened during 'Initialize'");
             throw;
         }
     }
@@ -110,9 +111,9 @@ public class Main : Game
             logger.Log($"Successful: LoadContent");
             base.LoadContent();
         }
-        catch (Exception ex)
+        catch
         {
-            Logger.Get().Log($"Exception during LoadContent: {ex}");
+            Logger.Get().Log($"Exception happened during 'LoadContent'");
             throw;
         }
     }
@@ -141,19 +142,22 @@ public class Main : Game
             logger.Log($"Successful: Start");
             logger.Log($"Game fully initialized in {stopwatch.Elapsed.Milliseconds}ms");
         }
-        catch (Exception ex)
+        catch
         {
-            Logger.Get().Log($"Exception during BeginRun: {ex}");
+            Logger.Get().Log($"Exception happened during 'BeginRun'");
             throw;
         }
     }
 
     protected override void Update(GameTime gameTime)
     {
-        long endBytes = GC.GetAllocatedBytesForCurrentThread();
-        allocated = endBytes - startBytes;
         startBytes = GC.GetAllocatedBytesForCurrentThread();
         stopwatch.Restart();
+
+        KeyboardState keyboardState = Keyboard.GetState();
+
+        if(keyboardState.IsKeyDown(Keys.C))
+            Crash();
 
         base.Update(gameTime);
     }
@@ -164,11 +168,18 @@ public class Main : Game
 
         frameTime = stopwatch.Elapsed.TotalNanoseconds;
         time = gameTime;
+        long endBytes = GC.GetAllocatedBytesForCurrentThread();
+        allocated = endBytes - startBytes;
     }
 
     protected override void OnExiting(object sender, ExitingEventArgs args)
     {
         coreThread.Stop();
         //save current world
+    }
+
+    public void Crash()
+    {
+        throw new Exception("Test Crash");
     }
 }

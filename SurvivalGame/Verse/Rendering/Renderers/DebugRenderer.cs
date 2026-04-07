@@ -3,7 +3,7 @@ using System.Text;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Verse.Resources;
-using Verse.Threads;
+using Verse.Threading;
 
 namespace Verse.Rendering;
 
@@ -232,7 +232,7 @@ internal sealed class GameDebugRenderer : DebugRenderer
         sb.Append(" bytes\n");
 
         sb.Append("CoreThread allocated: ");
-        AppendLong(sb, coreThread.Allocated, 3);
+        AppendLong(sb, coreThread.TickAllocatedAmount, 3);
         sb.Append(" bytes\n");
 
         sb.Append("DrawCalls : ");

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading;
 
 namespace Verse;
@@ -66,9 +67,8 @@ public readonly struct Log
 
 public sealed class Logger
 {
-    private static readonly ThreadLocal<Logger> instance = new ThreadLocal<Logger>(() => new Logger());
-    private readonly string logDir;
-    private readonly List<Log> logs;
+    private static readonly ThreadLocal<Logger> instances = new ThreadLocal<Logger>(() => new Logger(), true);
+
     private Logger()
     {
         logs = new();
@@ -79,6 +79,9 @@ public sealed class Logger
         File.WriteAllText(path, string.Empty);
     }
 
+    private readonly string logDir;
+    private readonly List<Log> logs;
+    
     private string GetThreadLogPath()
     {
         string name = Thread.CurrentThread.Name;
@@ -91,8 +94,6 @@ public sealed class Logger
     private void Print(Log log)
     {
         Console.WriteLine(log);
-        string path = GetThreadLogPath();
-        File.AppendAllText(path, log + Environment.NewLine);
         logs.Add(log);
     }
     public void Print(object message)
@@ -116,6 +117,17 @@ public sealed class Logger
         Print(Verse.Log.New(message, Verse.Log.Type.Error, true));
     }
 
+    public void Flush()
+    {
+        string path = GetThreadLogPath();
+        using (StreamWriter writer = new StreamWriter(path, append: true))
+        {
+            for (int i = 0; i < logs.Count; i++)
+                writer.WriteLine(logs[i]);
+        }
+        logs.Clear();
+    }
+
     public void Clear()
     {
         Console.Clear();
@@ -133,6 +145,11 @@ public sealed class Logger
 
     public static Logger Get()
     {
-        return instance.Value;
+        return instances.Value;
+    }
+
+    public static Logger[] GetAll()
+    {
+        return instances.Values.ToArray();
     }
 }
