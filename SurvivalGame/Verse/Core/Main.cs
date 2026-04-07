@@ -191,13 +191,13 @@ public class Main : Game
 
                 if (isDown && !wasInSet) { // DOWN
                     pressedKeys.Add(k);
-                    PushInputToStacks(k, true, false, false);
+                    PushInputToStacks(k, 1, 0, 0);
                 }
                 else if (isDown && wasInSet) // HOLDING
-                    PushInputToStacks(k, false, true, false);
+                    PushInputToStacks(k, 0, 1, 0);
                 else if (!isDown && wasInSet) { // RELEASED
                     pressedKeys.Remove(k);
-                    PushInputToStacks(k, false, false, true);
+                    PushInputToStacks(k, 0, 0, 1);
                 }
             }
         }
@@ -206,13 +206,13 @@ public class Main : Game
             for (int i = pressedKeys.Count - 1; i >= 0; i--)
             {
                 char k = pressedKeys[i];
-                PushInputToStacks(k, false, false, true); // Send UP event
+                PushInputToStacks(k, 0, 0, 1); // Send UP event
             }
             pressedKeys.Clear();
         }
     }
 
-    private void PushInputToStacks(char key, bool down, bool hold, bool up)
+    private void PushInputToStacks(char key, byte down, byte hold, byte up)
     {
         
     }
