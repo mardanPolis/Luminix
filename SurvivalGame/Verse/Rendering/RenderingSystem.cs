@@ -9,6 +9,7 @@ namespace Verse.Rendering;
 
 internal static class RenderingSystem
 {
+    private static Main main;
     private static FrameRenderer frameRenderer;
     private static GraphicsDeviceManager graphics;
 
@@ -17,7 +18,7 @@ internal static class RenderingSystem
     private static ulong frameCount = 0;
     private static long drawCount = 0;
 
-    static float prevPartialTick = 0;
+    private static float prevPartialTick = 0;
 
     public static GraphicsDeviceManager GraphicsDeviceManager => graphics;
     public static GraphicsDevice GraphicsDevice => graphics.GraphicsDevice;
@@ -26,17 +27,18 @@ internal static class RenderingSystem
 
     private static List<DebugRenderer> debugRenderers;
 
-    public static void Initialize(GraphicsDeviceManager graphics)
+    public static void Initialize(Main main, GraphicsDeviceManager graphics)
     {
+        RenderingSystem.main = main;
+        RenderingSystem.graphics = graphics;
+
         graphics.PreferredBackBufferWidth = 1920;
         graphics.PreferredBackBufferHeight = 1080;
         graphics.IsFullScreen = false;
-        graphics.SynchronizeWithVerticalRetrace = true;
-        graphics.ApplyChanges();
+        ToggleVSync(false);
+        ApplyChanges();
 
         readStack = CoreToRender.Read();
-
-        RenderingSystem.graphics = graphics;
     }
 
     public static void InitializeRenderers(bool isDebug)
@@ -73,5 +75,23 @@ internal static class RenderingSystem
         Interlocked.Exchange(ref drawCount, GraphicsDevice.Metrics.DrawCount);
 
         prevPartialTick = partialTick;
+    }
+
+    public static void ToggleVSync(bool? state = null)
+    {
+        if (graphics == null) return;
+
+        graphics.SynchronizeWithVerticalRetrace = state ?? !graphics.SynchronizeWithVerticalRetrace;
+        graphics.ApplyChanges();
+    }
+
+    public static void ApplyChanges()
+    {
+        if(graphics.SynchronizeWithVerticalRetrace)
+        {
+            main.IsFixedTimeStep = false;
+        }
+
+        graphics.ApplyChanges();
     }
 }

@@ -33,6 +33,7 @@ public class Main : Game
 
     private Stopwatch stopwatch;
     private GameTime time;
+    private Logger logger;
 
     public double FrameTime => frameTime;
     public double FrameDeltaTime => time != null ? time.ElapsedGameTime.TotalSeconds : 0;
@@ -54,10 +55,13 @@ public class Main : Game
     {
         try
         {
-            Console.WriteLine($"Started: Initialize");
+            Thread.CurrentThread.Name = "RenderThread";
+
+            logger = Logger.Get();
+            logger.Log($"Started: Initialize");
 
             IsFixedTimeStep = true;
-            TargetElapsedTime = TimeSpan.FromSeconds(1.0 / 144.0);
+            TargetElapsedTime = TimeSpan.FromSeconds(1.0 / 60.0);
 
             coreThread = new CoreThread(IS_DEBUG, TICK_RATE);
 
@@ -69,7 +73,7 @@ public class Main : Game
             //initialize thread bridges
             CoreToRender.Initialize();
 
-            RenderingSystem.Initialize(graphics);
+            RenderingSystem.Initialize(this, graphics);
             ResourceManager.Initialize(Content.RootDirectory, Content);
             World.Initialize(coreThread);
 
@@ -80,11 +84,11 @@ public class Main : Game
 
             RenderingSystem.InitializeRenderers(IS_DEBUG);
 
-            Console.WriteLine($"Successful: Initialize");
+            logger.Log($"Successful: Initialize");
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Exception during Initialize: {ex}");
+            Logger.Get().Log($"Exception during Initialize: {ex}");
             throw;
         }
     }
@@ -93,22 +97,22 @@ public class Main : Game
     {
         try
         {
-            Console.WriteLine($"Started: LoadContent");
+            logger.Log($"Started: LoadContent");
 
             int assetLoadStart = stopwatch.Elapsed.Milliseconds;
 
             ResourceManager.LoadDefaultData();
 
-            Console.WriteLine($"Loaded Game assets in {stopwatch.Elapsed.Milliseconds - assetLoadStart}ms");
+            logger.Log($"Loaded Game assets in {stopwatch.Elapsed.Milliseconds - assetLoadStart}ms");
 
             // TODO: use this.Content to load your game content
 
-            Console.WriteLine($"Successful: LoadContent");
+            logger.Log($"Successful: LoadContent");
             base.LoadContent();
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Exception during LoadContent: {ex}");
+            Logger.Get().Log($"Exception during LoadContent: {ex}");
             throw;
         }
     }
@@ -117,7 +121,7 @@ public class Main : Game
     {
         try
         {
-            Console.WriteLine($"Started: Start");
+            logger.Log($"Started: Start");
 
             //TEST
             var testObject = new Test();
@@ -129,14 +133,17 @@ public class Main : Game
             foreach(var component in World.WorldComponents)
                 component.Initialize();
 
+            int threadCount = Process.GetCurrentProcess().Threads.Count;
+            logger.Log($"Threads: {threadCount}");
+
             coreThread.Start();
             
-            Console.WriteLine($"Successful: Start");
-            Console.WriteLine($"Game fully initialized in {stopwatch.Elapsed.Milliseconds}ms");
+            logger.Log($"Successful: Start");
+            logger.Log($"Game fully initialized in {stopwatch.Elapsed.Milliseconds}ms");
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Exception during BeginRun: {ex}");
+            Logger.Get().Log($"Exception during BeginRun: {ex}");
             throw;
         }
     }

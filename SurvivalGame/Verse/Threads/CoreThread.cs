@@ -17,6 +17,8 @@ internal sealed class CoreThread
             this.thread = new Thread(DebugRun);
         else
             this.thread = new Thread(Run);
+            
+        this.thread.Name = "CoreThread";
         this.thread.IsBackground = false;
         this.thread.Priority = ThreadPriority.AboveNormal;
 
@@ -100,6 +102,8 @@ internal sealed class CoreThread
         
         long startBytes = 0;
 
+        Random random = new Random();
+
         while(running)
         {
             long elapsedTicks = stopwatch.ElapsedTicks;
@@ -114,7 +118,6 @@ internal sealed class CoreThread
             var temp = tickTimesBuffer1;
             tickTimesBuffer1 = tickTimesBuffer2;
             tickTimesBuffer2 = temp;
-
             
             Interlocked.Exchange(ref deltaTime, internalStopwatch.Elapsed.TotalMicroseconds);
             Interlocked.Exchange(ref deltaTimeSec, internalStopwatch.Elapsed.TotalSeconds);
@@ -126,6 +129,9 @@ internal sealed class CoreThread
             Interlocked.Add(ref nextTick, tickIntervalInTicks);
 
             currWriteStack = Bridges.CoreToRender.CurrentWriteStack;
+
+            if(random.Next(0, 100) < 5)
+                Thread.Sleep(80);
 
             Tick();
             long updateTime = internalStopwatch.ElapsedTicks;

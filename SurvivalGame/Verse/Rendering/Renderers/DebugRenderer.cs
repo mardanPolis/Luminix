@@ -156,8 +156,6 @@ public abstract class DebugRenderer
     }
 }
 
-
-
 internal sealed class GameDebugRenderer : DebugRenderer
 {
     private Main main;

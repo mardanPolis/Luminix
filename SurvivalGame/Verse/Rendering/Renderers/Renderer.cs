@@ -118,11 +118,11 @@ public abstract class GlobalRenderer : Renderer
 
     internal sealed override void Assign(IEnumerable list)
     {
-        Console.WriteLine($"Cant assign '{list.GetType().Name}' to this '{this.GetType().Name}'! Reason: GlobalRenderer");
+        Logger.Get().Log($"Cant assign '{list.GetType().Name}' to this '{this.GetType().Name}'! Reason: GlobalRenderer");
     }
 
     internal sealed override void Optimize()
     {
-        Console.WriteLine($"Cant optimize '{this.GetType().Name}'! Reason: GlobalRenderer");
+        Logger.Get().Log($"Cant optimize '{this.GetType().Name}'! Reason: GlobalRenderer");
     }
 }

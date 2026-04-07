@@ -66,7 +66,7 @@ public readonly struct Log
 
 public sealed class Logger
 {
-    private static readonly ThreadLocal<Logger> instance = new();
+    private static readonly ThreadLocal<Logger> instance = new ThreadLocal<Logger>(() => new Logger());
     private readonly string logDir;
     private readonly List<Log> logs;
     private Logger()
@@ -74,14 +74,17 @@ public sealed class Logger
         logs = new();
         logDir = Path.Combine(AppContext.BaseDirectory, "logs");
         Directory.CreateDirectory(logDir);
+        
+        string path = GetThreadLogPath();
+        File.WriteAllText(path, string.Empty);
     }
 
     private string GetThreadLogPath()
     {
-        int id = Thread.CurrentThread.ManagedThreadId;
+        string name = Thread.CurrentThread.Name;
         return Path.Combine(
             logDir,
-            $"thread_{id}.log"
+            $"thread_{name}.log"
         );
     }
 
