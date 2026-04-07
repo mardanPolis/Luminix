@@ -41,3 +41,8 @@ internal static class CoreToRender
         return currReadStack;
     }
 }
+
+internal static class RenderToCore
+{
+    
+}

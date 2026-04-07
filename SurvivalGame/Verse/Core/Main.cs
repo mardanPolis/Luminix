@@ -16,17 +16,27 @@ using Verse.Threading;
 namespace Verse;
 public class Main : Game
 {
+    private const bool IS_DEBUG = true;
+    private const uint TICK_RATE = 20;
+    private const uint TARGET_FPS = 144;
+    public const string VERSION = "1.0v";
+
+    public Main()
+    {
+        stopwatch = Stopwatch.StartNew();
+        graphics = new GraphicsDeviceManager(this);
+        Content.RootDirectory = "Content";
+        IsMouseVisible = true;
+    }
+
     private GraphicsDeviceManager graphics;
 
     private Thread mainThread = Thread.CurrentThread;
     private CoreThread coreThread = null;
 
-    private const bool IS_DEBUG = true;
-    private const uint TICK_RATE = 20;
-
-    public const string VERSION = "1.0v";
-
     private DenseList<Test> testList = new DenseList<Test>();
+
+    private DenseList<char> pressedKeys = new DenseList<char>();
 
     private long startBytes = 0;
     private long allocated = 0;
@@ -38,17 +48,9 @@ public class Main : Game
 
     public double FrameTime => frameTime;
     public double FrameDeltaTime => time != null ? time.ElapsedGameTime.TotalSeconds : 0;
-    public double FPS => FrameDeltaTime > 0 ? 1000.0 / FrameDeltaTime : double.MaxValue;
+    public double FPS => FrameDeltaTime > 0 ? 1.0 / FrameDeltaTime : double.MaxValue;
     public long FrameRate => (long)(1.0 / TargetElapsedTime.TotalSeconds);
     public long FrameAllocationAmount => allocated;
-
-    public Main()
-    {
-        stopwatch = Stopwatch.StartNew();
-        graphics = new GraphicsDeviceManager(this);
-        Content.RootDirectory = "Content";
-        IsMouseVisible = true;
-    }
 
     public GameTime GameTime => time;
 
@@ -62,7 +64,7 @@ public class Main : Game
             logger.Log($"Started: Initialize");
 
             IsFixedTimeStep = true;
-            TargetElapsedTime = TimeSpan.FromSeconds(1.0 / 144.0);
+            TargetElapsedTime = TimeSpan.FromSeconds(1.0 / TARGET_FPS);
 
             coreThread = new CoreThread(TICK_RATE, IS_DEBUG);
 
@@ -154,10 +156,7 @@ public class Main : Game
         startBytes = GC.GetAllocatedBytesForCurrentThread();
         stopwatch.Restart();
 
-        KeyboardState keyboardState = Keyboard.GetState();
-
-        if(keyboardState.IsKeyDown(Keys.C))
-            Crash();
+        HandleInput();
 
         base.Update(gameTime);
     }
@@ -176,6 +175,46 @@ public class Main : Game
     {
         coreThread.Stop();
         //save current world
+    }
+
+    private void HandleInput()
+    {
+        var state = Keyboard.GetState();
+
+        if (state.GetPressedKeyCount() > 0) 
+        {
+            for (byte i = 0; i < 255; i++)
+            {
+                char k = (char)i;
+                bool isDown = state.IsKeyDown((Keys)k);
+                bool wasInSet = pressedKeys.Contains(k);
+
+                if (isDown && !wasInSet) { // DOWN
+                    pressedKeys.Add(k);
+                    PushInputToStacks(k, true, false, false);
+                }
+                else if (isDown && wasInSet) // HOLDING
+                    PushInputToStacks(k, false, true, false);
+                else if (!isDown && wasInSet) { // RELEASED
+                    pressedKeys.Remove(k);
+                    PushInputToStacks(k, false, false, true);
+                }
+            }
+        }
+        else if (pressedKeys.Count > 0)
+        {
+            for (int i = pressedKeys.Count - 1; i >= 0; i--)
+            {
+                char k = pressedKeys[i];
+                PushInputToStacks(k, false, false, true); // Send UP event
+            }
+            pressedKeys.Clear();
+        }
+    }
+
+    private void PushInputToStacks(char key, bool down, bool hold, bool up)
+    {
+        
     }
 
     public void Crash()

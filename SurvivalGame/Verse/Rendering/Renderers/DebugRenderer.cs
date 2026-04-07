@@ -195,7 +195,7 @@ internal sealed class GameDebugRenderer : DebugRenderer
 
         if (elapsedForFps >= 0.5) 
         {
-            fps = 1.0 / frameDeltaTime;
+            fps = main.FPS;
             frameTime = main.FrameTime; 
             elapsedForFps = 0;
         }
