@@ -161,7 +161,7 @@ internal sealed class GameDebugRenderer : DebugRenderer
     private Main main;
     private CoreThread coreThread;
 
-    double[] managedMemoryAmounts = new double[100];
+    double[] managedMemoryAmounts = new double[128];
     private StringBuilder sb = new StringBuilder();
 
     private double frameTime = 0;
@@ -178,7 +178,7 @@ internal sealed class GameDebugRenderer : DebugRenderer
         Viewport viewport = RenderingSystem.GraphicsDevice.Viewport;
 
         var tickTimes = coreThread.TickTimes;
-        var currentIndex = (int)((coreThread.TickCount - 1) % tickTimes.Length);
+        var currentIndex = (int)((coreThread.TickCount - 1) & 127);
 
         double frameDeltaTime = main.FrameDeltaTime; 
         double tickTime = coreThread.TickTime;
@@ -204,7 +204,7 @@ internal sealed class GameDebugRenderer : DebugRenderer
         sb.Append("GAME VERSION:").Append(Main.VERSION).Append("\n");
         AppendDouble(sb, fps, 3, 3);
         sb.Append(":FPS | ");
-        AppendDouble(sb, tickDeltaTime > 0 ? 1000000.0 / tickDeltaTime : 0, 3, 3);
+        AppendDouble(sb, tickDeltaTime > 0 ? 1.0 / tickDeltaTime : 0, 3, 3);
         sb.Append(":TPS\n");
 
         sb.Append("FrameTime : ");
@@ -216,11 +216,11 @@ internal sealed class GameDebugRenderer : DebugRenderer
         sb.Append("ms\n");
 
         sb.Append("FrameDeltaTime : ");
-        AppendDouble(sb, frameDeltaTime / 1000.0, 4, 2);
+        AppendDouble(sb, frameDeltaTime * 1000.0, 4, 2);
         sb.Append("ms\n");
 
         sb.Append("TickDeltaTime  : ");
-        AppendDouble(sb, tickDeltaTime / 1000.0, 4, 2);
+        AppendDouble(sb, tickDeltaTime * 1000.0, 4, 2);
         sb.Append("ms\n");
 
         sb.Append("Managed Memory : ");
