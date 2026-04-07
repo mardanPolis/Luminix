@@ -59,13 +59,16 @@ public sealed class DenseList<T> : ICollection, IEnumerable<T>
             return false;
 
         int lastIndex = count - 1;
-        T lastItem = items[lastIndex];
-
-        items[idx] = lastItem;
-        indexMap[lastItem] = idx;
+        
+        if (idx < lastIndex)
+        {
+            T lastItem = items[lastIndex];
+            items[idx] = lastItem;
+            indexMap[lastItem] = idx;
+        }
 
         indexMap.Remove(item);
-        items[lastIndex] = default;
+        items[lastIndex] = default!;
         count--;
         return true;
     }
