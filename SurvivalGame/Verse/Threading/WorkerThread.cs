@@ -19,14 +19,14 @@ public class WorkerThread
     public static IEnumerable<WorkerThread> Threads => threads;
 
     //constructor
-    public WorkerThread(Action action, uint tickRate = 60, bool isDebug = false)
+    public WorkerThread(Action init, Action update, uint tickRate = 60, bool isDebug = false)
     {
         TickRate = tickRate;
 
         if(isDebug)
-            CreateDebugThread(action, out systemThread);
+            CreateDebugThread(init, update, out systemThread);
         else    
-            CreateThread(action, out systemThread);
+            CreateThread(init, update, out systemThread);
 
         lock (lockObject)
         {
@@ -39,9 +39,9 @@ public class WorkerThread
         TickRate = tickRate;
 
         if(isDebug)
-            CreateDebugThread(OnDebugTick, out systemThread);
+            CreateDebugThread(Initialize, OnDebugTick, out systemThread);
         else    
-            CreateThread(OnTick, out systemThread);
+            CreateThread(Initialize, OnTick, out systemThread);
 
         lock (lockObject)
         {
@@ -104,19 +104,21 @@ public class WorkerThread
 
     public double[] TickTimes => tickTimesBuffer1;
 
-
-
     public void Start() => systemThread.Start();
     public void Stop() => running = false;
 
+    protected virtual void Initialize() {}
     protected virtual void OnTick() {}
     protected virtual void OnDebugTick() {}
 
-    private void CreateDebugThread(Action action, out Thread thread)
+    private void CreateDebugThread(Action init, Action update, out Thread thread)
     {
         thread = new Thread(() =>
         {
+            Logger.Initialize();
             currentThread.Value = this;
+
+            init();
 
             try
             {
@@ -160,7 +162,7 @@ public class WorkerThread
 
                     startBytes = GC.GetAllocatedBytesForCurrentThread(); // allocated bytes at the start of the action
 
-                    action();
+                    update();
 
                     endBytes = GC.GetAllocatedBytesForCurrentThread(); // allocated bytes at the end of the action
 
@@ -180,11 +182,14 @@ public class WorkerThread
             }
         });
     }
-    private void CreateThread(Action action, out Thread thread)
+    private void CreateThread(Action init, Action update,out Thread thread)
     {
         thread = new Thread(() =>
         {
+            Logger.Initialize();
             currentThread.Value = this;
+
+            init();
 
             try
             {
@@ -193,7 +198,7 @@ public class WorkerThread
                 internalStopwatch = new Stopwatch();
                 stopwatch = Stopwatch.StartNew();
 
-                Interlocked.Exchange(ref nextTick, stopwatch.ElapsedTicks);
+                nextTick = stopwatch.ElapsedTicks;
         
                 while (running)
                 {
@@ -213,9 +218,9 @@ public class WorkerThread
 
                     Interlocked.Increment(ref tickCount);
                     Interlocked.Exchange(ref lastTickTime, nextTick);
-                    Interlocked.Add(ref nextTick, tickIntervalInTicks);
+                    nextTick += tickIntervalInTicks;
 
-                    action();
+                    update();
                 }
             }
             finally

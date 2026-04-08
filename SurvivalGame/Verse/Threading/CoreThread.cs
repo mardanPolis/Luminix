@@ -27,7 +27,7 @@ internal sealed class CoreThread : WorkerThread
     public double TickOptimizeTime => Volatile.Read(ref tickOptimizeTime);
 
     protected sealed override void OnTick()
-{
+    {
         Bridges.CoreToRender.Swap();
         currWriteStack = Bridges.CoreToRender.CurrentWriteStack;
 
