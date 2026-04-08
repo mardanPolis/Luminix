@@ -60,6 +60,8 @@ public class Main : Game
         {
             Thread.CurrentThread.Name = "RenderThread";
 
+            Logger.Initialize();
+
             logger = Logger.Get();
             logger.Log($"Started: Initialize");
 
@@ -214,7 +216,6 @@ public class Main : Game
 
     private void PushInputToStacks(char key, byte down, byte hold, byte up)
     {
-        
     }
 
     public void Crash()

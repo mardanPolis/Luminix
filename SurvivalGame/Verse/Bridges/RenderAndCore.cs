@@ -45,7 +45,6 @@ internal static class CoreToRender
 
 internal static class RenderToCore
 {
-    private static InputStack writeStack;
-    private static InputStack currReadStack;
-    private static InputStack prevReadStack;
+    private static InputStack inputStack;
+    public static InputStack communicationInputStack => inputStack;
 }

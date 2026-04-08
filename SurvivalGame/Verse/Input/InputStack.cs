@@ -1,11 +1,13 @@
 using System;
 using System.Collections.Generic;
+using System.Threading;
 
 namespace SurvivalGame.Verse.Input;
 
 internal class InputStack
 {
-    private PackedInput[] input = new PackedInput[byte.MaxValue + 1];
+    private PackedInput[] writeInput = new PackedInput[byte.MaxValue + 1];
+    private volatile PackedInput[] readInput = new PackedInput[byte.MaxValue + 1];
 
     public struct PackedInput
     {
@@ -25,15 +27,17 @@ internal class InputStack
         public bool IsUp   => (Data & 0b_0100) != 0;
     }
 
-    public void Clear()
+    public void Swap()
     {
-        for(int i = 0; i < input.Length; i++)
-            input[i].Data = 0;
+        for(int i = 0; i < readInput.Length; i++)
+            readInput[i].Data = 0;
+
+        writeInput= Interlocked.Exchange(ref readInput, writeInput);
     }
 
     public void KeyData(byte key, out bool isDown, out bool isHeld, out bool isUp)
     {
-        ref var keyData = ref input[key];
+        ref var keyData = ref readInput[key];
         isDown = keyData.IsDown;
         isHeld = keyData.IsHold;
         isUp = keyData.IsUp;
@@ -41,6 +45,6 @@ internal class InputStack
 
     public void Push(byte key, byte isDown, byte isHeld, byte isUp)
     {
-        input[key] = new PackedInput(isDown, isHeld, isUp, input[key]);
+        writeInput[key] = new PackedInput(isDown, isHeld, isUp, writeInput[key]);
     }
 }

@@ -67,7 +67,7 @@ public readonly struct Log
 
 public sealed class Logger
 {
-    private static readonly ThreadLocal<Logger> instances = new ThreadLocal<Logger>(() => new Logger(), true);
+    private static readonly ThreadLocal<Logger> instance = new ThreadLocal<Logger>(true);
 
     private Logger()
     {
@@ -89,6 +89,11 @@ public sealed class Logger
             logDir,
             $"thread_{name}.log"
         );
+    }
+
+    internal static void Initialize()
+    {
+        instance.Value = new Logger();
     }
 
     private void Print(Log log)
@@ -145,11 +150,11 @@ public sealed class Logger
 
     public static Logger Get()
     {
-        return instances.Value;
+        return instance.Value;
     }
 
     public static Logger[] GetAll()
     {
-        return instances.Values.ToArray();
+        return instance.Values.ToArray();
     }
 }
