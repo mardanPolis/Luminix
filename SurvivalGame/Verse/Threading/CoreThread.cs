@@ -1,8 +1,8 @@
 using System;
 using System.Diagnostics;
 using System.Threading;
-using Verse.Rendering;
 using Verse.Simulation;
+using Verse.Rendering;
 
 namespace Verse.Threading;
 
@@ -31,6 +31,8 @@ internal sealed class CoreThread : WorkerThread
         Bridges.CoreToRender.Swap();
         currWriteStack = Bridges.CoreToRender.CurrentWriteStack;
 
+        Bridges.RenderToCore.InputStack.Swap(out var inputBuffer);
+
         Tick();
         Render();
         Optimize(TickIntervalInTicks, CurrentElapsedTicks);
@@ -40,6 +42,8 @@ internal sealed class CoreThread : WorkerThread
     {
         Bridges.CoreToRender.Swap();
         currWriteStack = Bridges.CoreToRender.CurrentWriteStack;
+
+        Bridges.RenderToCore.InputStack.Swap(out var inputBuffer);
 
         Tick();
         long updateTime = CurrentElapsedTicks;

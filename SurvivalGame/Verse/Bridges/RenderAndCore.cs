@@ -1,13 +1,13 @@
-using SurvivalGame.Verse.Input;
+using Verse.UserInput;
 using Verse.Rendering;
 
 namespace Verse.Bridges;
 
 internal static class CoreToRender
 {
-    private static RenderStack writeStack;
+    private static volatile RenderStack writeStack;
     private static volatile RenderStack currReadStack;
-    private static RenderStack prevReadStack;
+    private static volatile RenderStack prevReadStack;
 
     private static volatile bool pendingStack = false;
 
@@ -45,6 +45,6 @@ internal static class CoreToRender
 
 internal static class RenderToCore
 {
-    private static InputStack inputStack;
-    public static InputStack communicationInputStack => inputStack;
+    private readonly static InputBuffer inputStack = new InputBuffer();
+    public static InputBuffer InputStack => inputStack;
 }

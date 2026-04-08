@@ -22,20 +22,20 @@ public class CameraMover : WorldComponent
 
         KeyboardState state = Keyboard.GetState();
 
-        if(state.IsKeyDown(Keys.W))
-            cameraPos.Y += speed;
-        if(state.IsKeyDown(Keys.S))
-            cameraPos.Y -= speed;
+        // if(state.IsKeyDown(Keys.W))
+        //     cameraPos.Y += speed;
+        // if(state.IsKeyDown(Keys.S))
+        //     cameraPos.Y -= speed;
 
-        if(state.IsKeyDown(Keys.A))
-            cameraPos.X -= speed;
-        if(state.IsKeyDown(Keys.D))
-            cameraPos.X += speed;
+        // if(state.IsKeyDown(Keys.A))
+        //     cameraPos.X -= speed;
+        // if(state.IsKeyDown(Keys.D))
+        //     cameraPos.X += speed;
 
-        if(state.IsKeyDown(Keys.Q))
-            camera.ScaleTo(camera.OrthographicSize - speed * 5f);
-        if(state.IsKeyDown(Keys.E))
-            camera.ScaleTo(camera.OrthographicSize + speed * 5f);
+        // if(state.IsKeyDown(Keys.Q))
+        //     camera.ScaleTo(camera.OrthographicSize - speed * 5f);
+        // if(state.IsKeyDown(Keys.E))
+        //     camera.ScaleTo(camera.OrthographicSize + speed * 5f);
 
         camera.MoveTo(cameraPos);
     }

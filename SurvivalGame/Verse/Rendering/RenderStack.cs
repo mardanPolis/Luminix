@@ -1,6 +1,6 @@
 using System;
 using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Graphics;
+using Verse.Simulation;
 using Verse.Rendering.RenderInstances;
 
 namespace Verse.Rendering;

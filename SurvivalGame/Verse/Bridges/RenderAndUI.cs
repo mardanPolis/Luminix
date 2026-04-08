@@ -1,6 +1,6 @@
 using System;
 
-namespace SurvivalGame.Verse.Bridges;
+namespace Verse.Bridges;
 
 public class UIToRender
 {

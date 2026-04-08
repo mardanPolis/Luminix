@@ -1,6 +1,3 @@
-using System;
-using Verse.Rendering;
-
 namespace Verse.Simulation;
 
 public abstract class WorldComponent

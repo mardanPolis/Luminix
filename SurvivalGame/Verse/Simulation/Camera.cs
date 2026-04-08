@@ -1,9 +1,9 @@
 using System;
-using System.Collections.Generic;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using Verse.Rendering;
 
-namespace Verse.Rendering;
+namespace Verse.Simulation;
 
 public class Camera
 {

@@ -6,6 +6,7 @@ using GameSrc.Rendering;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
 using SurvivalGame.GameSrc.Simulation;
+using Verse.UserInput;
 using Verse.Bridges;
 using Verse.Collections;
 using Verse.Rendering;
@@ -36,7 +37,7 @@ public class Main : Game
 
     private DenseList<Test> testList = new DenseList<Test>();
 
-    private DenseList<char> pressedKeys = new DenseList<char>();
+    private DenseList<char> pressedKeys = new DenseList<char>(capacity:256);
 
     private long startBytes = 0;
     private long allocated = 0;
@@ -53,6 +54,8 @@ public class Main : Game
     public long FrameAllocationAmount => allocated;
 
     public GameTime GameTime => time;
+
+    private InputBuffer.PackedInput[] packedInputs = new InputBuffer.PackedInput[256];
 
     protected override void Initialize()
     {
@@ -185,7 +188,7 @@ public class Main : Game
 
         if (state.GetPressedKeyCount() > 0) 
         {
-            for (byte i = 0; i < 255; i++)
+            for (int i = 0; i < 256; i++)
             {
                 char k = (char)i;
                 bool isDown = state.IsKeyDown((Keys)k);
@@ -193,13 +196,13 @@ public class Main : Game
 
                 if (isDown && !wasInSet) { // DOWN
                     pressedKeys.Add(k);
-                    PushInputToStacks(k, 1, 0, 0);
+                    packedInputs[(byte)k] = new InputBuffer.PackedInput(1, 0, 0, packedInputs[(byte)k]);
                 }
                 else if (isDown && wasInSet) // HOLDING
-                    PushInputToStacks(k, 0, 1, 0);
+                    packedInputs[(byte)k] = new InputBuffer.PackedInput(0, 1, 0, packedInputs[(byte)k]);
                 else if (!isDown && wasInSet) { // RELEASED
                     pressedKeys.Remove(k);
-                    PushInputToStacks(k, 0, 0, 1);
+                    packedInputs[(byte)k] = new InputBuffer.PackedInput(0, 0, 1, packedInputs[(byte)k]);
                 }
             }
         }
@@ -208,14 +211,23 @@ public class Main : Game
             for (int i = pressedKeys.Count - 1; i >= 0; i--)
             {
                 char k = pressedKeys[i];
-                PushInputToStacks(k, 0, 0, 1); // Send UP event
+                packedInputs[(byte)k] = new InputBuffer.PackedInput(0, 0, 1, packedInputs[(byte)k]);
             }
             pressedKeys.Clear();
         }
+
+        WriteInput();
     }
 
-    private void PushInputToStacks(char key, byte down, byte hold, byte up)
+
+    private void PushInputToStacks(char k, byte down, byte hold, byte up)
     {
+        packedInputs[(byte)k] = new InputBuffer.PackedInput(down, hold, up, packedInputs[(byte)k]);
+    }
+
+    private void WriteInput()
+    {
+        RenderToCore.InputStack.Write(packedInputs);
     }
 
     public void Crash()

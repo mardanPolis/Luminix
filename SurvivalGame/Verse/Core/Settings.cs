@@ -1,6 +1,6 @@
 using System;
 
-namespace SurvivalGame.Verse.Core;
+namespace Verse;
 
 public sealed class Settings
 {

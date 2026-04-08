@@ -68,7 +68,7 @@ public class WorkerThread
     public ID ThreadID { get; private set; }
     public string Name { get => systemThread.Name; set => systemThread.Name = value; }
     public bool IsBackground { get => systemThread.IsBackground; set => systemThread.IsBackground = value; }
-    public bool IsAlive => systemThread.IsAlive;
+    public bool IsAlive => running;
     public ThreadPriority Priority { get => systemThread.Priority; set => systemThread.Priority = value; }
 
     public uint TickRate
@@ -139,7 +139,7 @@ public class WorkerThread
                     long elapsedTicks = stopwatch.ElapsedTicks;
                     if(elapsedTicks < Interlocked.Read(ref nextTick))
                     {
-                        Thread.SpinWait(20);
+                        Thread.SpinWait(10);
                         continue;
                     }
                     
@@ -206,7 +206,7 @@ public class WorkerThread
                     long elapsedTicks = stopwatch.ElapsedTicks;
                     if(elapsedTicks < Interlocked.Read(ref nextTick))
                     {
-                        Thread.SpinWait(20);
+                        Thread.SpinWait(10);
                         continue;
                     }
                     
