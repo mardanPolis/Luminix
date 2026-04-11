@@ -99,7 +99,7 @@ public class Main : Game
         }
         catch
         {
-            Logger.Get().Log($"Exception happened during 'Initialize'");
+            Logger.Get().Err($"Exception happened during 'Initialize'");
             throw;
         }
     }
@@ -123,7 +123,7 @@ public class Main : Game
         }
         catch
         {
-            Logger.Get().Log($"Exception happened during 'LoadContent'");
+            Logger.Get().Err($"Exception happened during 'LoadContent'");
             throw;
         }
     }
@@ -154,7 +154,7 @@ public class Main : Game
         }
         catch
         {
-            Logger.Get().Log($"Exception happened during 'BeginRun'");
+            Logger.Get().Err($"Exception happened during 'BeginRun'");
             throw;
         }
     }
