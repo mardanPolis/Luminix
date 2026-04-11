@@ -9,7 +9,7 @@ try
 }
 catch(Exception ex)
 {
-    Logger.Get().Log(ex);
+    Logger.Get().Err(ex);
     foreach(var workerThread in WorkerThread.Threads)
         workerThread.Stop();
 }
