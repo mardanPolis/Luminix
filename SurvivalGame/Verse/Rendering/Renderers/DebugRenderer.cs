@@ -64,19 +64,18 @@ public abstract class DebugRenderer
         Vector2 rightLower = position + new Vector2(scale.X - valueMargin, scale.Y - valueMargin);
 
         // 3. Graphing Constants
-        float availableHeight = scale.Y - (valueMargin * 2);
+        float availableHeight = scale.Y - (valueMargin * 2) - 5;
         float graphBottomY = leftLower.Y;
 
         for (int i = 0; i < data.Length; i++)
         {
-            float xPos = leftLower.X + ((i - 1) * valueLineThickness);
+            float xPos = leftLower.X + (i * valueLineThickness);
 
             float ratio = (float)(data[i] / maxValue);
 
-            float barHeight = ratio * availableHeight + 5;
+            float barHeight = ratio * availableHeight;
 
-            Vector2 startPoint = new Vector2(xPos, graphBottomY + 1);
-            Vector2 endPoint = new Vector2(xPos, graphBottomY + 1 - barHeight);
+            Vector2 startPoint = new Vector2(xPos, graphBottomY);
 
             int distance = (i <= lastIndex) 
                 ? (lastIndex - i) 
@@ -86,12 +85,12 @@ public abstract class DebugRenderer
             fade = MathF.Pow(fade, 1.5f); 
 
             float r = ratio;
-            float g = 1.0f - ratio * (i % 2 == 0 ? 1 : 0.5f);
-            float b = 0.2f - ratio;
+            float g = 1.0f - ratio * 0.5f;
+            float b = 0.2f;
 
             Color barColor = new Color(r, g, b) * fade;
 
-            DrawLine(endPoint, startPoint, barColor, valueLineThickness);
+            DrawVerticalLine(startPoint, -(int)(barHeight + 5), barColor, valueLineThickness);
         }
 
         DrawLine(leftUpper, rightUpper, Color.White, 1);
@@ -100,7 +99,20 @@ public abstract class DebugRenderer
         DrawLine(leftLower, leftUpper, Color.White, 1);
     }
 
-    public void AppendLong(StringBuilder sb, long value, int minDigits = 1)
+    protected void DrawVerticalLine(Vector2 position, int height, Color color, int lineThickness)
+    {
+        lineThickness = Math.Max(lineThickness, 1);
+
+        spriteBatch.Draw(pixel,
+            new Rectangle((int)position.X, (int)position.Y + height, lineThickness, -height),
+            null, 
+            color, 
+            0, 
+            new Vector2(0, 0),
+            SpriteEffects.None, 
+            0);
+    }
+    protected void AppendLong(StringBuilder sb, long value, int minDigits = 1)
     {
         if (value < 0)
         {
@@ -132,7 +144,7 @@ public abstract class DebugRenderer
             sb.Append(buffer[i]);
         }
     }
-    public void AppendDouble(StringBuilder sb, double value, int decimalPlaces = 4, int minIntDigits = 1)
+    protected void AppendDouble(StringBuilder sb, double value, int decimalPlaces = 4, int minIntDigits = 1)
     {
         if (double.IsNaN(value)) { sb.Append("NaN"); return; }
         if (double.IsInfinity(value)) { sb.Append("INF"); return; }
