@@ -136,12 +136,23 @@ public class WorkerThread
         
                 while (running)
                 {
-                    long elapsedTicks = stopwatch.ElapsedTicks;
-                    if(elapsedTicks < Interlocked.Read(ref nextTick))
+                    long currentTicks = stopwatch.ElapsedTicks;
+                    long targetTick = Interlocked.Read(ref nextTick);
+
+                    if(currentTicks < targetTick)
                     {
-                        Thread.SpinWait(10);
+                        long ticksRemaining = nextTick - currentTicks;
+                        double msRemaining = (double)ticksRemaining / Stopwatch.Frequency * 1000;
+                        
+                        if (msRemaining > 15)
+                            Thread.Sleep(10);
+                        else if (msRemaining > 4)
+                            Thread.Yield();
+                        else if (msRemaining > 1)
+                            Thread.SpinWait(5);
+
                         continue;
-                    }
+                    } 
                     
                     var temp = tickTimesBuffer1;
                     tickTimesBuffer1 = tickTimesBuffer2;
@@ -202,11 +213,21 @@ public class WorkerThread
         
                 while (running)
                 {
+                    long currentTicks = stopwatch.ElapsedTicks;
+                    long targetTick = Interlocked.Read(ref nextTick);
 
-                    long elapsedTicks = stopwatch.ElapsedTicks;
-                    if(elapsedTicks < Interlocked.Read(ref nextTick))
+                    if(currentTicks < targetTick)
                     {
-                        Thread.SpinWait(10);
+                        long ticksRemaining = nextTick - currentTicks;
+                        double msRemaining = (double)ticksRemaining / Stopwatch.Frequency * 1000;
+
+                        if (msRemaining > 15)
+                            Thread.Sleep(10);
+                        else if (msRemaining > 4)
+                            Thread.Yield();
+                        else if (msRemaining > 1)
+                            Thread.SpinWait(5);
+                            
                         continue;
                     }
                     
