@@ -1,13 +1,30 @@
 using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Threading;
 using Microsoft.Xna.Framework.Input;
-using Verse.UserInput;
+using Verse.Bridge;
 
 namespace Verse;
 
 public sealed class Input
 {
+    public enum MouseButtons
+    {
+        LeftButton = 0,
+        RightButton = 1,
+        MiddleButton = 2,
+        SideButton1 = 3,
+        SideButton2 = 4
+    }
+
     private static ThreadLocal<Input> instance = new ThreadLocal<Input>(true);
+
+    private Dictionary<Keys, Action[]> keyDownActions = new Dictionary<Keys, Action[]>();
+    private Dictionary<Keys, Action[]> keyUpActions = new Dictionary<Keys, Action[]>();
+
+    private Dictionary<byte, Action<short, short>[]> mouseButtonDownActions = new Dictionary<byte, Action<short, short>[]>();
+    private Dictionary<byte, Action<short, short>[]> mouseButtonUpActions = new Dictionary<byte, Action<short, short>[]>();
 
     internal static void Initialize()
     {
@@ -24,35 +41,103 @@ public sealed class Input
         return Get().IsKeyDown(keys);
     }
 
-    public static bool GetKey(Keys keys)
-    {
-        return Get().IsKeyHeld(keys);
-    }
-
     public static bool GetKeyUp(Keys keys)
     {
         return Get().IsKeyUp(keys);
     }
 
-    private InputBuffer.PackedInput[] input = new InputBuffer.PackedInput[256];
+    public static bool GetMouseButtonDown(MouseButtons button)
+    {
+        return Get().IsMouseButtonDown(button);
+    }
 
-    internal void Update(InputBuffer.PackedInput[] packedInputs)
+    public static bool GetMouseButtonUp(MouseButtons button)
+    {
+        return Get().IsMouseButtonUp(button);
+    }
+
+    private long[] keyInput = new long[4];
+
+    private short mouseX = 0;
+    private short mouseY = 0;
+    private byte mouseButtonStates = 0;
+
+    internal void ReadFrom(InputBridge inputBridge)
+    {
+        inputBridge.Read(out long[] _readKeyBuffer, out ConcurrentQueue<byte> _pressedKeys, out ConcurrentQueue<byte> _releasedKeys,
+        out InputBridge.MouseData mouseData);
+
+        Array.Copy(_readKeyBuffer, keyInput, _readKeyBuffer.Length);
+        mouseX = (short)(mouseData.position >> 16);
+        mouseY = (short)mouseData.position;
+        mouseButtonStates = mouseData.buttonStates;
+
+        while(_pressedKeys.TryDequeue(out byte key))
+        {
+            if (keyDownActions.TryGetValue((Keys)key, out var actions))
+            {
+                for (int i = 0; i < actions.Length; i++)
+                    actions[i]();
+            }
+        }
+
+        while(_releasedKeys.TryDequeue(out byte key))
+        {
+            if (keyUpActions.TryGetValue((Keys)key, out var actions))
+            {
+                for (int i = 0; i < actions.Length; i++)
+                    actions[i]();
+            }
+        }
+
+        while(mouseData.pressedButtons.TryDequeue(out (byte, short, short) pressEvent))
+        {
+            if (mouseButtonDownActions.TryGetValue(pressEvent.Item1, out var actions))
+            {
+                var x = pressEvent.Item2;
+                var y = pressEvent.Item3;
+                for (int i = 0; i < actions.Length; i++)
+                    actions[i](x, y);
+            }
+        }
+
+        while(mouseData.releasedButtons.TryDequeue(out (byte, short, short) pressEvent))
+        {
+            if (mouseButtonUpActions.TryGetValue(pressEvent.Item1, out var actions))
+            {
+                var x = pressEvent.Item2;
+                var y = pressEvent.Item3;
+                for (int i = 0; i < actions.Length; i++)
+                    actions[i](x, y);
+            }
+        }
+    }
+
+    public void Subscribe(Action action, Keys key)
     {
         
     }
 
     public bool IsKeyDown(Keys keys)
     {
-        return input[(byte)keys].IsDown;
+        byte key = (byte)keys;
+        return (keyInput[key >> 6] & (1L << (key & 63))) != 0;
     }
-
-    public bool IsKeyHeld(Keys keys)
-    {
-        return input[(byte)keys].IsHeld;
-    }
-
     public bool IsKeyUp(Keys keys)
     {
-        return input[(byte)keys].IsUp;
+        byte key = (byte)keys;
+        return (keyInput[key >> 6] & (1L << (key & 63))) == 0;
     }
+
+    public bool IsMouseButtonDown(MouseButtons button)
+    {
+        return (mouseButtonStates & (1 << ((byte)button & 7))) != 0;
+    }
+    public bool IsMouseButtonUp(MouseButtons button)
+    {
+        return (mouseButtonStates & (1 << ((byte)button & 7))) == 0;
+    }
+
+    public short MouseX => mouseX;
+    public short MouseY => mouseY;
 }

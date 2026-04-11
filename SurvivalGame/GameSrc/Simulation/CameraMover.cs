@@ -1,6 +1,7 @@
 using System;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
+using Verse;
 using Verse.Rendering;
 using Verse.Simulation;
 
@@ -20,22 +21,25 @@ public class CameraMover : WorldComponent
 
         var cameraPos = camera.Position;
 
-        KeyboardState state = Keyboard.GetState();
+        if(Input.GetKeyDown(Keys.W))
+            cameraPos.Y += speed;
+        if(Input.GetKeyDown(Keys.S))
+            cameraPos.Y -= speed;
 
-        // if(state.IsKeyDown(Keys.W))
-        //     cameraPos.Y += speed;
-        // if(state.IsKeyDown(Keys.S))
-        //     cameraPos.Y -= speed;
+        if(Input.GetKeyDown(Keys.A))
+            cameraPos.X -= speed;
+        if(Input.GetKeyDown(Keys.D))
+            cameraPos.X += speed;
+            
+        float direction = 0;
+        if(Input.GetKeyDown(Keys.E)) direction += 1f;
+        if(Input.GetKeyDown(Keys.Q)) direction -= 1f;
 
-        // if(state.IsKeyDown(Keys.A))
-        //     cameraPos.X -= speed;
-        // if(state.IsKeyDown(Keys.D))
-        //     cameraPos.X += speed;
-
-        // if(state.IsKeyDown(Keys.Q))
-        //     camera.ScaleTo(camera.OrthographicSize - speed * 5f);
-        // if(state.IsKeyDown(Keys.E))
-        //     camera.ScaleTo(camera.OrthographicSize + speed * 5f);
+        if (direction != 0)
+        {
+            float targetSize = camera.OrthographicSize + (direction * speed * 5f);
+            camera.ScaleTo(targetSize);
+        }
 
         camera.MoveTo(cameraPos);
     }

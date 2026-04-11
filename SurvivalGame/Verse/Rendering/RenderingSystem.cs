@@ -18,8 +18,6 @@ internal static class RenderingSystem
     private static ulong frameCount = 0;
     private static long drawCount = 0;
 
-    private static float prevPartialTick = 0;
-
     public static GraphicsDeviceManager GraphicsDeviceManager => graphics;
     public static GraphicsDevice GraphicsDevice => graphics.GraphicsDevice;
     public static ulong FrameCount => Interlocked.Read(ref frameCount);
@@ -73,8 +71,6 @@ internal static class RenderingSystem
 
         Interlocked.Increment(ref frameCount);
         Interlocked.Exchange(ref drawCount, GraphicsDevice.Metrics.DrawCount);
-
-        prevPartialTick = partialTick;
     }
 
     public static void ToggleVSync(bool? state = null)

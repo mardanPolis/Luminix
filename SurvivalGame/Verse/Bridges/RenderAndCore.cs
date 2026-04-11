@@ -1,4 +1,4 @@
-using Verse.UserInput;
+using Verse.Bridge;
 using Verse.Rendering;
 
 namespace Verse.Bridges;
@@ -45,6 +45,7 @@ internal static class CoreToRender
 
 internal static class RenderToCore
 {
-    private readonly static InputBuffer inputStack = new InputBuffer();
-    public static InputBuffer InputStack => inputStack;
+    internal static volatile bool WindowIsActive = false;
+    private readonly static InputBridge inputBridge = new InputBridge();
+    public static InputBridge InputBridge => inputBridge;
 }

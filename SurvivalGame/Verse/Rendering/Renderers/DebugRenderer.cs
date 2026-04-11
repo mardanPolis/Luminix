@@ -165,7 +165,7 @@ internal sealed class GameDebugRenderer : DebugRenderer
     private StringBuilder sb = new StringBuilder();
 
     private double frameTime = 0;
-    private double elapsedForFps = 0;
+    private double elapsed = 0;
     private double fps = 0;
 
     public void Initialize(Main main, CoreThread coreThread)
@@ -191,13 +191,13 @@ internal sealed class GameDebugRenderer : DebugRenderer
         
         spriteBatch.Begin();
 
-        elapsedForFps += frameDeltaTime; // Assuming this is in seconds
+        elapsed += frameDeltaTime; // Assuming this is in seconds
 
-        if (elapsedForFps >= 0.5) 
+        if (elapsed >= 0.05) 
         {
             fps = main.FPS;
             frameTime = main.FrameTime; 
-            elapsedForFps = 0;
+            elapsed = 0;
         }
 
         sb.Clear();

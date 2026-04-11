@@ -26,12 +26,21 @@ internal sealed class CoreThread : WorkerThread
     public double TickRenderTime => Volatile.Read(ref tickRenderTime);
     public double TickOptimizeTime => Volatile.Read(ref tickOptimizeTime);
 
+    private Input input;
+    private Random random = new Random();
+
+    protected sealed override void Initialize()
+    {
+        Input.Initialize();
+        input = Input.Get();
+    } 
+
     protected sealed override void OnTick()
     {
         Bridges.CoreToRender.Swap();
         currWriteStack = Bridges.CoreToRender.CurrentWriteStack;
 
-        Bridges.RenderToCore.InputStack.Swap(out var inputBuffer);
+        input.ReadFrom(Bridges.RenderToCore.InputBridge);
 
         Tick();
         Render();
@@ -43,7 +52,7 @@ internal sealed class CoreThread : WorkerThread
         Bridges.CoreToRender.Swap();
         currWriteStack = Bridges.CoreToRender.CurrentWriteStack;
 
-        Bridges.RenderToCore.InputStack.Swap(out var inputBuffer);
+        input.ReadFrom(Bridges.RenderToCore.InputBridge);
 
         Tick();
         long updateTime = CurrentElapsedTicks;

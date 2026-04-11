@@ -6,7 +6,6 @@ using GameSrc.Rendering;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
 using SurvivalGame.GameSrc.Simulation;
-using Verse.UserInput;
 using Verse.Bridges;
 using Verse.Collections;
 using Verse.Rendering;
@@ -37,8 +36,6 @@ public class Main : Game
 
     private DenseList<Test> testList = new DenseList<Test>();
 
-    private DenseList<char> pressedKeys = new DenseList<char>(capacity:256);
-
     private long startBytes = 0;
     private long allocated = 0;
     private double frameTime;
@@ -55,7 +52,12 @@ public class Main : Game
 
     public GameTime GameTime => time;
 
-    private InputBuffer.PackedInput[] packedInputs = new InputBuffer.PackedInput[256];
+    private int mousePosition = 0; // X, Y
+    private byte mouseButtonStates = 0; 
+    private long mouseScrollPositions = 0; // vX, vY, hX, hY
+
+    private long[] prevKeyboardStates = new long[4];
+    private long[] currKeyboardStates = new long[4];
 
     protected override void Initialize()
     {
@@ -71,6 +73,7 @@ public class Main : Game
             IsFixedTimeStep = true;
             TargetElapsedTime = TimeSpan.FromSeconds(1.0 / TARGET_FPS);
 
+            mainThread.Priority = ThreadPriority.Highest;
             coreThread = new CoreThread(TICK_RATE, IS_DEBUG);
 
             RendererRegistry.Register(typeof(GameDebugRenderer));
@@ -158,8 +161,8 @@ public class Main : Game
 
     protected override void Update(GameTime gameTime)
     {
-        startBytes = GC.GetAllocatedBytesForCurrentThread();
         stopwatch.Restart();
+        startBytes = GC.GetAllocatedBytesForCurrentThread();
 
         HandleInput();
 
@@ -184,54 +187,120 @@ public class Main : Game
 
     private void HandleInput()
     {
-        var state = Keyboard.GetState();
+        if(IsActive)
+        {
+            HandleKeyboardInput();
+            HandleMouseInput();
+            RenderToCore.InputBridge.Write(currKeyboardStates, mousePosition, mouseButtonStates);
+        }
+        else
+        {
+            Array.Clear(currKeyboardStates, 0, 4);
 
-        if (state.GetPressedKeyCount() > 0) 
+            var mouseState = Mouse.GetState();
+            mousePosition = (mouseState.X << 16) | mouseState.Y; 
+            RenderToCore.InputBridge.Write(currKeyboardStates, mousePosition, 0);
+        }
+
+        RenderToCore.WindowIsActive = IsActive;
+    }
+
+    private void HandleKeyboardInput()
+    {
+        Array.Copy(currKeyboardStates, prevKeyboardStates, 4);
+        Array.Clear(currKeyboardStates, 0, 4);
+
+        var keyboardState = Keyboard.GetState();
+        
+        if(keyboardState.GetPressedKeyCount() > 0)
         {
             for (int i = 0; i < 256; i++)
             {
-                char k = (char)i;
-                bool isDown = state.IsKeyDown((Keys)k);
-                bool wasInSet = pressedKeys.Contains(k);
-
-                if (isDown && !wasInSet) { // DOWN
-                    pressedKeys.Add(k);
-                    packedInputs[(byte)k] = new InputBuffer.PackedInput(1, 0, 0, packedInputs[(byte)k]);
-                }
-                else if (isDown && wasInSet) // HOLDING
-                    packedInputs[(byte)k] = new InputBuffer.PackedInput(0, 1, 0, packedInputs[(byte)k]);
-                else if (!isDown && wasInSet) { // RELEASED
-                    pressedKeys.Remove(k);
-                    packedInputs[(byte)k] = new InputBuffer.PackedInput(0, 0, 1, packedInputs[(byte)k]);
+                if (keyboardState.IsKeyDown((Keys)i))
+                {
+                    currKeyboardStates[i >> 6] |= 1L << (i & 63);
                 }
             }
         }
-        else if (pressedKeys.Count > 0)
+
+        for (int i = 0; i < 4; i++)
         {
-            for (int i = pressedKeys.Count - 1; i >= 0; i--)
-            {
-                char k = pressedKeys[i];
-                packedInputs[(byte)k] = new InputBuffer.PackedInput(0, 0, 1, packedInputs[(byte)k]);
-            }
-            pressedKeys.Clear();
+            long current = currKeyboardStates[i];
+            long previous = prevKeyboardStates[i];
+            
+            long changed = current ^ previous;
+            if (changed == 0) continue;
+
+            long pressed = changed & current;
+            long released = changed & previous;
+
+            if (pressed != 0) DispatchEvents(i, pressed, true);
+            if (released != 0) DispatchEvents(i, released, false);
         }
 
-        WriteInput();
     }
 
-
-    private void PushInputToStacks(char k, byte down, byte hold, byte up)
+    private void DispatchEvents(int chunkIndex, long mask, bool isDown)
     {
-        packedInputs[(byte)k] = new InputBuffer.PackedInput(down, hold, up, packedInputs[(byte)k]);
+        int offset = chunkIndex << 6;
+        for (int bit = 0; bit < 64; bit++)
+        {
+            if ((mask & (1L << bit)) != 0)
+            {
+                Keys key = (Keys)(offset | bit);
+                if (isDown) RenderToCore.InputBridge.PressKeyEvent(key);
+                else RenderToCore.InputBridge.ReleaseKeyEvent(key);
+            }
+        }
     }
 
-    private void WriteInput()
+    private void HandleMouseInput()
     {
-        RenderToCore.InputStack.Write(packedInputs);
+        var mouseState = Mouse.GetState();
+
+        //position
+        short mouseX = (short)mouseState.X;
+        short mouseY = (short)mouseState.Y;
+
+        int currMousePosition = (mouseX << 16) | (int)mouseY;
+
+        //mouseButtons
+
+        byte currMouseButtonStates = 0;
+
+        if (mouseState.LeftButton == ButtonState.Pressed) currMouseButtonStates = 1;
+        if (mouseState.RightButton == ButtonState.Pressed) currMouseButtonStates |= 2;
+        if (mouseState.MiddleButton == ButtonState.Pressed) currMouseButtonStates |= 4; 
+        if (mouseState.XButton1 == ButtonState.Pressed) currMouseButtonStates |= 8;
+        if (mouseState.XButton2 == ButtonState.Pressed) currMouseButtonStates |= 16;
+
+        int changedButtons = currMouseButtonStates ^ mouseButtonStates;
+
+        if (changedButtons != 0)
+        {
+            short X = (short)mouseState.X;
+            short Y = (short)mouseState.Y;
+
+            for (byte i = 0; i < 5; i++)
+            {
+                int mask = 1 << i;
+                if ((changedButtons & mask) != 0)
+                {
+                    bool isDown = (currMouseButtonStates & mask) == 0;
+                    DispatchMouseEvent(i, X, Y, isDown);
+                }
+            }
+        }
+
+        mousePosition = currMousePosition;
+        mouseButtonStates = currMouseButtonStates;
     }
 
-    public void Crash()
+    private void DispatchMouseEvent(byte button, short X, short Y, bool down)
     {
-        throw new Exception("Test Crash");
+        if(down)
+            RenderToCore.InputBridge.ReleaseButtonEvent(button, X, Y);
+        else
+            RenderToCore.InputBridge.PressButtonEvent(button, X, Y);
     }
 }

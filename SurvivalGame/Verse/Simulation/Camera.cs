@@ -63,12 +63,6 @@ public class Camera
         return Vector2.Transform(worldPos, GetViewMatrix());
     }
 
-    public void LookAt(Vector2 target)
-    {
-        position0 = target;
-        position = target;
-    }
-
     public void Translate(Vector2 delta)
     {
         position0 += delta;
@@ -83,10 +77,6 @@ public class Camera
         this.orthoSize = Math.Max(orthoSize, 0.01f);
     }
 
-    internal void TickStart(Viewport viewport)
-    {
-        this.viewport = viewport;
-    }
     internal void Tick()
     {
         position0 = position;
