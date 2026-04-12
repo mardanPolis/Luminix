@@ -4,18 +4,18 @@ namespace Verse.Identifiers;
 
 public readonly record struct ID : IEquatable<ID>
 {
-    private readonly uint _value;
+    private readonly uint value;
 
     public ID(uint value)
     {
-        _value = value;
+        this.value = value;
     }
 
-    public uint Value => _value;
+    public uint Value => value;
 
-    public bool Equals(ID other) => _value == other._value;
+    public bool Equals(ID other) => value == other.value;
 
-    public override int GetHashCode() => (int)_value;
+    public override int GetHashCode() => (int)value;
 
-    public override string ToString() => $"[ID:{_value}]";
+    public override string ToString() => $"[ID:{value}]";
 }
