@@ -22,14 +22,14 @@ public class CameraMover : WorldComponent
         var cameraPos = camera.Position;
 
         if(Input.GetKeyDown(Keys.W))
-            cameraPos.Y += speed;
+            cameraPos.Y += speed * (camera.OrthographicSize * 0.1f);
         if(Input.GetKeyDown(Keys.S))
-            cameraPos.Y -= speed;
+            cameraPos.Y -= speed * (camera.OrthographicSize * 0.1f);
 
         if(Input.GetKeyDown(Keys.A))
-            cameraPos.X -= speed;
+            cameraPos.X -= speed * (camera.OrthographicSize * 0.1f);
         if(Input.GetKeyDown(Keys.D))
-            cameraPos.X += speed;
+            cameraPos.X += speed * (camera.OrthographicSize * 0.1f);
             
         float direction = 0;
         if(Input.GetKeyDown(Keys.E)) direction += 1f;

@@ -1,9 +1,9 @@
 using Microsoft.Xna.Framework;
 
-namespace Verse.Rendering.RenderInstances;
-internal struct InstanceSprite
+namespace Verse.Rendering.RenderItems;
+internal struct RenderItemInterpSprite
 {
-    public InstanceSprite(Sprite sprite, Vector2 position, Vector2 scale, float rotation, float layerDepth)
+    public RenderItemInterpSprite(Sprite sprite, Vector2 position, Vector2 scale, float rotation, float layerDepth)
     {
         Sprite = sprite;
         Position = position;
@@ -13,8 +13,11 @@ internal struct InstanceSprite
     }
 
     public Sprite Sprite;
+    public Vector2 Position0;
     public Vector2 Position;
+    public Vector2 Scale0;
     public Vector2 Scale;
+    public float Rotation0;
     public float Rotation;
     public float LayerDepth;
 }

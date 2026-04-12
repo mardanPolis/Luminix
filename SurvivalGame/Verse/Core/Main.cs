@@ -63,6 +63,8 @@ public class Main : Game
     {
         try
         {
+            startBytes = GC.GetAllocatedBytesForCurrentThread();
+            
             Thread.CurrentThread.Name = "RenderThread";
 
             Logger.Initialize();
@@ -150,7 +152,12 @@ public class Main : Game
             coreThread.Start();
             
             logger.Log($"Successful: Start");
+
+            long endBytes = GC.GetAllocatedBytesForCurrentThread();
+            allocated = endBytes - startBytes;
+
             logger.Log($"Game fully initialized in {stopwatch.Elapsed.Milliseconds}ms");
+            logger.Log($"Game allocated {allocated} bytes during initialization!");
         }
         catch
         {

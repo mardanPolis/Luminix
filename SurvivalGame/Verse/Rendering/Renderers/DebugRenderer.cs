@@ -2,6 +2,7 @@ using System;
 using System.Text;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using Microsoft.Xna.Framework.Input;
 using Verse.Resources;
 using Verse.Threading;
 
@@ -262,5 +263,14 @@ internal sealed class GameDebugRenderer : DebugRenderer
         DrawGraph(graphPos, gHeight, tickTimes, budgetUs, 5, 5, currentIndex, false);
 
         spriteBatch.End();
+
+        var keyboard = Keyboard.GetState();
+        if(keyboard.IsKeyDown(Keys.Home))
+        {
+            for (int i = 0; i <= GC.MaxGeneration; i++)
+            {
+                Console.WriteLine($"Gen {i} collections: {GC.CollectionCount(i)}");
+            }
+        }
     }
 }

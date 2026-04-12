@@ -2,7 +2,7 @@ using System;
 using System.Runtime.CompilerServices;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using Verse.Rendering.RenderInstances;
+using Verse.Rendering.RenderItems;
 using Verse.Resources;
 
 namespace Verse.Rendering;
@@ -28,41 +28,58 @@ internal sealed class FrameRenderer
 
         try
         {
-            var interpSpritesCount = renderStack.InterpolatedSpriteCount;
-            var interpSprites = renderStack.InstanceInterpolatedSprites;
+            var batchPositions = renderStack.BatchPositions;
+            var batchPositionsDataSet = batchPositions.DataSet;
 
-            var spritesCount = renderStack.SpriteCount;
-            var sprites = renderStack.InstanceSprites;
+            var interpSprites = renderStack.InterpolatedSpriteRenderItemStack;
+            var interpSpritesDataSet = interpSprites.DataSet;
+            var interpSpritesCount = interpSprites.Count;
 
-            var lineCount = renderStack.LineCount;
-            var lines = renderStack.InstanceLines;
+            var sprites = renderStack.SpriteRenderItemStack;
+            var spritesDataSet = sprites.DataSet;
+            var spritesCount = sprites.Count;
 
-            var textCount = renderStack.TextCount;
-            var texts = renderStack.InstanceText;
+            var spritesBatch = renderStack.SpriteBatchRenderItemStack;
+            var spritesBatchDataSet = spritesBatch.DataSet;
+            var spritesBatchCount = spritesBatch.Count;
+
+            var lines = renderStack.LineRenderItemStack;
+            var linesDataSet = lines.DataSet;
+            var lineCount = lines.Count;
+
+            var texts = renderStack.TextRenderItemStack;
+            var textDataSet = texts.DataSet;
+            var textCount = texts.Count;
             
             count = interpSpritesCount;
             typeRendered = "Interpolated Sprites";
-            length = interpSprites.Length;
+            length = interpSpritesDataSet.Length;
             for (i = 0; i < interpSpritesCount; i++)
-                DrawSprite(ref interpSprites[i], partialTick);
+                DrawSprite(ref interpSpritesDataSet[i], partialTick);
 
             count = spritesCount;
             typeRendered = "Sprites";
-            length = sprites.Length;
+            length = spritesDataSet.Length;
             for (i = 0; i < spritesCount; i++)
-                DrawSprite(ref sprites[i]);
+                DrawSprite(ref spritesDataSet[i]);
+
+            count = spritesBatchCount;
+            typeRendered = "SpriteBatches";
+            length = spritesBatchDataSet.Length;
+            for (i = 0; i < spritesBatchCount; i++)
+                DrawSpriteBatch(ref spritesBatchDataSet[i], batchPositionsDataSet);
 
             count = lineCount;
             typeRendered = "Lines";
-            length = lines.Length;
+            length = spritesBatchDataSet.Length;
             for (i = 0; i < lineCount; i++)
-                DrawLine(ref lines[i]);
+                DrawLine(ref linesDataSet[i]);
 
             count = textCount;
             typeRendered = "Text";
-            length = texts.Length;
+            length = textDataSet.Length;
             for (i = 0; i < textCount; i++)
-                DrawText(ref texts[i]);
+                DrawText(ref textDataSet[i]);
         }
         catch
         {
@@ -74,59 +91,93 @@ internal sealed class FrameRenderer
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private void DrawSprite(ref InstanceInterpolatedSprite sprite, float t)
+    private void DrawSprite(ref RenderItemInterpSprite renderItem, float t)
     {
-        var pos = sprite.Position0 + (sprite.Position - sprite.Position0) * t;
+        var pos = renderItem.Position0 + (renderItem.Position - renderItem.Position0) * t;
         pos.Y = -pos.Y;
 
-        var rot = sprite.Rotation0 + (sprite.Rotation - sprite.Rotation0) * t;
-        var scale = sprite.Scale0 + (sprite.Scale - sprite.Scale0) * t;
+        var rot = renderItem.Rotation0 + (renderItem.Rotation - renderItem.Rotation0) * t;
+        var scale = renderItem.Scale0 + (renderItem.Scale - renderItem.Scale0) * t;
 
         spriteBatch.Draw(
-            sprite.Sprite.TextureRegion.Texture,
+            renderItem.Sprite.TextureRegion.Texture,
             pos,
-            sprite.Sprite.TextureRegion.SourceRectangle,
-            sprite.Sprite.Color,
+            renderItem.Sprite.TextureRegion.SourceRectangle,
+            renderItem.Sprite.Color,
             rot,
-            sprite.Sprite.Origin,
+            renderItem.Sprite.Origin,
             scale,
-            sprite.Sprite.Effects,
-            sprite.LayerDepth
+            renderItem.Sprite.Effects,
+            renderItem.LayerDepth
         );
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private void DrawSprite(ref InstanceSprite sprite)
+    private void DrawSprite(ref RenderItemSprite renderItem)
     {
-        var pos = sprite.Position;
+        var pos = renderItem.Position;
         pos.Y = -pos.Y;
 
         spriteBatch.Draw(
-            sprite.Sprite.TextureRegion.Texture,
+            renderItem.Sprite.TextureRegion.Texture,
             pos,
-            sprite.Sprite.TextureRegion.SourceRectangle,
-            sprite.Sprite.Color,
-            sprite.Rotation,
-            sprite.Sprite.Origin,
-            sprite.Scale,
-            sprite.Sprite.Effects,
-            sprite.LayerDepth
+            renderItem.Sprite.TextureRegion.SourceRectangle,
+            renderItem.Sprite.Color,
+            renderItem.Rotation,
+            renderItem.Sprite.Origin,
+            renderItem.Scale,
+            renderItem.Sprite.Effects,
+            renderItem.LayerDepth
         );
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private void DrawLine(ref InstanceLine line)
+    private void DrawSpriteBatch(ref RenderItemSpriteBatch renderItem, Vector2[] positions)
+    {
+        var texture = renderItem.Sprite.TextureRegion.Texture;
+        var source = renderItem.Sprite.TextureRegion.SourceRectangle;
+        var color = renderItem.Sprite.Color;
+        var origin = renderItem.Sprite.Origin;
+        var scale = renderItem.Scale;
+        var effects = renderItem.Sprite.Effects;
+        var layer = renderItem.LayerDepth;
+
+        var startIndex = renderItem.StartIndex;
+        var length = startIndex + renderItem.Length;
+
+        for(int i = startIndex; i < length; i++)
+        {
+            var pos = positions[i];
+            pos.Y = -pos.Y;
+
+            spriteBatch.Draw(
+                texture,
+                pos,
+                source,
+                color,
+                0,
+                origin,
+                scale,
+                effects,
+                layer
+            );
+        }
+
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private void DrawLine(ref RenderItemLine renderItem)
     {
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private void DrawText(ref InstanceText instance)
+    private void DrawText(ref RenderItemText renderItem)
     {
         spriteBatch.DrawString(
-            instance.Bold ? ResourceManager.GenericFontBold : ResourceManager.GenericFontMedium,
-            instance.Text,
-            instance.Position,
-            instance.Color
+            renderItem.Bold ? ResourceManager.GenericFontBold : ResourceManager.GenericFontMedium,
+            renderItem.Text,
+            renderItem.Position,
+            renderItem.Color
         );
     }
 }

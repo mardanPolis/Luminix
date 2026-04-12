@@ -1,10 +1,10 @@
 using Microsoft.Xna.Framework;
 
-namespace Verse.Rendering.RenderInstances;
+namespace Verse.Rendering.RenderItems;
 
-internal struct InstanceText
+internal struct RenderItemText
 {
-    public InstanceText(string text, Vector2 position, Vector2 scale, float rotation, bool bold, Color color, float layerDepth)
+    public RenderItemText(string text, Vector2 position, Vector2 scale, float rotation, bool bold, Color color, float layerDepth)
     {
         Text = text;
         Position = position;

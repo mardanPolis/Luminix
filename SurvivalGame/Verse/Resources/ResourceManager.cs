@@ -15,9 +15,14 @@ public static class ResourceManager
 
     public static string RootDirectory {get; private set;}
 
+    private static Texture2D nullTexture;
+    private static TextureRegion nullTextureRegion;
+
     private static SpriteFont IBMPlexMono_Bold;
     private static SpriteFont IBMPlexMono_Medium;
     private static SpriteFont IBMPlexMono_Regular;
+
+    private static bool finalized = false;
 
     internal static void Initialize(string rootDirectory, ContentManager content)
     {
@@ -31,8 +36,8 @@ public static class ResourceManager
         pixel.SetData(new[] { Color.White });
         textures["pixel"] = pixel;
 
-        LoadTexture("null_texture.png");
-        NewTextureRegion("null_texture", "null_texture.png", 0, 0, 32, 32);
+        nullTexture = LoadTexture("null_texture.png");
+        nullTextureRegion = NewTextureRegion("null_texture", "null_texture.png", 0, 0, 32, 32);
 
         IBMPlexMono_Bold = ContentManager.Load<SpriteFont>("Fonts/IBMPlexMono-Bold");
         IBMPlexMono_Medium = ContentManager.Load<SpriteFont>("Fonts/IBMPlexMono-Medium");
@@ -43,13 +48,21 @@ public static class ResourceManager
     {
         if (textures.ContainsKey(name))
             return textures[name];
+        else if (finalized)
+        {
+            Logger.Get().Wrn($"Failed to load texture with name '{name}'.");
+            return nullTexture;
+        }
 
         Texture2D texture;
         using (var stream = File.OpenRead(Path.Combine(RootDirectory, name)))
             texture = Texture2D.FromStream(RenderingSystem.GraphicsDevice, stream);
 
         if (texture == null)
-            throw new FileNotFoundException($"Failed to load texture with name '{name}'.");
+        {
+            Logger.Get().Wrn($"Failed to load texture with name '{name}'.");
+            return nullTexture;
+        }
 
         textures[name] = texture;
         return texture;
@@ -71,7 +84,10 @@ public static class ResourceManager
     public static TextureRegion GetTextureRegion(string name)
     {
         if (!textureRegions.TryGetValue(name, out var textureRegion))
-            throw new KeyNotFoundException($"TextureRegion with name '{name}' not found.");
+        {
+            Logger.Get().Wrn($"TextureRegion with name '{name}' not found.");
+            return nullTextureRegion;
+        }
 
         return textureRegion;
     }

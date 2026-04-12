@@ -1,9 +1,9 @@
 using Microsoft.Xna.Framework;
 
-namespace Verse.Rendering.RenderInstances;
-internal struct InstanceLine
+namespace Verse.Rendering.RenderItems;
+internal struct RenderItemLine
 {
-    public InstanceLine(Vector2 start, Vector2 end, Color color, float thickness)
+    public RenderItemLine(Vector2 start, Vector2 end, Color color, float thickness)
     {
         Start = start;
         End = end;

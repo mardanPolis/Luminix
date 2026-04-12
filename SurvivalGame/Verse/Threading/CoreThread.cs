@@ -27,7 +27,6 @@ internal sealed class CoreThread : WorkerThread
     public double TickOptimizeTime => Volatile.Read(ref tickOptimizeTime);
 
     private Input input;
-    private Random random = new Random();
 
     protected sealed override void Initialize()
     {
@@ -78,6 +77,7 @@ internal sealed class CoreThread : WorkerThread
         for(int i = 0; i < World.WorldComponents.Count; i++)
             World.WorldComponents[i].Tick();
     }
+    
     private void Render()
     {
         currWriteStack.Reset();
@@ -89,10 +89,9 @@ internal sealed class CoreThread : WorkerThread
         for(int i = 0; i < renderers.Length; i++)
             renderers[i].RenderOn(currWriteStack);
     }
+
     private void Optimize(long maxTime, long time)
     {
-        // if(maxTime * 0.9 > time) currWriteStack.Optimize();
-        // else currWriteStack.SkipOptimization();
+        if(maxTime * 0.6 > time) currWriteStack.Optimize();
     }
-
 }

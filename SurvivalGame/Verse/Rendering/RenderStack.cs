@@ -1,7 +1,7 @@
 using System;
 using Microsoft.Xna.Framework;
 using Verse.Simulation;
-using Verse.Rendering.RenderInstances;
+using Verse.Rendering.RenderItems;
 using Verse.Identifiers;
 
 namespace Verse.Rendering;
@@ -23,7 +23,7 @@ public sealed class RenderStack(ID iD)
         }
     }
     
-    private struct Stack<T>(int size) where T : struct
+    internal class Stack<T>(int size, int minSize = 128) where T : struct
     {
         public T[] DataSet = new T[size];
         public int Count = 0;
@@ -40,10 +40,24 @@ public sealed class RenderStack(ID iD)
 
             return ref DataSet[Count++];
         }
+        public void BatchNext(T[] values)
+        {
+            int desiredSpace = Count + values.Length;
+            if(DataSet.Length < desiredSpace)
+            {
+                Array.Resize(ref DataSet, (int)System.Numerics.BitOperations.RoundUpToPowerOf2((uint)desiredSpace));
+            }
+
+            Array.Copy(values, 0, DataSet, Count, values.Length);
+            Count += values.Length;
+        }
 
         public void Optimize()
         {
             int targetSize = DataSet.Length / 2;
+
+            if (targetSize < minSize)
+                return;
 
             if (targetSize < prevCounts[biggestCountIndex] + OPTIMIZING_THRESHOLD)
                 return;
@@ -53,7 +67,6 @@ public sealed class RenderStack(ID iD)
 
             DataSet = new T[targetSize];
         }
-
         public void Reset()
         {
             void GetBiggest(int[] array, out int index)
@@ -74,6 +87,7 @@ public sealed class RenderStack(ID iD)
 
             Count = 0;
         }
+    
     }
 
     internal const int OPTIMIZATION_DELAY_TICKS = 60;
@@ -81,78 +95,87 @@ public sealed class RenderStack(ID iD)
 
     public readonly ID stackID = iD;
 
-    private CameraData camera;
-    private Stack<InstanceInterpolatedSprite> interpolatedSpriteRenderDataStack = new Stack<InstanceInterpolatedSprite>(1024);
-    private Stack<InstanceSprite> spriteRenderDataStack = new Stack<InstanceSprite>(1024);
-    private Stack<InstanceLine> lineRenderDataStack = new Stack<InstanceLine>(512);
-    private Stack<InstanceText> textRenderDataStack = new Stack<InstanceText>(128);
+    internal CameraData Camera { get; private set; }
+    internal Stack<RenderItemInterpSprite> InterpolatedSpriteRenderItemStack { get; private set; } = new Stack<RenderItemInterpSprite>(1024);
+    internal Stack<RenderItemSprite> SpriteRenderItemStack { get; private set; } = new Stack<RenderItemSprite>(1024);
+    internal Stack<RenderItemLine> LineRenderItemStack { get; private set; } = new Stack<RenderItemLine>(512);
+    internal Stack<RenderItemText> TextRenderItemStack { get; private set; } = new Stack<RenderItemText>(128);
 
-    internal CameraData Camera => camera;
-    internal InstanceInterpolatedSprite[] InstanceInterpolatedSprites => interpolatedSpriteRenderDataStack.DataSet;
-    internal int InterpolatedSpriteCount => interpolatedSpriteRenderDataStack.Count;
-    internal InstanceSprite[] InstanceSprites => spriteRenderDataStack.DataSet;
-    internal int SpriteCount => spriteRenderDataStack.Count;
-    internal InstanceLine[] InstanceLines => lineRenderDataStack.DataSet;
-    internal int LineCount => lineRenderDataStack.Count;
-    internal InstanceText[] InstanceText => textRenderDataStack.DataSet;
-    internal int TextCount => textRenderDataStack.Count;
+    internal Stack<RenderItemSpriteBatch> SpriteBatchRenderItemStack { get; private set; } = new Stack<RenderItemSpriteBatch>(32, 32);
+    internal Stack<Vector2> BatchPositions { get; private set; } = new Stack<Vector2>(128);
 
     internal void PostCameraData(Camera camera)
     {
         if(camera == null)
             return;
 
-        this.camera = new CameraData(
+        Camera = new CameraData(
             camera.Position, camera.TPosition,
             camera.OrthographicSize, camera.TOrthographicSize
         );
     }
 
+    public void PostSpriteBatch(Sprite sprite, Vector2[] positions, Vector2 scale, float layerDepth = 0)
+    {
+        ref var renderItem = ref SpriteBatchRenderItemStack.Next();
+        
+        renderItem.Sprite = sprite;
+        renderItem.Scale = new Vector2(scale.X * sprite.TextureRegion.WidthCoefficient, scale.Y * sprite.TextureRegion.HeightCoefficient);
+        renderItem.StartIndex = BatchPositions.Count;
+        renderItem.Length = positions.Length;
+        renderItem.LayerDepth = layerDepth;
+
+        BatchPositions.BatchNext(positions);
+    }
     public void PostSprite(Sprite sprite, Vector2 position0, Vector2 position, float rotation0, float rotation, Vector2 scale0, Vector2 scale, float layerDepth = 0f)
     {
-        ref var instanceSprite = ref interpolatedSpriteRenderDataStack.Next();
+        ref var renderItem = ref InterpolatedSpriteRenderItemStack.Next();
 
-        instanceSprite.Sprite = sprite;
-        instanceSprite.Position0 = position0;
-        instanceSprite.Position = position;
-        instanceSprite.Rotation0 = rotation0;
-        instanceSprite.Rotation = rotation;
-        instanceSprite.Scale0 = new Vector2(scale0.X * sprite.TextureRegion.WidthCoefficient, scale0.Y * sprite.TextureRegion.HeightCoefficient);
-        instanceSprite.Scale = new Vector2(scale.X * sprite.TextureRegion.WidthCoefficient, scale.Y * sprite.TextureRegion.HeightCoefficient);
-        instanceSprite.LayerDepth = layerDepth;
+        renderItem.Sprite = sprite;
+        renderItem.Position0 = position0;
+        renderItem.Position = position;
+        renderItem.Rotation0 = rotation0;
+        renderItem.Rotation = rotation;
+        renderItem.Scale0 = new Vector2(scale0.X * sprite.TextureRegion.WidthCoefficient, scale0.Y * sprite.TextureRegion.HeightCoefficient);
+        renderItem.Scale = new Vector2(scale.X * sprite.TextureRegion.WidthCoefficient, scale.Y * sprite.TextureRegion.HeightCoefficient);
+        renderItem.LayerDepth = layerDepth;
     }
     public void PostSprite(Sprite sprite, Vector2 position, float rotation, Vector2 scale, float layerDepth = 0f)
     {
-        ref var instanceSprite = ref spriteRenderDataStack.Next();
+        ref var renderItem = ref SpriteRenderItemStack.Next();
 
-        instanceSprite.Sprite = sprite;
-        instanceSprite.Position = position;
-        instanceSprite.Rotation = rotation;
-        instanceSprite.Scale = new Vector2(scale.X * sprite.TextureRegion.WidthCoefficient, scale.Y * sprite.TextureRegion.HeightCoefficient);
-        instanceSprite.LayerDepth = layerDepth;
+        renderItem.Sprite = sprite;
+        renderItem.Position = position;
+        renderItem.Rotation = rotation;
+        renderItem.Scale = new Vector2(scale.X * sprite.TextureRegion.WidthCoefficient, scale.Y * sprite.TextureRegion.HeightCoefficient);
+        renderItem.LayerDepth = layerDepth;
     }
     public void PostLine(Vector2 start, Vector2 end, Color color, float thickness)
     {
-        ref var instanceLine = ref lineRenderDataStack.Next();
+        ref var renderItem = ref LineRenderItemStack.Next();
 
-        instanceLine.Start = start;
-        instanceLine.End = end;
-        instanceLine.Color = color;
-        instanceLine.Thickness = thickness;
+        renderItem.Start = start;
+        renderItem.End = end;
+        renderItem.Color = color;
+        renderItem.Thickness = thickness;
     }
 
     internal void Optimize()
     {
-        interpolatedSpriteRenderDataStack.Optimize();
-        spriteRenderDataStack.Optimize();
-        lineRenderDataStack.Optimize();
-        textRenderDataStack.Optimize();
+        InterpolatedSpriteRenderItemStack.Optimize();
+        SpriteBatchRenderItemStack.Optimize();
+        BatchPositions.Optimize();
+        SpriteRenderItemStack.Optimize();
+        LineRenderItemStack.Optimize();
+        TextRenderItemStack.Optimize();
     }
     public void Reset()
     {
-        interpolatedSpriteRenderDataStack.Reset();
-        spriteRenderDataStack.Reset();
-        lineRenderDataStack.Reset();
-        textRenderDataStack.Reset();
+        InterpolatedSpriteRenderItemStack.Reset();
+        SpriteBatchRenderItemStack.Reset();
+        BatchPositions.Reset();
+        SpriteRenderItemStack.Reset();
+        LineRenderItemStack.Reset();
+        TextRenderItemStack.Reset();
     }
 }
