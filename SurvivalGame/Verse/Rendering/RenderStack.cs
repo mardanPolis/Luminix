@@ -2,12 +2,13 @@ using System;
 using Microsoft.Xna.Framework;
 using Verse.Simulation;
 using Verse.Rendering.RenderInstances;
+using Verse.Identifiers;
 
 namespace Verse.Rendering;
 
 public sealed class RenderStack
 {
-    internal RenderStack(StackSharedData interpSpriteSharedData, StackSharedData spriteSharedData, StackSharedData lineSharedData, StackSharedData textSharedData)
+    internal RenderStack(StackSharedData interpSpriteSharedData, StackSharedData spriteSharedData, StackSharedData lineSharedData, StackSharedData textSharedData, ID iD)
     {
         interpolatedSpriteRenderDataStack = new Stack<InstanceInterpolatedSprite>(1024);
         spriteRenderDataStack = new Stack<InstanceSprite>(1024);
@@ -18,6 +19,8 @@ public sealed class RenderStack
         spriteRenderDataStack.sharedData = spriteSharedData;
         lineRenderDataStack.sharedData = lineSharedData;
         textRenderDataStack.sharedData = textSharedData;
+
+        stackID = iD;
     }
 
     internal class StackSharedData
@@ -104,7 +107,7 @@ public sealed class RenderStack
     private Stack<InstanceLine> lineRenderDataStack;
     private Stack<InstanceText> textRenderDataStack;
 
-    private bool cameraDataPosted = false;
+    public readonly ID stackID;
 
     private Vector2 cameraPosition0;
     private Vector2 cameraPosition;
@@ -125,8 +128,6 @@ public sealed class RenderStack
     {
         if(camera == null)
             return;
-
-        cameraDataPosted = true;
 
         cameraPosition0 = camera.Position;
         cameraPosition = camera.TPosition;
@@ -184,17 +185,10 @@ public sealed class RenderStack
 
     public void Reset()
     {
-        cameraDataPosted = false;
-
         interpolatedSpriteRenderDataStack.Reset();
         spriteRenderDataStack.Reset();
         lineRenderDataStack.Reset();
         textRenderDataStack.Reset();
-    }
-
-    internal bool CanRender()
-    {
-        return cameraDataPosted;
     }
 
     internal Matrix GenerateCameraViewMatrix(float t, float viewportHeight, float viewportWidth)

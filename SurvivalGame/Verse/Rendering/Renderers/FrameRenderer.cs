@@ -18,19 +18,57 @@ internal sealed class FrameRenderer
     public void DrawFrame(RenderStack renderStack, Viewport viewport, float partialTick)
     {
         RenderingSystem.GraphicsDevice.Clear(Color.CornflowerBlue);
-        spriteBatch.Begin(samplerState: SamplerState.PointClamp, sortMode: SpriteSortMode.FrontToBack, transformMatrix: renderStack.GenerateCameraViewMatrix(partialTick, viewport.Height, viewport.Width));
+        spriteBatch.Begin(samplerState: SamplerState.PointClamp, sortMode: SpriteSortMode.Deferred, depthStencilState: DepthStencilState.Default,
+        transformMatrix: renderStack.GenerateCameraViewMatrix(partialTick, viewport.Height, viewport.Width));
 
-        for (int i = 0; i < renderStack.InterpolatedSpriteCount; i++)
-            DrawSprite(ref renderStack.InstanceInterpolatedSprites[i], partialTick);
+        int count = 0;
+        int i = 0;
+        int length = 0;
+        string typeRendered = "";
 
-        for (int i = 0; i < renderStack.SpriteCount; i++)
-            DrawSprite(ref renderStack.InstanceSprites[i]);
+        try
+        {
+            var interpSpritesCount = renderStack.InterpolatedSpriteCount;
+            var interpSprites = renderStack.InstanceInterpolatedSprites;
 
-        for (int i = 0; i < renderStack.LineCount; i++)
-            DrawLine(ref renderStack.InstanceLines[i]);
+            var spritesCount = renderStack.SpriteCount;
+            var sprites = renderStack.InstanceSprites;
 
-        for (int i = 0; i < renderStack.TextCount; i++)
-            DrawText(ref renderStack.InstanceText[i]);
+            var lineCount = renderStack.LineCount;
+            var lines = renderStack.InstanceLines;
+
+            var textCount = renderStack.TextCount;
+            var texts = renderStack.InstanceText;
+            
+            count = interpSpritesCount;
+            typeRendered = "Interpolated Sprites";
+            length = interpSprites.Length;
+            for (i = 0; i < interpSpritesCount; i++)
+                DrawSprite(ref interpSprites[i], partialTick);
+
+            count = spritesCount;
+            typeRendered = "Sprites";
+            length = sprites.Length;
+            for (i = 0; i < spritesCount; i++)
+                DrawSprite(ref sprites[i]);
+
+            count = lineCount;
+            typeRendered = "Lines";
+            length = lines.Length;
+            for (i = 0; i < lineCount; i++)
+                DrawLine(ref lines[i]);
+
+            count = textCount;
+            typeRendered = "Text";
+            length = texts.Length;
+            for (i = 0; i < textCount; i++)
+                DrawText(ref texts[i]);
+        }
+        catch
+        {
+            Logger.Get().Err($"Exception happened during rendering: RenderStack[{renderStack.stackID}] '{typeRendered}' -> (Index/Count/Length : {i}/{count}/{length})");
+            throw;
+        }
 
         spriteBatch.End();
     }

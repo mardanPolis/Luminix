@@ -91,8 +91,8 @@ internal sealed class CoreThread : WorkerThread
     }
     private void Optimize(long maxTime, long time)
     {
-        if(maxTime * 0.9 > time) currWriteStack.Optimize();
-        else currWriteStack.SkipOptimization();
+        // if(maxTime * 0.9 > time) currWriteStack.Optimize();
+        // else currWriteStack.SkipOptimization();
     }
 
 }

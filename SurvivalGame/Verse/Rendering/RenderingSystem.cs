@@ -41,7 +41,7 @@ internal static class RenderingSystem
 
     public static void InitializeRenderers(bool isDebug)
     {
-        var spriteBatch = new SpriteBatch(graphics.GraphicsDevice);
+        var spriteBatch = new SpriteBatch(graphics.GraphicsDevice, 500000);
         frameRenderer = new FrameRenderer(spriteBatch);
 
         if (isDebug)

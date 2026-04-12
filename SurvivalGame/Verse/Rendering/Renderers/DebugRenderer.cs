@@ -189,6 +189,8 @@ internal sealed class GameDebugRenderer : DebugRenderer
     {
         Viewport viewport = RenderingSystem.GraphicsDevice.Viewport;
 
+        float gHeight = 200f;
+
         var tickTimes = coreThread.TickTimes;
         var currentIndex = (int)((coreThread.TickCount - 1) & 127);
 
@@ -201,8 +203,6 @@ internal sealed class GameDebugRenderer : DebugRenderer
         long usedMemory = GC.GetTotalMemory(false);
         managedMemoryAmounts[currentIndex] = usedMemory / 1024.0 / 1024.0;
         
-        spriteBatch.Begin();
-
         elapsed += frameDeltaTime; // Assuming this is in seconds
 
         if (elapsed >= 0.05) 
@@ -250,10 +250,10 @@ internal sealed class GameDebugRenderer : DebugRenderer
         sb.Append("DrawCalls : ");
         sb.Append(RenderingSystem.DrawCount);
 
+        spriteBatch.Begin();
+
         spriteBatch.DrawString(ResourceManager.GenericFontMedium, sb,
             new Vector2(15, 15), Color.White);
-
-        float gHeight = 200f;
 
         Vector2 graphPos = new Vector2(viewport.Width - 20, viewport.Height - gHeight - 20);
         DrawGraph(graphPos, gHeight, managedMemoryAmounts, 128, 5, 5, currentIndex, true);

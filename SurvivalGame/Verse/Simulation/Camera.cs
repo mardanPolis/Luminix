@@ -41,16 +41,11 @@ public class Camera
 
         float scaleY = viewport.Height / orthoSize0;
         float scaleX = scaleY;
-        // Translation to center the camera on its position
+
         var translation = Matrix.CreateTranslation(new Vector3(-position0.X, position0.Y, 0f));
+        var scale = Matrix.CreateScale(scaleX, -scaleY, 1f);
+        var screenCenter = Matrix.CreateTranslation(new Vector3(viewport.Width * 0.5f, -viewport.Height * 0.5f, 0f));
 
-        // Zoom
-        var scale = Matrix.CreateScale(scaleX, scaleY, 1f);
-
-        // Move origin to center of screen
-        var screenCenter = Matrix.CreateTranslation(new Vector3(viewport.Width * 0.5f, viewport.Height * 0.5f, 0f));
-
-        // Final view matrix: translate world -> rotate/scale -> move to screen center
         return translation * scale * screenCenter;
     }
     
