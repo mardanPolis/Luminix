@@ -6,63 +6,32 @@ using Verse.Identifiers;
 
 namespace Verse.Rendering;
 
-public sealed class RenderStack
+public sealed class RenderStack(ID iD)
 {
-    internal RenderStack(StackSharedData interpSpriteSharedData, StackSharedData spriteSharedData, StackSharedData lineSharedData, StackSharedData textSharedData, ID iD)
+    internal record struct CameraData(Vector2 Position0, Vector2 Position, float OrthographicSize0, float OrthographicSize)
     {
-        interpolatedSpriteRenderDataStack = new Stack<InstanceInterpolatedSprite>(1024);
-        spriteRenderDataStack = new Stack<InstanceSprite>(1024);
-        lineRenderDataStack = new Stack<InstanceLine>(512);
-        textRenderDataStack = new Stack<InstanceText>(128);
-
-        interpolatedSpriteRenderDataStack.sharedData = interpSpriteSharedData;
-        spriteRenderDataStack.sharedData = spriteSharedData;
-        lineRenderDataStack.sharedData = lineSharedData;
-        textRenderDataStack.sharedData = textSharedData;
-
-        stackID = iD;
-    }
-
-    internal class StackSharedData
-    {
-        public readonly int[] prevCounts = new int[OPTIMIZATION_DELAY_TICKS];
-        int currentIndex = 0;
-        int biggestCountIndex = 0;
-        public int unResizedCount = 0;
-
-        public void NextCount(int count)
+        public Matrix GetViewMatrix(float t, float viewportHeight, float viewportWidth)
         {
-            void GetBiggest(int[] array, out int index)
-            {
-                int maxIndex = 0;
+            var tarPos = Position0 + (Position - Position0) * t;
+            var tarOrthoSize = OrthographicSize0 + (OrthographicSize - OrthographicSize0) * t;
 
-                for (int i = 0; i < array.Length; i++)
-                    if (array[i] > array[maxIndex])
-                        maxIndex = i;
+            var tarScale = viewportHeight / tarOrthoSize;
 
-                index = maxIndex;
-            }
-            
-            prevCounts[currentIndex] = count;
-            if (count > prevCounts[biggestCountIndex])
-                biggestCountIndex = currentIndex;
-            else if(currentIndex == biggestCountIndex)
-                GetBiggest(prevCounts, out biggestCountIndex);
-
-            currentIndex = (currentIndex + 1) % OPTIMIZATION_DELAY_TICKS;
-        }
-
-        public int GetBiggestCount()
-        {
-            return prevCounts[biggestCountIndex];
+            return Matrix.CreateTranslation(new Vector3(-tarPos.X, tarPos.Y, 0f)) *
+            Matrix.CreateScale(tarScale, tarScale, 1f) *
+            Matrix.CreateTranslation(new Vector3(viewportWidth * 0.5f, viewportHeight * 0.5f, 0f));
         }
     }
+    
     private struct Stack<T>(int size) where T : struct
     {
         public T[] DataSet = new T[size];
         public int Count = 0;
 
-        public StackSharedData sharedData;
+        private readonly int[] prevCounts = new int[128];
+        int currentIndex = 0;
+        int biggestCountIndex = 0;
+
 
         public ref T Next()
         {
@@ -72,29 +41,37 @@ public sealed class RenderStack
             return ref DataSet[Count++];
         }
 
-        public void TryOptimize()
+        public void Optimize()
         {
-            sharedData.unResizedCount++;
-            if(sharedData.unResizedCount < OPTIMIZATION_DELAY_TICKS)
+            int targetSize = DataSet.Length / 2;
+
+            if (targetSize < prevCounts[biggestCountIndex] + OPTIMIZING_THRESHOLD)
+                return;
+            
+            if (targetSize < Count + OPTIMIZING_THRESHOLD)
                 return;
 
-            var maxPrevCapacity = sharedData.GetBiggestCount();
-            var maxCapacity = Count > maxPrevCapacity ? Count : maxPrevCapacity;
-
-            var lowerArrayLength = DataSet.Length / 2;
-
-            if(lowerArrayLength < maxCapacity + OPTIMIZING_THRESHOLD)
-                DataSet = new T[lowerArrayLength];
-
-            sharedData.unResizedCount = 0;
+            DataSet = new T[targetSize];
         }
-        internal void SkippedOptimization()
+
+        public void Reset()
         {
-            sharedData.unResizedCount++;
-        }
-        internal void Reset()
-        {
-            sharedData.NextCount(Count);                                                   
+            void GetBiggest(int[] array, out int index)
+            {
+                index = 0;
+                for (int i = 0; i < array.Length; i++)
+                    if (array[i] > array[index])
+                        index = i;
+            }
+            
+            prevCounts[currentIndex] = Count;
+            if (Count > prevCounts[biggestCountIndex])
+                biggestCountIndex = currentIndex;
+            else if(currentIndex == biggestCountIndex)
+                GetBiggest(prevCounts, out biggestCountIndex);
+
+            currentIndex = (currentIndex + 1) & 127;
+
             Count = 0;
         }
     }
@@ -102,19 +79,15 @@ public sealed class RenderStack
     internal const int OPTIMIZATION_DELAY_TICKS = 60;
     internal const int OPTIMIZING_THRESHOLD = 128;
 
-    private Stack<InstanceInterpolatedSprite> interpolatedSpriteRenderDataStack;
-    private Stack<InstanceSprite> spriteRenderDataStack;
-    private Stack<InstanceLine> lineRenderDataStack;
-    private Stack<InstanceText> textRenderDataStack;
+    public readonly ID stackID = iD;
 
-    public readonly ID stackID;
+    private CameraData camera;
+    private Stack<InstanceInterpolatedSprite> interpolatedSpriteRenderDataStack = new Stack<InstanceInterpolatedSprite>(1024);
+    private Stack<InstanceSprite> spriteRenderDataStack = new Stack<InstanceSprite>(1024);
+    private Stack<InstanceLine> lineRenderDataStack = new Stack<InstanceLine>(512);
+    private Stack<InstanceText> textRenderDataStack = new Stack<InstanceText>(128);
 
-    private Vector2 cameraPosition0;
-    private Vector2 cameraPosition;
-
-    private float OrthoSize0;
-    private float OrthoSize;
-
+    internal CameraData Camera => camera;
     internal InstanceInterpolatedSprite[] InstanceInterpolatedSprites => interpolatedSpriteRenderDataStack.DataSet;
     internal int InterpolatedSpriteCount => interpolatedSpriteRenderDataStack.Count;
     internal InstanceSprite[] InstanceSprites => spriteRenderDataStack.DataSet;
@@ -129,10 +102,10 @@ public sealed class RenderStack
         if(camera == null)
             return;
 
-        cameraPosition0 = camera.Position;
-        cameraPosition = camera.TPosition;
-        OrthoSize0 = camera.OrthographicSize;
-        OrthoSize = camera.TOrthographicSize;
+        this.camera = new CameraData(
+            camera.Position, camera.TPosition,
+            camera.OrthographicSize, camera.TOrthographicSize
+        );
     }
 
     public void PostSprite(Sprite sprite, Vector2 position0, Vector2 position, float rotation0, float rotation, Vector2 scale0, Vector2 scale, float layerDepth = 0f)
@@ -170,36 +143,16 @@ public sealed class RenderStack
 
     internal void Optimize()
     {
-        interpolatedSpriteRenderDataStack.TryOptimize();
-        spriteRenderDataStack.TryOptimize();
-        lineRenderDataStack.TryOptimize();
-        textRenderDataStack.TryOptimize();
+        interpolatedSpriteRenderDataStack.Optimize();
+        spriteRenderDataStack.Optimize();
+        lineRenderDataStack.Optimize();
+        textRenderDataStack.Optimize();
     }
-    internal void SkipOptimization()
-    {
-        interpolatedSpriteRenderDataStack.SkippedOptimization();
-        spriteRenderDataStack.SkippedOptimization();
-        lineRenderDataStack.SkippedOptimization();
-        textRenderDataStack.SkippedOptimization();
-    }
-
     public void Reset()
     {
         interpolatedSpriteRenderDataStack.Reset();
         spriteRenderDataStack.Reset();
         lineRenderDataStack.Reset();
         textRenderDataStack.Reset();
-    }
-
-    internal Matrix GenerateCameraViewMatrix(float t, float viewportHeight, float viewportWidth)
-    {
-        var tarPos = cameraPosition0 + (cameraPosition - cameraPosition0) * t;
-        var tarOrthoSize = OrthoSize0 + (OrthoSize - OrthoSize0) * t;
-
-        var tarScale = viewportHeight / tarOrthoSize;
-
-        return Matrix.CreateTranslation(new Vector3(-tarPos.X, tarPos.Y, 0f)) *
-        Matrix.CreateScale(tarScale, tarScale, 1f) *
-        Matrix.CreateTranslation(new Vector3(viewportWidth * 0.5f, viewportHeight * 0.5f, 0f));
     }
 }

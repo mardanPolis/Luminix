@@ -43,8 +43,8 @@ internal sealed class CoreThread : WorkerThread
         input.ReadFrom(Bridges.RenderToCore.InputBridge);
 
         Tick();
-        Render();
         Optimize(TickIntervalInTicks, CurrentElapsedTicks);
+        Render();
     }
 
     protected sealed override void OnDebugTick()
@@ -56,10 +56,10 @@ internal sealed class CoreThread : WorkerThread
 
         Tick();
         long updateTime = CurrentElapsedTicks;
-        Render();
-        long renderTime = CurrentElapsedTicks;
         Optimize(TickIntervalInTicks, CurrentElapsedTicks);
         long optimizeTime = CurrentElapsedTicks;
+        Render();
+        long renderTime = CurrentElapsedTicks;
         
         //avg tick time
         TimeSpan elapsedUpdateTime = Stopwatch.GetElapsedTime(0, updateTime);

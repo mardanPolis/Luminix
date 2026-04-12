@@ -16,14 +16,9 @@ internal static class CoreToRender
 
     public static void Initialize()
     {
-        RenderStack.StackSharedData sharedDataInterpSprite = new RenderStack.StackSharedData();
-        RenderStack.StackSharedData sharedDataSprite = new RenderStack.StackSharedData();
-        RenderStack.StackSharedData sharedDataLine = new RenderStack.StackSharedData();
-        RenderStack.StackSharedData sharedDataText = new RenderStack.StackSharedData();
-
-        writeStack = new RenderStack(sharedDataInterpSprite, sharedDataSprite, sharedDataLine, sharedDataText, new Identifiers.ID(1));
-        currReadStack = new RenderStack(sharedDataInterpSprite, sharedDataSprite, sharedDataLine, sharedDataText, new Identifiers.ID(2));
-        prevReadStack = new RenderStack(sharedDataInterpSprite, sharedDataSprite, sharedDataLine, sharedDataText, new Identifiers.ID(3));
+        writeStack = new RenderStack(new Identifiers.ID(1));
+        currReadStack = new RenderStack(new Identifiers.ID(2));
+        prevReadStack = new RenderStack(new Identifiers.ID(3));
     }
 
     public static void Swap()

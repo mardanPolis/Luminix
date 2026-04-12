@@ -19,7 +19,7 @@ internal sealed class FrameRenderer
     {
         RenderingSystem.GraphicsDevice.Clear(Color.CornflowerBlue);
         spriteBatch.Begin(samplerState: SamplerState.PointClamp, sortMode: SpriteSortMode.Deferred, depthStencilState: DepthStencilState.Default,
-        transformMatrix: renderStack.GenerateCameraViewMatrix(partialTick, viewport.Height, viewport.Width));
+        transformMatrix: renderStack.Camera.GetViewMatrix(partialTick, viewport.Height, viewport.Width));
 
         int count = 0;
         int i = 0;
