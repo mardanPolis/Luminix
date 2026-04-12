@@ -1,11 +1,6 @@
-﻿#if OPENGL
-    #define SV_POSITION POSITION
-    #define VS_SHADERMODEL vs_3_0
-    #define PS_SHADERMODEL ps_3_0
-#else
-    #define VS_SHADERMODEL vs_4_0_level_9_1
-    #define PS_SHADERMODEL ps_4_0_level_9_1
-#endif
+#define SV_POSITION POSITION
+#define VS_SHADERMODEL vs_3_0
+#define PS_SHADERMODEL ps_3_0
 
 float4x4 MatrixTransform;
 float GlobalScale; // Global scale multiplier
@@ -35,10 +30,17 @@ VertexShaderOutput MainVS(in VertexShaderInput input)
 {
     VertexShaderOutput output;
 
+    // 1. APPLY GLOBAL SCALE 
+    // We scale X and Y, but usually keep Z (depth) as is
     float3 finalPos = input.Position;
     finalPos.xy *= GlobalScale;
+
+    // 2. FLIP Y POSITION
+    // Moving this here ensures the flip happens in "World Space"
     finalPos.y = -finalPos.y;
 
+    // 3. TRANSFORM TO SCREEN SPACE
+    // We convert our float3 to a float4 (w = 1.0) for matrix math
     output.Position = mul(float4(finalPos, 1.0), MatrixTransform);
     
     output.Color = input.Color;
