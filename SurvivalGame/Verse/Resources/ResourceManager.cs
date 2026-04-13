@@ -18,11 +18,21 @@ public static class ResourceManager
     private static Texture2D nullTexture;
     private static TextureRegion nullTextureRegion;
 
-    private static SpriteFont IBMPlexMono_Bold;
-    private static SpriteFont IBMPlexMono_Medium;
-    private static SpriteFont IBMPlexMono_Regular;
+    private static SpriteFont iBMPlexMono_Bold;
+    private static SpriteFont iBMPlexMono_Medium;
+    private static SpriteFont iBMPlexMono_Regular;
 
     private static bool finalized = false;
+
+    private static Effect baseEffect;
+
+    public static Texture2D NullTexture => nullTexture;
+
+    public static SpriteFont GenericFontBold => iBMPlexMono_Bold;
+    public static SpriteFont GenericFontMedium => iBMPlexMono_Medium;
+    public static SpriteFont GenericFontRegular => iBMPlexMono_Regular;
+
+    public static Effect GenericShader => baseEffect;
 
     internal static void Initialize(string rootDirectory, ContentManager content)
     {
@@ -39,9 +49,11 @@ public static class ResourceManager
         nullTexture = LoadTexture("null_texture.png");
         nullTextureRegion = NewTextureRegion("null_texture", "null_texture.png", 0, 0, 32, 32);
 
-        IBMPlexMono_Bold = ContentManager.Load<SpriteFont>("Fonts/IBMPlexMono-Bold");
-        IBMPlexMono_Medium = ContentManager.Load<SpriteFont>("Fonts/IBMPlexMono-Medium");
-        IBMPlexMono_Regular = ContentManager.Load<SpriteFont>("Fonts/IBMPlexMono-Regular");
+        iBMPlexMono_Bold = ContentManager.Load<SpriteFont>("Fonts/IBMPlexMono-Bold");
+        iBMPlexMono_Medium = ContentManager.Load<SpriteFont>("Fonts/IBMPlexMono-Medium");
+        iBMPlexMono_Regular = ContentManager.Load<SpriteFont>("Fonts/IBMPlexMono-Regular");
+
+        baseEffect = ContentManager.Load<Effect>("Effects/SpriteShader");
     }
 
     public static Texture2D LoadTexture(string name)
@@ -91,9 +103,5 @@ public static class ResourceManager
 
         return textureRegion;
     }
-
-    public static SpriteFont GenericFontBold => IBMPlexMono_Bold;
-    public static SpriteFont GenericFontMedium => IBMPlexMono_Medium;
-    public static SpriteFont GenericFontRegular => IBMPlexMono_Regular;
 
 }

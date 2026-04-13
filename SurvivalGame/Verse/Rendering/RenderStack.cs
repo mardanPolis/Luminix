@@ -102,7 +102,7 @@ public sealed class RenderStack(ID iD)
     internal Stack<RenderItemText> TextRenderItemStack { get; private set; } = new Stack<RenderItemText>(128);
 
     internal Stack<RenderItemSpriteBatch> SpriteBatchRenderItemStack { get; private set; } = new Stack<RenderItemSpriteBatch>(32, 32);
-    internal Stack<Vector2> BatchPositions { get; private set; } = new Stack<Vector2>(128);
+    internal Stack<Vector3> BatchPositions { get; private set; } = new Stack<Vector3>(128);
 
     internal void PostCameraData(Camera camera)
     {
@@ -115,7 +115,7 @@ public sealed class RenderStack(ID iD)
         );
     }
 
-    public void PostSpriteBatch(Sprite sprite, Vector2[] positions, Vector2 scale, float layerDepth = 0)
+    public void PostSpriteBatch(Sprite sprite, Vector3[] positions, Vector2 scale, float layerDepth = 0)
     {
         ref var renderItem = ref SpriteBatchRenderItemStack.Next();
         
