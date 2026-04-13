@@ -199,6 +199,10 @@ internal sealed class GameDebugRenderer : DebugRenderer
         double tickTime = coreThread.TickTime;
         double tickDeltaTime = coreThread.TickDeltaTime;
 
+        double tickUpdateTime = coreThread.TickUpdateTime; 
+        double tickRenderTime = coreThread.TickRenderTime;
+        double tickOptimizeTime = coreThread.TickOptimizeTime;
+
         double budgetUs = 1000000.0 / coreThread.TickRate;
 
         long usedMemory = GC.GetTotalMemory(false);
@@ -226,6 +230,18 @@ internal sealed class GameDebugRenderer : DebugRenderer
 
         sb.Append("TickTime  : ");
         AppendDouble(sb, tickTime / 1000.0, 4, 2);
+        sb.Append("ms\n");
+
+        sb.Append("tickUpdateTime  : ");
+        AppendDouble(sb, tickUpdateTime / 1000.0, 4, 2);
+        sb.Append("ms\n");
+
+        sb.Append("tickRenderTime  : ");
+        AppendDouble(sb, tickRenderTime / 1000.0, 4, 2);
+        sb.Append("ms\n");
+
+        sb.Append("tickOptimizeTime  : ");
+        AppendDouble(sb, tickOptimizeTime / 1000.0, 4, 2);
         sb.Append("ms\n");
 
         sb.Append("FrameDeltaTime : ");

@@ -62,8 +62,8 @@ internal sealed class CoreThread : WorkerThread
         
         //avg tick time
         TimeSpan elapsedUpdateTime = Stopwatch.GetElapsedTime(0, updateTime);
-        TimeSpan elapsedRenderTime = Stopwatch.GetElapsedTime(updateTime, renderTime);
-        TimeSpan elapsedOptimizeTime = Stopwatch.GetElapsedTime(renderTime, optimizeTime);
+        TimeSpan elapsedOptimizeTime = Stopwatch.GetElapsedTime(updateTime, optimizeTime);
+        TimeSpan elapsedRenderTime = Stopwatch.GetElapsedTime(optimizeTime, renderTime);
 
         Interlocked.Exchange(ref tickUpdateTime, elapsedUpdateTime.TotalMicroseconds);
         Interlocked.Exchange(ref tickRenderTime, elapsedRenderTime.TotalMicroseconds);
