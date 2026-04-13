@@ -21,11 +21,10 @@ public class TestRenderer : Renderer<Test>
         {
             for (int x = 0; x < 500; x++)
             {
-                Vector3 position = new Vector3(x * 2 - 500, y * 2 - 500, 0);
+                Vector3 position = new Vector3(x - 250, y - 250, 0);
                 positions.Add(position);
             }
         }
-
         this.positions = positions.ToArray();
     }
     public override void Render(Test renderable, RenderStack renderStack)

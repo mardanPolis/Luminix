@@ -33,10 +33,12 @@ struct VertexShaderOutput
 VertexShaderOutput MainVS(VertexInput vertex, InstanceInput instance)
 {
     VertexShaderOutput output;
+    
+    float2 localPos = (vertex.Position.xy * instance.SourceRect.zw - instance.Origin.xy) * instance.Scale.xy;
+    
+    float4 worldPos = float4(localPos + instance.Position.xy, instance.Position.z, 1);
 
-    float4 pos = float4(((vertex.Position.xy + instance.Position) * instance.SourceRect.zw - instance.Origin.xy) * instance.Scale, 0, 1);
-
-    output.Position = mul(pos, MatrixTransform);
+    output.Position = mul(worldPos, MatrixTransform);
     output.Color = vertex.Color;
     output.TextureCoordinates = vertex.TextureCoordinates;
     return output;

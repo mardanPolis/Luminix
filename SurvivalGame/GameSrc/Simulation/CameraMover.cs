@@ -37,7 +37,7 @@ public class CameraMover : WorldComponent
 
         if (direction != 0)
         {
-            float targetSize = camera.OrthographicSize + (direction * speed * 5f);
+            float targetSize = camera.OrthographicSize + (direction * speed * 10f);
             camera.ScaleTo(targetSize);
         }
 

@@ -43,8 +43,8 @@ internal sealed class FrameRenderer
         indexBuffer = new IndexBuffer(device, IndexElementSize.SixteenBits, 6, BufferUsage.WriteOnly);
         indexBuffer.SetData(indices);
         
-        instanceDataArray = new InstanceData[25000];
-        instanceBuffer = new DynamicVertexBuffer(device, typeof(InstanceData), 25000, BufferUsage.WriteOnly);
+        instanceDataArray = new InstanceData[50000];
+        instanceBuffer = new DynamicVertexBuffer(device, typeof(InstanceData), 50000, BufferUsage.WriteOnly);
 
         instancingEffect = ResourceManager.GenericShader;
 
@@ -242,6 +242,8 @@ internal sealed class FrameRenderer
                 var tex = renderItem.Sprite.TextureRegion.Texture;
                 var origin = renderItem.Sprite.Origin;
                 var scale = renderItem.Scale;
+
+                Console.WriteLine(scale);
 
                 if(tex != texture && texture != null)
                     Flush(ref instanceIndex);

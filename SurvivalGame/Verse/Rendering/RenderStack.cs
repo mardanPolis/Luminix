@@ -44,9 +44,7 @@ public sealed class RenderStack(ID iD)
         {
             int desiredSpace = Count + values.Length;
             if(DataSet.Length < desiredSpace)
-            {
                 Array.Resize(ref DataSet, (int)System.Numerics.BitOperations.RoundUpToPowerOf2((uint)desiredSpace));
-            }
 
             Array.Copy(values, 0, DataSet, Count, values.Length);
             Count += values.Length;
