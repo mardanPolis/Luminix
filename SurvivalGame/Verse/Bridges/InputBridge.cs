@@ -29,13 +29,13 @@ internal class InputBridge
     }
 
     public void Read(out long[] _readKeyBuffer, out ConcurrentQueue<byte> _pressedKeys, out ConcurrentQueue<byte> _releasedKeys,
-    out MouseData mouseData)
+    out MouseData _mouseData)
     {
         _readKeyBuffer = readKeyBuffer;
         _pressedKeys = PressedKeys;
         _releasedKeys = ReleasedKeys;
 
-        mouseData = new()
+        _mouseData = new()
         {
             buttonStates = mouseButtonStates,
             position = mousePosition,

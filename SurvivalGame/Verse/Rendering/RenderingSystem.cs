@@ -46,14 +46,8 @@ internal static class RenderingSystem
 
         if (isDebug)
         {
-            debugRenderers = RendererRegistry.GetDebugRenderers();
-            if(debugRenderers != null)
-                foreach(var renderer in debugRenderers)
-                    renderer.Initialize(spriteBatch);
+            
         }
-
-        foreach(var renderer in RendererRegistry.GetRenderers())
-            renderer.Initialize();
     }
 
     public static void DrawFrame(float partialTick)
@@ -63,7 +57,7 @@ internal static class RenderingSystem
 
         partialTick = Math.Clamp(partialTick, 0f, 1f);
 
-        frameRenderer.DrawFrame(readStack, graphics.GraphicsDevice.Viewport, partialTick);
+        frameRenderer.RenderFrame(readStack, graphics.GraphicsDevice.Viewport, partialTick);
 
         if(debugRenderers != null)
             for (int i = 0; i < debugRenderers.Count; i++)

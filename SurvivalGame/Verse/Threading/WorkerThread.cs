@@ -4,66 +4,46 @@ using System.Diagnostics;
 using System.Threading;
 using Verse.Collections;
 using Verse.Identifiers;
+using Verse.Workspaces;
 
 namespace Verse.Threading;
 
 public class WorkerThread
 {
     //global values
-    private static readonly ThreadLocal<WorkerThread> currentThread = new();
-    private static readonly object lockObject = new();
-    private static DenseList<WorkerThread> threads = new();
+    private static readonly ThreadLocal<WorkerThread> thread = new(true);
 
-    public static WorkerThread CurrentThread => currentThread.Value;
-
-    public static IEnumerable<WorkerThread> Threads => threads;
+    public static WorkerThread CurrentThread => thread.Value;
+    public static IList<WorkerThread> Threads => thread.Values;
 
     //constructor
-    public WorkerThread(Action init, Action update, uint tickRate = 60, bool isDebug = false)
+    public WorkerThread(Action init, Action update, uint tickRate = 60)
     {
         TickRate = tickRate;
 
-        if(isDebug)
+        if(Settings.Debug)
             CreateDebugThread(init, update, out systemThread);
         else    
             CreateThread(init, update, out systemThread);
 
-        lock (lockObject)
-        {
-            ThreadID = new ID((uint)threads.Count);
-            threads.Add(this);
-        }
+        ThreadID = new ID((uint)Threads.Count);
     }
-    protected WorkerThread(uint tickRate = 60, bool isDebug = false)
+    protected WorkerThread(uint tickRate = 60)
     {
         TickRate = tickRate;
 
-        if(isDebug)
+        if(Settings.Debug)
             CreateDebugThread(Initialize, OnDebugTick, out systemThread);
         else    
             CreateThread(Initialize, OnTick, out systemThread);
 
-        lock (lockObject)
-        {
-            ThreadID = new ID((uint)threads.Count);
-            threads.Add(this);
-        }
+        ThreadID = new ID((uint)Threads.Count);
     }
 
-    //instance values
+
+    // Core threading components
     private readonly Thread systemThread;
     private volatile bool running = true;
-    
-    private Stopwatch stopwatch;
-    private Stopwatch internalStopwatch;
-
-    private long tickCount = 0;
-    private volatile uint tickIntervalInTicks = 0;
-
-    private double deltaTime = 0;
-    private long lastTickTime = 0;
-    protected uint TickIntervalInTicks => tickIntervalInTicks;
-    protected long CurrentElapsedTicks => internalStopwatch.ElapsedTicks;
 
     public ID ThreadID { get; private set; }
     public string Name { get => systemThread.Name; set => systemThread.Name = value; }
@@ -71,38 +51,39 @@ public class WorkerThread
     public bool IsAlive => running;
     public ThreadPriority Priority { get => systemThread.Priority; set => systemThread.Priority = value; }
 
+    public Workspace Workspace { get; private set; }
+
+    private Stopwatch stopwatch;
+    private Stopwatch internalStopwatch;
+
+    private long tickCount = 0;
+    private volatile uint tickIntervalInTicks = 0;
+    private long lastTickDate = 0;
+    private double deltaTime = 0;
+
+    protected uint TickIntervalInTicks => tickIntervalInTicks;
+    protected long CurrentElapsedTicks => internalStopwatch.ElapsedTicks;
+
     public uint TickRate
     {
-        set { tickIntervalInTicks = (uint)(Stopwatch.Frequency / value); }
-        get { return (uint)(Stopwatch.Frequency / tickIntervalInTicks); }
+        get => (uint)(Stopwatch.Frequency / tickIntervalInTicks);
+        set => tickIntervalInTicks = (uint)(Stopwatch.Frequency / value);
     }
+
     public long TickCount => Volatile.Read(ref tickCount);
-    public float PartialTick
-    {
-        get 
-        { 
-            long current = stopwatch.ElapsedTicks;
-            long start = Interlocked.Read(ref lastTickTime);
-            uint interval = this.tickIntervalInTicks;
-
-            return (float)(current - start) / interval;
-        }
-    }
     public double TickDeltaTime => Volatile.Read(ref deltaTime);
+    public float PartialTick => (float)(stopwatch.ElapsedTicks - Volatile.Read(ref lastTickDate)) / tickIntervalInTicks;
 
 
-
-    // debug variables
     private long allocated = 0;
     private double tickTime = 0;
-
     private double[] tickTimesBuffer1 = new double[128];
     private double[] tickTimesBuffer2 = new double[128];
 
-    public double TickTime => Volatile.Read(ref tickTime);
     public long TickAllocatedAmount => Volatile.Read(ref allocated);
-
+    public double TickTime => Volatile.Read(ref tickTime);
     public double[] TickTimes => tickTimesBuffer1;
+
 
     public void Start() => systemThread.Start();
     public void Stop() => running = false;
@@ -111,12 +92,20 @@ public class WorkerThread
     protected virtual void OnTick() {}
     protected virtual void OnDebugTick() {}
 
+    internal void AssignWorkspace(Workspace workspace)
+    {
+        if(Workspace != null && Workspace != workspace)
+            throw new InvalidOperationException("Workspace for this thread already exists!");
+
+        Workspace = workspace;
+    } 
+
     private void CreateDebugThread(Action init, Action update, out Thread thread)
     {
         thread = new Thread(() =>
         {
             Logger.Initialize();
-            currentThread.Value = this;
+            WorkerThread.thread.Value = this;
 
             init();
 
@@ -131,8 +120,6 @@ public class WorkerThread
 
                 internalStopwatch = new Stopwatch();
                 stopwatch = Stopwatch.StartNew();
-
-                Interlocked.Exchange(ref nextTick, stopwatch.ElapsedTicks);
         
                 while (running)
                 {
@@ -154,28 +141,24 @@ public class WorkerThread
                         continue;
                     } 
                     
+                    //Setting deltaTime
+                    Interlocked.Exchange(ref deltaTime, internalStopwatch.Elapsed.TotalSeconds);
+                    
                     var temp = tickTimesBuffer1;
                     tickTimesBuffer1 = tickTimesBuffer2;
                     tickTimesBuffer2 = temp;
 
-                    internalStopwatch.Stop(); // OLD TICK STOP
-                    
-                    //Setting deltaTime
-                    Interlocked.Exchange(ref deltaTime, internalStopwatch.Elapsed.TotalSeconds);
-                    
                     internalStopwatch.Restart(); // NEW TICK
 
                     Interlocked.Increment(ref tickCount);
-                    
-                    //Synchronization
-                    Interlocked.Exchange(ref lastTickTime, nextTick);
+                    Interlocked.Exchange(ref lastTickDate, nextTick);
                     Interlocked.Add(ref nextTick, tickIntervalInTicks);
 
-                    startBytes = GC.GetAllocatedBytesForCurrentThread(); // allocated bytes at the start of the action
+                    startBytes = GC.GetAllocatedBytesForCurrentThread();
 
                     update();
 
-                    endBytes = GC.GetAllocatedBytesForCurrentThread(); // allocated bytes at the end of the action
+                    endBytes = GC.GetAllocatedBytesForCurrentThread();
 
                     tickTimesBuffer2[currentIndex] = tickTime;
 
@@ -189,7 +172,7 @@ public class WorkerThread
             }
             finally
             {
-                currentThread.Value = null;
+                WorkerThread.thread.Value = null;
             }
         });
     }
@@ -198,7 +181,7 @@ public class WorkerThread
         thread = new Thread(() =>
         {
             Logger.Initialize();
-            currentThread.Value = this;
+            WorkerThread.thread.Value = this;
 
             init();
 
@@ -231,22 +214,20 @@ public class WorkerThread
                         continue;
                     }
                     
-                    internalStopwatch.Stop();
-
                     Interlocked.Exchange(ref deltaTime, internalStopwatch.Elapsed.TotalSeconds);
                     
                     internalStopwatch.Restart();
 
                     Interlocked.Increment(ref tickCount);
-                    Interlocked.Exchange(ref lastTickTime, nextTick);
-                    nextTick += tickIntervalInTicks;
+                    Interlocked.Exchange(ref lastTickDate, nextTick);
+                    Interlocked.Add(ref nextTick, tickIntervalInTicks);
 
                     update();
                 }
             }
             finally
             {
-                currentThread.Value = null;
+                WorkerThread.thread.Value = null;
             }
         });
     }

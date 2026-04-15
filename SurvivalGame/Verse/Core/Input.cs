@@ -18,43 +18,11 @@ public sealed class Input
         SideButton2 = 4
     }
 
-    private static ThreadLocal<Input> instance = new ThreadLocal<Input>(true);
-
     private Dictionary<Keys, Action[]> keyDownActions = new Dictionary<Keys, Action[]>();
     private Dictionary<Keys, Action[]> keyUpActions = new Dictionary<Keys, Action[]>();
 
     private Dictionary<byte, Action<short, short>[]> mouseButtonDownActions = new Dictionary<byte, Action<short, short>[]>();
     private Dictionary<byte, Action<short, short>[]> mouseButtonUpActions = new Dictionary<byte, Action<short, short>[]>();
-
-    internal static void Initialize()
-    {
-        instance.Value = new Input();
-    }
-
-    public static Input Get()
-    {
-        return instance.Value;
-    }
-
-    public static bool GetKeyDown(Keys keys)
-    {
-        return Get().IsKeyDown(keys);
-    }
-
-    public static bool GetKeyUp(Keys keys)
-    {
-        return Get().IsKeyUp(keys);
-    }
-
-    public static bool GetMouseButtonDown(MouseButtons button)
-    {
-        return Get().IsMouseButtonDown(button);
-    }
-
-    public static bool GetMouseButtonUp(MouseButtons button)
-    {
-        return Get().IsMouseButtonUp(button);
-    }
 
     private long[] keyInput = new long[4];
 

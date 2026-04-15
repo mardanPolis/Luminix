@@ -13,11 +13,11 @@
 
 #---------------------------------- Content ---------------------------------#
 
-#begin Effects/SpriteShader.fx
+#begin Effects/TileShader.fx
 /importer:EffectImporter
 /processor:EffectProcessor
 /processorParam:DebugMode=Auto
-/build:Effects/SpriteShader.fx
+/build:Effects/TileShader.fx
 
 #begin Fonts/IBMPlexMono-Bold.spritefont
 /importer:FontDescriptionImporter

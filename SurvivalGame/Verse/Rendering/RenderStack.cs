@@ -1,8 +1,8 @@
 using System;
 using Microsoft.Xna.Framework;
 using Verse.Simulation;
-using Verse.Rendering.RenderItems;
 using Verse.Identifiers;
+using System.Collections.Generic;
 
 namespace Verse.Rendering;
 
@@ -22,9 +22,11 @@ public sealed class RenderStack(ID iD)
             Matrix.CreateTranslation(new Vector3(viewportWidth * 0.5f, viewportHeight * 0.5f, 0f));
         }
     }
-    
-    internal class Stack<T>(int size, int minSize = 128) where T : struct
+    internal class DynamicSet<T>(int size, int minSize) where T : struct
     {
+        internal const int OPTIMIZATION_DELAY_TICKS = 60;
+        internal const int OPTIMIZING_THRESHOLD = 128;
+
         public T[] DataSet = new T[size];
         public int Count = 0;
 
@@ -85,22 +87,11 @@ public sealed class RenderStack(ID iD)
 
             Count = 0;
         }
-    
     }
-
-    internal const int OPTIMIZATION_DELAY_TICKS = 60;
-    internal const int OPTIMIZING_THRESHOLD = 128;
-
+   
     public readonly ID stackID = iD;
 
     internal CameraData Camera { get; private set; }
-    internal Stack<RenderItemInterpSprite> InterpolatedSpriteRenderItemStack { get; private set; } = new Stack<RenderItemInterpSprite>(1024);
-    internal Stack<RenderItemSprite> SpriteRenderItemStack { get; private set; } = new Stack<RenderItemSprite>(1024);
-    internal Stack<RenderItemLine> LineRenderItemStack { get; private set; } = new Stack<RenderItemLine>(512);
-    internal Stack<RenderItemText> TextRenderItemStack { get; private set; } = new Stack<RenderItemText>(128);
-
-    internal Stack<RenderItemSpriteBatch> SpriteBatchRenderItemStack { get; private set; } = new Stack<RenderItemSpriteBatch>(32, 32);
-    internal Stack<Vector3> BatchPositions { get; private set; } = new Stack<Vector3>(128);
 
     internal void PostCameraData(Camera camera)
     {
@@ -113,67 +104,66 @@ public sealed class RenderStack(ID iD)
         );
     }
 
-    public void PostSpriteBatch(Sprite sprite, Vector3[] positions, Vector2 scale, float layerDepth = 0)
+    //----------------------> TILE MAP <----------------------\\
+    private record struct TileMapData(int StartIndex, int Length);
+    private static Dictionary<string, int> tileMapIndexes = new Dictionary<string, int>();
+    private static TileMapData[] tileMapDataSet = [];
+    private static Vector3[] tilePositions = [];
+    private Vector2[] tileSourceRect = [];
+
+    internal static void AllocateTileMap(string mapName, Vector3[] positions)
     {
-        ref var renderItem = ref SpriteBatchRenderItemStack.Next();
+        int mapIndex = tileMapDataSet.Length;
+        if(tileMapIndexes.TryAdd(mapName, mapIndex))
+        {
+            var newTileMapDataSet = new TileMapData[tileMapDataSet.Length + 1];
+            Array.Copy(tileMapDataSet, newTileMapDataSet, tileMapDataSet.Length);
+            newTileMapDataSet[mapIndex] = new TileMapData(tilePositions.Length, positions.Length);
+            tileMapDataSet = newTileMapDataSet;
+
+            var newTilePositions = new Vector3[tilePositions.Length + positions.Length];
+            Array.Copy(tilePositions, newTilePositions, tilePositions.Length);
+            Array.Copy(positions, 0, newTilePositions, newTileMapDataSet[mapIndex].StartIndex, positions.Length);
+            tilePositions = newTilePositions;
+
+            return;
+        }
+
+        Logger.Get().Log("Unable to allocate on RenderStack's a new TileMap");
+    }
+
+    internal void PostTileDataSet(string mapName, Vector2[] tileSourceRectangles)
+    {
+        if(tileSourceRect.Length != tilePositions.Length)
+            tileSourceRect = new Vector2[tilePositions.Length];
+
+        if(!tileMapIndexes.TryGetValue(mapName, out int index))
+            throw new KeyNotFoundException($"No Allocated TileMap found: '{mapName}'; Allocate a TileMap with its positions first!");
+
+        var data = tileMapDataSet[index];
+
+        if(data.Length != tileSourceRectangles.Length)
+            throw new ArgumentException($"Expected Tile data of length: '{data.Length}', but received Tile data of length: '{tileSourceRectangles.Length}'");
         
-        renderItem.Sprite = sprite;
-        renderItem.Scale = new Vector2(scale.X * sprite.TextureRegion.WidthCoefficient, scale.Y * sprite.TextureRegion.HeightCoefficient);
-        renderItem.StartIndex = BatchPositions.Count;
-        renderItem.Length = positions.Length;
-        renderItem.LayerDepth = layerDepth;
-
-        BatchPositions.BatchNext(positions);
-    }
-    public void PostSprite(Sprite sprite, Vector2 position0, Vector2 position, float rotation0, float rotation, Vector2 scale0, Vector2 scale, float layerDepth = 0f)
-    {
-        ref var renderItem = ref InterpolatedSpriteRenderItemStack.Next();
-
-        renderItem.Sprite = sprite;
-        renderItem.Position0 = position0;
-        renderItem.Position = position;
-        renderItem.Rotation0 = rotation0;
-        renderItem.Rotation = rotation;
-        renderItem.Scale0 = new Vector2(scale0.X * sprite.TextureRegion.WidthCoefficient, scale0.Y * sprite.TextureRegion.HeightCoefficient);
-        renderItem.Scale = new Vector2(scale.X * sprite.TextureRegion.WidthCoefficient, scale.Y * sprite.TextureRegion.HeightCoefficient);
-        renderItem.LayerDepth = layerDepth;
-    }
-    public void PostSprite(Sprite sprite, Vector2 position, float rotation, Vector2 scale, float layerDepth = 0f)
-    {
-        ref var renderItem = ref SpriteRenderItemStack.Next();
-
-        renderItem.Sprite = sprite;
-        renderItem.Position = position;
-        renderItem.Rotation = rotation;
-        renderItem.Scale = new Vector2(scale.X * sprite.TextureRegion.WidthCoefficient, scale.Y * sprite.TextureRegion.HeightCoefficient);
-        renderItem.LayerDepth = layerDepth;
-    }
-    public void PostLine(Vector2 start, Vector2 end, Color color, float thickness)
-    {
-        ref var renderItem = ref LineRenderItemStack.Next();
-
-        renderItem.Start = start;
-        renderItem.End = end;
-        renderItem.Color = color;
-        renderItem.Thickness = thickness;
+        Array.Copy(tileSourceRectangles, 0, tileSourceRect, data.StartIndex, data.Length);
     }
 
-    internal void Optimize()
+    //TO DO: implement ToggleTileMap method.
+
+
+    // internal void Optimize()
+    // {
+    //     SpriteBatchRenderItemStack.Optimize();
+    //     BatchPositions.Optimize();
+    // }
+    // internal void Reset()
+    // {
+    //     SpriteBatchRenderItemStack.Reset();
+    //     BatchPositions.Reset();
+    // }
+    internal void Clear()
     {
-        InterpolatedSpriteRenderItemStack.Optimize();
-        SpriteBatchRenderItemStack.Optimize();
-        BatchPositions.Optimize();
-        SpriteRenderItemStack.Optimize();
-        LineRenderItemStack.Optimize();
-        TextRenderItemStack.Optimize();
-    }
-    public void Reset()
-    {
-        InterpolatedSpriteRenderItemStack.Reset();
-        SpriteBatchRenderItemStack.Reset();
-        BatchPositions.Reset();
-        SpriteRenderItemStack.Reset();
-        LineRenderItemStack.Reset();
-        TextRenderItemStack.Reset();
+        
     }
 }
+

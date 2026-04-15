@@ -1,43 +1,23 @@
 using System;
-using System.Collections.Generic;
-using Verse.Threading;
 
 namespace Verse.Simulation;
 
-public class World
+
+public sealed class World
 {
-    private static List<WorldComponent> worldComponents = new List<WorldComponent>();
-    private static HashSet<Type> initializedComponentTypes = new HashSet<Type>();
-    private static CoreThread coreThread;
-    
-    public static IReadOnlyList<WorldComponent> WorldComponents => worldComponents;
-
-    public static uint TickRate
+    internal World(string name)
     {
-        set { coreThread.TickRate = value; }
-        get { return coreThread.TickRate; }
+        this.Name = name;
+        this.TileMapName = $"{name}_tile_map";
+        this.TileMapName = $"{name}_tile_map_top";
     }
 
-    public static long TickCount => coreThread.TickCount;
+    public readonly string Name;
 
-    public static double TickDeltaTime => coreThread.TickDeltaTime;
-
-    public static float PartialTick => coreThread.PartialTick;
-
-    internal static void Initialize(CoreThread coreThread)
+    public readonly string TileMapName;
+    public readonly string TileMapNameTop;
+    public void Render()
     {
-        World.coreThread = coreThread;
+        
     }
-    internal static void NewWorldComponent(WorldComponent component)
-    {
-        if(initializedComponentTypes.Contains(component.GetType()))
-        {
-            Console.WriteLine($"Error: World component of type {component.GetType()} already exists. Cannot add multiple components of the same type.");
-            return;
-        }
-
-        worldComponents.Add(component);
-        initializedComponentTypes.Add(component.GetType());
-    }
-
 }

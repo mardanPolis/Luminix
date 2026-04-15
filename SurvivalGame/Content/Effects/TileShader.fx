@@ -1,10 +1,15 @@
+Texture2D Texture;
+float textureSize;
+float textureRegionSize;
+float textureRegionOrigin;
+
+float2 Scale;
+
 float4x4 MatrixTransform;
 
-Texture2D SpriteTexture;
-
-sampler2D SpriteTextureSampler = sampler_state
+sampler2D TextureSampler = sampler_state
 {
-    Texture = <SpriteTexture>;
+    Texture = <Texture>;
     Filter = Point;
 };
 
@@ -17,10 +22,8 @@ struct VertexInput
 
 struct InstanceInput
 {
-    float3 Position : TEXCOORD1;
-    float2 Origin : TEXCOORD2;
-    float2 Scale : TEXCOORD3;
-    float4 SourceRect  : TEXCOORD4; 
+    float3 Position : POSITION;
+    float2 SourceRectPos  : TEXCOORD0; 
 };
 
 struct VertexShaderOutput
@@ -34,19 +37,21 @@ VertexShaderOutput MainVS(VertexInput vertex, InstanceInput instance)
 {
     VertexShaderOutput output;
     
-    float2 localPos = (vertex.Position.xy * instance.SourceRect.zw - instance.Origin.xy) * instance.Scale.xy;
-    
+    float2 localPos = (vertex.Position.xy * textureRegionSize - textureRegionOrigin) * Scale.xy;
     float4 worldPos = float4(localPos + instance.Position.xy, instance.Position.z, 1);
 
     output.Position = mul(worldPos, MatrixTransform);
     output.Color = vertex.Color;
-    output.TextureCoordinates = vertex.TextureCoordinates;
+
+    float invTexSize = 1.0 / textureSize;
+    output.TextureCoordinates = (vertex.TextureCoordinates * textureRegionSize + instance.SourceRectPos) * invTexSize;
+
     return output;
 }
 
 float4 MainPS(VertexShaderOutput input) : COLOR0
 {
-    return tex2D(SpriteTextureSampler, input.TextureCoordinates);
+    return tex2D(TextureSampler, input.TextureCoordinates) * input.Color;
 }
 
 technique SpriteDrawing

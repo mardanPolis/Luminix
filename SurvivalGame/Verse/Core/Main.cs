@@ -2,7 +2,6 @@ using System;
 using System.Diagnostics;
 using System.Threading;
 using GameSrc;
-using GameSrc.Rendering;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
 using SurvivalGame.GameSrc.Simulation;
@@ -16,9 +15,6 @@ using Verse.Threading;
 namespace Verse;
 public class Main : Game
 {
-    private const bool IS_DEBUG = true;
-    private const uint TICK_RATE = 20;
-    private const uint TARGET_FPS = 144;
     public const string VERSION = "1.0v";
 
     public Main()
@@ -72,30 +68,18 @@ public class Main : Game
             logger = Logger.Get();
             logger.Log($"Started: Initialize");
 
-            IsFixedTimeStep = true;
-            TargetElapsedTime = TimeSpan.FromSeconds(1.0 / TARGET_FPS);
+            //coreThread = new CoreThread();
 
-            mainThread.Priority = ThreadPriority.Highest;
-            coreThread = new CoreThread(TICK_RATE, IS_DEBUG);
-
-            RendererRegistry.Register(typeof(GameDebugRenderer));
-            RendererRegistry.Register(typeof(TestRenderer));
-            RendererRegistry.Assign(testList, typeof(TestRenderer));
-            RendererRegistry.FinalizeRegistry();
+            mainThread.Priority = ThreadPriority.AboveNormal;
+            coreThread.Priority = ThreadPriority.AboveNormal;
 
             //initialize thread bridges
             CoreToRender.Initialize();
 
             RenderingSystem.Initialize(this, graphics);
             ResourceManager.Initialize(Content.RootDirectory, Content);
-            World.Initialize(coreThread);
 
             base.Initialize();
-
-            if(RendererRegistry.TryGetDebugRenderer(typeof(GameDebugRenderer), out DebugRenderer renderer))
-                ((GameDebugRenderer)renderer).Initialize(this, coreThread);
-
-            RenderingSystem.InitializeRenderers(IS_DEBUG);
 
             logger.Log($"Successful: Initialize");
         }
@@ -143,27 +127,21 @@ public class Main : Game
             new CameraMover();
             //END TEST
 
-            foreach(var component in World.WorldComponents)
-                component.Initialize();
-
-            int threadCount = Process.GetCurrentProcess().Threads.Count;
-            logger.Log($"Threads: {threadCount}");
-
             coreThread.Start();
             
             logger.Log($"Successful: Start");
-
-            long endBytes = GC.GetAllocatedBytesForCurrentThread();
-            allocated = endBytes - startBytes;
-
-            logger.Log($"Game fully initialized in {stopwatch.Elapsed.Milliseconds}ms");
-            logger.Log($"Game allocated {allocated} bytes during initialization!");
         }
         catch
         {
             Logger.Get().Err($"Exception happened during 'BeginRun'");
             throw;
         }
+
+        long endBytes = GC.GetAllocatedBytesForCurrentThread();
+        allocated = endBytes - startBytes;
+
+        logger.Log($"Game fully initialized in {stopwatch.Elapsed.Milliseconds}ms");
+        logger.Log($"Game allocated {allocated} bytes during initialization!");
     }
 
     protected override void Update(GameTime gameTime)

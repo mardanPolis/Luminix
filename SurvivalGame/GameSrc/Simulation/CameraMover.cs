@@ -17,7 +17,7 @@ public class CameraMover : WorldComponent
 
     public override void Tick()
     {
-        float speed = (float)(5f * World.TickDeltaTime);
+        float speed = (float)(5f * Universe.TickDeltaTime);
 
         var cameraPos = camera.Position;
 
@@ -38,6 +38,7 @@ public class CameraMover : WorldComponent
         if (direction != 0)
         {
             float targetSize = camera.OrthographicSize + (direction * speed * 10f);
+            targetSize = Math.Clamp(targetSize, 5, 150);
             camera.ScaleTo(targetSize);
         }
 
