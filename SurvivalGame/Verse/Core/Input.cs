@@ -1,13 +1,13 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Threading;
 using Microsoft.Xna.Framework.Input;
 using Verse.Bridge;
+using Verse.Workspaces;
 
 namespace Verse;
 
-public sealed class Input
+public sealed class Input : Workspace.Service
 {
     public enum MouseButtons
     {
