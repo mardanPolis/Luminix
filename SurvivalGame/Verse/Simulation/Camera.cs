@@ -2,20 +2,18 @@ using System;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Verse.Rendering;
+using Verse.Workspaces;
 
 namespace Verse.Simulation;
 
 public class Camera
 {
+    private Universe universe;
     public Camera()
     {
-        MainCamera ??= this;
-        viewport = RenderingSystem.GraphicsDevice.Viewport;
+        universe = Workspace.Current.GetService<Universe>();
     }
 
-    public static Camera MainCamera { get; set; } = null;
-
-    private Viewport viewport;
     private Vector2 position0 = Vector2.Zero;
     private Vector2 position = Vector2.Zero;
     private float orthoSize0 = 15f;
@@ -26,18 +24,18 @@ public class Camera
     public float PosX { get { return position0.X; } set { position0.X = value; position.X = value; } }
     public float PosY { get { return position0.Y; } set { position0.Y = value; position.Y = value; } }
     public float ScaleX { get { return ScaleY; }}
-    public float ScaleY { get { return viewport.Height / orthoSize0; } }
+    public float ScaleY { get { return universe.Viewport.Height / orthoSize0; } }
     public float Zoom
     {
-        get => viewport.Height / orthoSize0;
-        set => orthoSize0 = viewport.Height / MathF.Max(value, 0.01f);
+        get => universe.Viewport.Height / orthoSize0;
+        set => orthoSize0 = universe.Viewport.Height / MathF.Max(value, 0.01f);
     }
     public float OrthographicSize { get { return orthoSize0; } set { orthoSize0 = value > 0.01f ? value : 0.01f; orthoSize = orthoSize0;  } }
     internal float TOrthographicSize => orthoSize;
 
     public virtual Matrix GetViewMatrix()
     {
-        viewport = RenderingSystem.GraphicsDevice.Viewport;
+        var viewport = universe.Viewport;
 
         float scaleY = viewport.Height / orthoSize0;
         float scaleX = scaleY;

@@ -70,6 +70,9 @@ public class WorkerThread
         set => tickIntervalInTicks = (uint)(Stopwatch.Frequency / value);
     }
 
+    protected long UnsafeTickCount => tickCount;
+    protected double UnsafeTickDeltaTime => deltaTime;
+
     public long TickCount => Volatile.Read(ref tickCount);
     public double TickDeltaTime => Volatile.Read(ref deltaTime);
     public float PartialTick => (float)(stopwatch.ElapsedTicks - Volatile.Read(ref lastTickDate)) / tickIntervalInTicks;
@@ -83,7 +86,6 @@ public class WorkerThread
     public long TickAllocatedAmount => Volatile.Read(ref allocated);
     public double TickTime => Volatile.Read(ref tickTime);
     public double[] TickTimes => tickTimesBuffer1;
-
 
     public void Start() => systemThread.Start();
     public void Stop() => running = false;

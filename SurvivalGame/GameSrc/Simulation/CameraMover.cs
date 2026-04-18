@@ -9,31 +9,33 @@ namespace SurvivalGame.GameSrc.Simulation;
 
 public class CameraMover : WorldComponent
 {
-    private Camera camera;
+    private Input input;
+
     public override void Initialize()
     {
-        camera = new Camera();
+        Workspace.TryGetService(out input);
     }
 
-    public override void Tick()
+    public override void Tick(Map currentMap)
     {
-        float speed = (float)(5f * Universe.TickDeltaTime);
+        Camera camera = currentMap.Camera;
+        float speed = (float)(5f * Universe.DeltaTime);
 
         var cameraPos = camera.Position;
 
-        if(Input.GetKeyDown(Keys.W))
+        if(input.IsKeyDown(Keys.W))
             cameraPos.Y += speed * (camera.OrthographicSize * 0.1f);
-        if(Input.GetKeyDown(Keys.S))
+        if(input.IsKeyDown(Keys.S))
             cameraPos.Y -= speed * (camera.OrthographicSize * 0.1f);
 
-        if(Input.GetKeyDown(Keys.A))
+        if(input.IsKeyDown(Keys.A))
             cameraPos.X -= speed * (camera.OrthographicSize * 0.1f);
-        if(Input.GetKeyDown(Keys.D))
+        if(input.IsKeyDown(Keys.D))
             cameraPos.X += speed * (camera.OrthographicSize * 0.1f);
             
         float direction = 0;
-        if(Input.GetKeyDown(Keys.E)) direction += 1f;
-        if(Input.GetKeyDown(Keys.Q)) direction -= 1f;
+        if(input.IsKeyDown(Keys.E)) direction += 1f;
+        if(input.IsKeyDown(Keys.Q)) direction -= 1f;
 
         if (direction != 0)
         {

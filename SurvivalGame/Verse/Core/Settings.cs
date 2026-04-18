@@ -6,23 +6,22 @@ public static class Settings
 {
     internal sealed class Controller
     {
-        private Controller() { }
-        internal static Controller Create()
+        public Controller()
         {
-            if(controller != null)
-                throw new System.InvalidOperationException("Controller has already been initialized.");
-
-            return new Controller();
+            if(Settings.initialized)
+                throw new ArgumentException("Cant create a Settings.Controller, settings class is already initialized!");
         }
+
         public bool Debug { set => Settings.Debug = value; }
         public int PixelsPerUnit { set => Settings.PixelsPerUnit = value; }
     }
-    private static Controller controller;
-    internal static void Initialize(out Controller controllerInstance)
+    internal static void Initialize(out Controller controller)
     {
-        controller = Controller.Create();
-        controllerInstance = controller;
+        controller = new Controller();
+        initialized = true;
     }
+
+    private static bool initialized;
 
     public static bool Debug { get; private set; }
     public static bool DebugInfo { get; set; }

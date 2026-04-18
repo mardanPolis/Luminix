@@ -1,5 +1,5 @@
 Source File,Dest File,Processor Type,Content Type,Source File Size,Dest File Size,Build Seconds
-"/home/markuss/Dev/Monogame/SurvivalGame/Content/Effects/SpriteShader.fx","/home/markuss/Dev/Monogame/SurvivalGame/Content/bin/DesktopGL/Content/Effects/SpriteShader.xnb","EffectProcessor","CompiledEffectContent",1325,1915,4.7543674
+"/home/markuss/Dev/Monogame/SurvivalGame/Content/Effects/TileShader.fx","/home/markuss/Dev/Monogame/SurvivalGame/Content/bin/DesktopGL/Content/Effects/TileShader.xnb","EffectProcessor","CompiledEffectContent",1436,2309,5.105557
 "/home/markuss/Dev/Monogame/SurvivalGame/Content/Fonts/IBMPlexMono-Bold.spritefont","/home/markuss/Dev/Monogame/SurvivalGame/Content/bin/DesktopGL/Content/Fonts/IBMPlexMono-Bold.xnb","FontDescriptionProcessor","SpriteFontContent",2019,18458,0.0574413
 "/home/markuss/Dev/Monogame/SurvivalGame/Content/Fonts/IBMPlexMono-Medium.spritefont","/home/markuss/Dev/Monogame/SurvivalGame/Content/bin/DesktopGL/Content/Fonts/IBMPlexMono-Medium.xnb","FontDescriptionProcessor","SpriteFontContent",2021,17946,0.0204095
 "/home/markuss/Dev/Monogame/SurvivalGame/Content/Fonts/IBMPlexMono-Regular.spritefont","/home/markuss/Dev/Monogame/SurvivalGame/Content/bin/DesktopGL/Content/Fonts/IBMPlexMono-Regular.xnb","FontDescriptionProcessor","SpriteFontContent",2022,17946,0.0217379

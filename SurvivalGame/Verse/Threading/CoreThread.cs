@@ -3,12 +3,13 @@ using System.Diagnostics;
 using System.Threading;
 using Verse.Simulation;
 using Verse.Rendering;
+using Verse.Workspaces;
 
 namespace Verse.Threading;
 
 public sealed class CoreThread : WorkerThread
 {
-    private CoreThread() : base(20)
+    internal CoreThread() : base(20)
     {   
 
         this.Name = "CoreThread";
@@ -21,8 +22,16 @@ public sealed class CoreThread : WorkerThread
     public double TickUpdateTime => Volatile.Read(ref tickUpdateTime);
     public double TickRenderTime => Volatile.Read(ref tickRenderTime);
 
+    private Universe universe;
+    private Universe.Controller universeController;
     private Input input;
 
+    protected sealed override void Initialize()
+    {
+        var workspace = new Workspace();
+        universe = new Universe(out universeController);
+        input = new Input();
+    }
 
     protected sealed override void OnTick()
     {
@@ -30,7 +39,7 @@ public sealed class CoreThread : WorkerThread
 
         input.ReadFrom(Bridges.RenderToCore.InputBridge);
 
-        WorldTick();
+        GameTick();
         Render();
     }
 
@@ -40,7 +49,7 @@ public sealed class CoreThread : WorkerThread
 
         input.ReadFrom(Bridges.RenderToCore.InputBridge);
 
-        WorldTick();
+        GameTick();
         long updateTime = CurrentElapsedTicks;
         Render();
         long renderTime = CurrentElapsedTicks;
@@ -53,9 +62,13 @@ public sealed class CoreThread : WorkerThread
         Interlocked.Exchange(ref tickRenderTime, elapsedRenderTime.TotalMicroseconds);
     }
 
-    private void WorldTick()
+    private void GameTick()
     {
-        Camera.MainCamera.Tick();
+        universeController.TickRate = TickRate;
+        universeController.DeltaTime = UnsafeTickDeltaTime;
+        universeController.TickCount = UnsafeTickCount;
+
+        universe.World.Tick();
     }
     
     private void Render()

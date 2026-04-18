@@ -1,22 +1,90 @@
 using System;
 using System.Collections.Generic;
+using System.Numerics;
+using Microsoft.Xna.Framework.Graphics;
 using Verse.Threading;
 using Verse.Workspaces;
 
 namespace Verse.Simulation;
 
-public class Universe : Workspace.Service
+public sealed class Universe : Workspace.Service
 {
-    private static World world = null;
-    public static ref readonly World World => ref world;
+    public readonly struct Controller
+    {
+        public Controller(Universe universe)
+        {
+            if(universe.initialized)
+                throw new ArgumentException("Cant create a Universe.Controller, the provided universe is already initialized!");
+            
+            this.controlledUniverse = universe;
+        }
 
-    internal static void NewComponent(WorldComponent component)
+        private readonly Universe controlledUniverse;
+
+        public uint TickRate { get => controlledUniverse.TickRate; set => controlledUniverse.TickRate = value; }
+        public long TickCount { get => controlledUniverse.TickCount; set => controlledUniverse.TickCount = value; }
+        public double DeltaTime { get => controlledUniverse.DeltaTime; set => controlledUniverse.DeltaTime = value; }
+
+        public Viewport Viewport { get => controlledUniverse.Viewport; set => controlledUniverse.Viewport = value; }
+    }
+
+    public Universe(out Controller controller)
+    {
+        this.logger = Logger.Get();
+        this.initialized = false;
+        controller = new Controller(this);
+
+        this.initialized = true;
+    }
+
+    private readonly bool initialized;
+    private readonly Logger logger;
+
+    //Global Variables
+    public uint TickRate { get; private set; }
+    public long TickCount { get; private set; }
+    public double DeltaTime { get; private set; }
+
+    public Viewport Viewport { get; private set; }
+
+    //Renderers
+
+
+    //Current World
+    private World world;
+    public World World => world;
+
+    public void NewBlankWorld(string name, int mapWidth, int mapHeight, bool debug)
+    {
+        if(world != null)
+        {
+            logger.Wrn("Unable to create a blank world!, because a world already exists!");
+            return;
+        }
+
+        WorldComponent[] worldComponents = [];
+        world = new World(name, mapWidth, mapHeight, worldComponents, debug);
+        world.GenerateBlankMap();
+    }
+
+    public void LoadWorld(string worldName)
     {
         
     }
 
-    internal static void NewWorld(string name, int width, int height)
+    public void SaveWorld()
     {
         
+    }
+
+    public void ExitWorld()
+    {
+        if(world == null)
+        {
+            logger.Wrn("Unable to exit a world, no world to exit!");
+            return;
+        }
+
+        world = null;
     }
 }

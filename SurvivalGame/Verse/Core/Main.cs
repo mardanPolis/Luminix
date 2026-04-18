@@ -61,16 +61,15 @@ public class Main : Game
         {
             startBytes = GC.GetAllocatedBytesForCurrentThread();
             
-            Thread.CurrentThread.Name = "RenderThread";
-
             Logger.Initialize();
 
             logger = Logger.Get();
             logger.Log($"Started: Initialize");
 
-            //coreThread = new CoreThread();
-
             mainThread.Priority = ThreadPriority.AboveNormal;
+            mainThread.Name = "RenderThread";
+            
+            coreThread = new CoreThread();
             coreThread.Priority = ThreadPriority.AboveNormal;
 
             //initialize thread bridges
@@ -88,6 +87,17 @@ public class Main : Game
             Logger.Get().Err($"Exception happened during 'Initialize'");
             throw;
         }
+
+        ProcessThreadCollection currentThreads = Process.GetCurrentProcess().Threads;
+
+        foreach (ProcessThread thread in currentThreads)
+            Console.WriteLine($"Thread ID: {thread.Id} | State: {thread.ThreadState}");
+
+        long endBytes = GC.GetAllocatedBytesForCurrentThread();
+        allocated = endBytes - startBytes;
+
+        logger.Log($"Game fully initialized in {stopwatch.Elapsed.Milliseconds}ms");
+        logger.Log($"Game allocated {allocated} bytes during initialization!");
     }
 
     protected override void LoadContent()
@@ -101,9 +111,6 @@ public class Main : Game
             ResourceManager.LoadDefaultData();
 
             logger.Log($"Loaded Game assets in {stopwatch.Elapsed.Milliseconds - assetLoadStart}ms");
-
-            // TODO: use this.Content to load your game content
-
             logger.Log($"Successful: LoadContent");
             base.LoadContent();
         }
@@ -112,36 +119,6 @@ public class Main : Game
             Logger.Get().Err($"Exception happened during 'LoadContent'");
             throw;
         }
-    }
-
-    protected override void BeginRun()
-    {
-        try
-        {
-            logger.Log($"Started: Start");
-
-            //TEST
-            var testObject = new Test();
-            testList.Add(testObject);
-
-            new CameraMover();
-            //END TEST
-
-            coreThread.Start();
-            
-            logger.Log($"Successful: Start");
-        }
-        catch
-        {
-            Logger.Get().Err($"Exception happened during 'BeginRun'");
-            throw;
-        }
-
-        long endBytes = GC.GetAllocatedBytesForCurrentThread();
-        allocated = endBytes - startBytes;
-
-        logger.Log($"Game fully initialized in {stopwatch.Elapsed.Milliseconds}ms");
-        logger.Log($"Game allocated {allocated} bytes during initialization!");
     }
 
     protected override void Update(GameTime gameTime)
