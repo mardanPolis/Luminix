@@ -1,107 +1,97 @@
+using System;
 using System.Collections.Generic;
 using System.IO;
 using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Audio;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 using Verse.Rendering;
 
 namespace Verse.Resources;
-public static class ResourceManager
+public sealed class ContentManager : Microsoft.Xna.Framework.Content.ContentManager
 {
-    private static readonly Dictionary<string, TextureRegion> textureRegions = new Dictionary<string, TextureRegion>();
-    private static readonly Dictionary<string, Texture2D> textures = new Dictionary<string, Texture2D>();
-    
-    public static ContentManager ContentManager { get; private set; }
+    private readonly Dictionary<string, TextureRegion> textureRegions = new Dictionary<string, TextureRegion>();
+    private readonly Dictionary<string, Texture2D> textures = new Dictionary<string, Texture2D>();
+    private readonly Dictionary<string, SoundEffect> soundEffects = new Dictionary<string, SoundEffect>();
+    private readonly Dictionary<string, SpriteFont> spriteFonts = new Dictionary<string, SpriteFont>();
+    private readonly Dictionary<string, Effect> effects = new Dictionary<string, Effect>();
 
-    public static string RootDirectory {get; private set;}
+    public ContentManager(IServiceProvider serviceProvider) : base(serviceProvider) { }
 
-    private static Texture2D nullTexture;
-    private static TextureRegion nullTextureRegion;
-
-    private static SpriteFont iBMPlexMono_Bold;
-    private static SpriteFont iBMPlexMono_Medium;
-    private static SpriteFont iBMPlexMono_Regular;
-
-    private static bool finalized = false;
-
-    private static Effect baseEffect;
-
-    public static Texture2D NullTexture => nullTexture;
-
-    public static SpriteFont GenericFontBold => iBMPlexMono_Bold;
-    public static SpriteFont GenericFontMedium => iBMPlexMono_Medium;
-    public static SpriteFont GenericFontRegular => iBMPlexMono_Regular;
-
-    public static Effect GenericShader => baseEffect;
-
-    internal static void Initialize(string rootDirectory, ContentManager content)
+    public Texture2D CreateTexture(string assetName, Color[] colors, Vector2 scale)
     {
-        RootDirectory = rootDirectory;
-        ContentManager = content;
-    }
+        ArgumentNullException.ThrowIfNull(assetName, nameof(assetName));
+        ArgumentNullException.ThrowIfNull(colors, nameof(colors));
+        
+        if(textures.ContainsKey(assetName))
+            throw new InvalidOperationException($"Unable to create a Texture, because one already exists with name: '{assetName}'");
 
-    internal static void LoadDefaultData()
-    {
-        Texture2D pixel = new Texture2D(RenderingSystem.GraphicsDevice, 1, 1);
-        pixel.SetData(new[] { Color.White });
-        textures["pixel"] = pixel;
-
-        nullTexture = LoadTexture("null_texture.png");
-        nullTextureRegion = NewTextureRegion("null_texture", "null_texture.png", 0, 0, 32, 32);
-
-        iBMPlexMono_Bold = ContentManager.Load<SpriteFont>("Fonts/IBMPlexMono-Bold");
-        iBMPlexMono_Medium = ContentManager.Load<SpriteFont>("Fonts/IBMPlexMono-Medium");
-        iBMPlexMono_Regular = ContentManager.Load<SpriteFont>("Fonts/IBMPlexMono-Regular");
-
-        baseEffect = ContentManager.Load<Effect>("Effects/SpriteShader");
-    }
-
-    public static Texture2D LoadTexture(string name)
-    {
-        if (textures.ContainsKey(name))
-            return textures[name];
-        else if (finalized)
-        {
-            Logger.Get().Wrn($"Failed to load texture with name '{name}'.");
-            return nullTexture;
-        }
-
-        Texture2D texture;
-        using (var stream = File.OpenRead(Path.Combine(RootDirectory, name)))
-            texture = Texture2D.FromStream(RenderingSystem.GraphicsDevice, stream);
-
-        if (texture == null)
-        {
-            Logger.Get().Wrn($"Failed to load texture with name '{name}'.");
-            return nullTexture;
-        }
-
-        textures[name] = texture;
+        var texture = new Texture2D(RenderingSystem.GraphicsDevice, (int)scale.X, (int)scale.Y);
+        texture.SetData(colors);
+        textures[assetName] = texture;
         return texture;
     }
 
-    public static TextureRegion NewTextureRegion(string name, string textureName, int x, int y, int width, int height)
+    public Texture2D CreateTexture(string assetName, Stream stream)
     {
-        if (textureRegions.ContainsKey(name))
-            return null;
+        ArgumentNullException.ThrowIfNull(assetName, nameof(assetName));
+        ArgumentNullException.ThrowIfNull(stream, nameof(stream));
 
-        if (!textures.TryGetValue(textureName, out var texture))
-            throw new KeyNotFoundException($"Texture with name '{textureName}' not found.");
+        if(textures.ContainsKey(assetName))
+            throw new InvalidOperationException($"Unable to create a Texture, because one already exists with name: '{assetName}'");
 
-        var textureRegion = new TextureRegion(texture, x, y, width, height);
-        textureRegions[name] = textureRegion;
-        return textureRegion;
-    }
-
-    public static TextureRegion GetTextureRegion(string name)
-    {
-        if (!textureRegions.TryGetValue(name, out var textureRegion))
+        using (stream)
         {
-            Logger.Get().Wrn($"TextureRegion with name '{name}' not found.");
-            return nullTextureRegion;
+            var texture = Texture2D.FromStream(RenderingSystem.GraphicsDevice, stream);
+            textures[assetName] = texture;
+            return texture;
         }
-
-        return textureRegion;
     }
 
+    public SoundEffect CreateSoundEffect(string assetName, Stream stream)
+    {
+        ArgumentNullException.ThrowIfNull(assetName, nameof(assetName));
+        ArgumentNullException.ThrowIfNull(stream, nameof(stream));
+
+        if(soundEffects.ContainsKey(assetName))
+            throw new InvalidOperationException($"Unable to create a SoundEffect, because one already exists with name: '{assetName}'");
+
+        SoundEffect soundEffect = ReadAsset<SoundEffect>(assetName, null);
+        soundEffects[assetName] = soundEffect;
+        return soundEffect;
+    }
+
+    public SpriteFont CreateSpriteFont(string assetName, Stream stream)
+    {
+        ArgumentNullException.ThrowIfNull(assetName, nameof(assetName));
+        ArgumentNullException.ThrowIfNull(stream, nameof(stream));
+
+        if(spriteFonts.ContainsKey(assetName))
+            throw new InvalidOperationException($"Unable to create a SpriteFont, because one already exists with name: '{assetName}'");
+
+        var font = ReadAsset<SpriteFont>(assetName, null);
+        spriteFonts[assetName] = font;
+        return font;
+    }
+
+    public Effect CreateEffect(string assetName, Stream stream)
+    {
+        ArgumentNullException.ThrowIfNull(assetName, nameof(assetName));
+        
+        if(soundEffects.ContainsKey(assetName))
+            throw new InvalidOperationException($"Unable to create a Effect, because one already exists with name: '{assetName}'");
+        
+        var effect = ReadAsset<Effect>(assetName, null);
+        effects[assetName] = effect;
+        return effect;
+    }
 }
+        // NullTexture = LoadTexture("null_texture.png");
+        // NullTextureRegion = NewTextureRegion("null_texture", "null_texture.png", 0, 0, 32, 32);
+
+        // GenericFontBold = ContentManager.Load<SpriteFont>("Fonts/IBMPlexMono-Bold");
+        // GenericFontMedium = ContentManager.Load<SpriteFont>("Fonts/IBMPlexMono-Medium");
+        // GenericFontRegular = ContentManager.Load<SpriteFont>("Fonts/IBMPlexMono-Regular");
+
+        // TileShader = ContentManager.Load<Effect>("Effects/SpriteShader");
+
