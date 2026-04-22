@@ -18,6 +18,8 @@ public sealed class ContentManager : Microsoft.Xna.Framework.Content.ContentMana
 
     public ContentManager(IServiceProvider serviceProvider) : base(serviceProvider) { }
 
+    private Stream openedStream = null;
+
     public Texture2D CreateTexture(string assetName, Color[] colors, Vector2 scale)
     {
         ArgumentNullException.ThrowIfNull(assetName, nameof(assetName));
@@ -56,8 +58,10 @@ public sealed class ContentManager : Microsoft.Xna.Framework.Content.ContentMana
         if(soundEffects.ContainsKey(assetName))
             throw new InvalidOperationException($"Unable to create a SoundEffect, because one already exists with name: '{assetName}'");
 
+        openedStream = stream;
         SoundEffect soundEffect = ReadAsset<SoundEffect>(assetName, null);
         soundEffects[assetName] = soundEffect;
+        openedStream = null;
         return soundEffect;
     }
 
@@ -69,8 +73,10 @@ public sealed class ContentManager : Microsoft.Xna.Framework.Content.ContentMana
         if(spriteFonts.ContainsKey(assetName))
             throw new InvalidOperationException($"Unable to create a SpriteFont, because one already exists with name: '{assetName}'");
 
+        openedStream = stream;
         var font = ReadAsset<SpriteFont>(assetName, null);
         spriteFonts[assetName] = font;
+        openedStream = null;
         return font;
     }
 
@@ -81,9 +87,19 @@ public sealed class ContentManager : Microsoft.Xna.Framework.Content.ContentMana
         if(soundEffects.ContainsKey(assetName))
             throw new InvalidOperationException($"Unable to create a Effect, because one already exists with name: '{assetName}'");
         
+        openedStream = stream;
         var effect = ReadAsset<Effect>(assetName, null);
         effects[assetName] = effect;
+        openedStream = null;
         return effect;
+    }
+
+    protected override Stream OpenStream(string assetName)
+    {
+        if(openedStream != null)
+            return openedStream;
+
+        return base.OpenStream(assetName);
     }
 }
         // NullTexture = LoadTexture("null_texture.png");
