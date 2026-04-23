@@ -1,6 +1,5 @@
 using System;
 using System.IO;
-using Verse;
 
 namespace Verse.IO;
 
@@ -18,6 +17,8 @@ public class AssetSerializer
                 return LoadTexture(location, "jpg");
             case "jpeg":
                 return LoadTexture(location, "jpeg");
+            case "xnb":
+                return LoadTexture(location, "xnb");
             case "asset":
                 return LoadTextureAsset(location);
             default:
