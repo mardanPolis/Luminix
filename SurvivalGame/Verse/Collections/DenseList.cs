@@ -15,7 +15,7 @@ public sealed class DenseList<T> : ICollection, IEnumerable<T>
 
     private T[] items;
     private int count;
-    private Dictionary<T, int> indexMap;
+    private readonly Dictionary<T, int> indexMap;
 
     public int Count => count;
     public bool IsSynchronized => false;

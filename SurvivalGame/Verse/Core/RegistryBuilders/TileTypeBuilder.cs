@@ -21,24 +21,24 @@ public class TileTypeBuilder
     public Dictionary<string, int> IntVariables = new();
     public Dictionary<string, Tag> Tags = new();
 
-    public TileTypeBuilder Textured(string texture)
-    {
-        try
-        {
-            var texture2D = ResourceManager.LoadTexture(texture);
-            if(texture2D.Width != Settings.PixelsPerUnit || texture2D.Height != Settings.PixelsPerUnit)
-                throw new ArgumentException($"Texture '{texture}' can't be a tile texture because its size is not {Settings.PixelsPerUnit}x{Settings.PixelsPerUnit}");
+    // public TileTypeBuilder Textured(string texture)
+    // {
+    //     try
+    //     {
+    //         var texture2D = ContentManager.LoadTexture(texture);
+    //         if(texture2D.Width != Settings.PixelsPerUnit || texture2D.Height != Settings.PixelsPerUnit)
+    //             throw new ArgumentException($"Texture '{texture}' can't be a tile texture because its size is not {Settings.PixelsPerUnit}x{Settings.PixelsPerUnit}");
             
-            Texture = texture;
-        }
-        catch(Exception ex)
-        {
-            Logger.Get().Wrn($"Failed to assign texture '{texture}' to TileType, exception: {ex}");
-            Texture = "";
-        }
+    //         Texture = texture;
+    //     }
+    //     catch(Exception ex)
+    //     {
+    //         Logger.Get().Wrn($"Failed to assign texture '{texture}' to TileType, exception: {ex}");
+    //         Texture = "";
+    //     }
 
-        return this;
-    }
+    //     return this;
+    // }
     
     public TileTypeBuilder Movability(short cost = 1)
     {

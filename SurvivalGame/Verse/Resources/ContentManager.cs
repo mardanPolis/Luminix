@@ -54,14 +54,13 @@ public sealed class ContentManager : Microsoft.Xna.Framework.Content.ContentMana
         if(textures.ContainsKey(assetName))
             throw new InvalidOperationException($"Unable to create a Texture, because one already exists with name: '{assetName}'");
 
-        using (stream)
-        {
-            var texture = Texture2D.FromStream(RenderingSystem.GraphicsDevice, stream);
-            textures[assetName] = texture;
-            loadedAssets[assetName] = texture;
-            disposables.Add(texture);
-            return texture;
-        }
+        openedStream = stream;
+        var texture =  ReadAsset<Texture2D>(assetName, null);
+        textures[assetName] = texture;
+        loadedAssets[assetName] = texture;
+        disposables.Add(texture);
+        openedStream = null;
+        return texture;
     }
 
     public SoundEffect CreateSoundEffect(string assetName, Stream stream)

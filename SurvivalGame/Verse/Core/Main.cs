@@ -4,12 +4,10 @@ using System.Threading;
 using GameSrc;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
-using SurvivalGame.GameSrc.Simulation;
 using Verse.Bridges;
 using Verse.Collections;
 using Verse.Rendering;
 using Verse.Resources;
-using Verse.Simulation;
 using Verse.Threading;
 
 namespace Verse;
@@ -21,7 +19,10 @@ public class Main : Game
     {
         stopwatch = Stopwatch.StartNew();
         graphics = new GraphicsDeviceManager(this);
-        Content.RootDirectory = "Content";
+        Content = new ContentManager(Services)
+        {
+            RootDirectory = "Content"
+        };
         IsMouseVisible = true;
     }
 
@@ -76,7 +77,6 @@ public class Main : Game
             CoreToRender.Initialize();
 
             RenderingSystem.Initialize(this, graphics);
-            ResourceManager.Initialize(Content.RootDirectory, Content);
 
             base.Initialize();
 
@@ -107,8 +107,6 @@ public class Main : Game
             logger.Log($"Started: LoadContent");
 
             int assetLoadStart = stopwatch.Elapsed.Milliseconds;
-
-            ResourceManager.LoadDefaultData();
 
             logger.Log($"Loaded Game assets in {stopwatch.Elapsed.Milliseconds - assetLoadStart}ms");
             logger.Log($"Successful: LoadContent");
