@@ -1,6 +1,6 @@
 using System;
 
-namespace GameSrc;
+namespace Game;
 
 public class Test
 {

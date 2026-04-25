@@ -2,10 +2,10 @@
 using Verse;
 using Verse.Threading;
 
-using var game = new Verse.Main();
+using var engine = new Verse.Main();
 try
 {
-    game.Run();
+    engine.Run();
 }
 catch(Exception ex)
 {

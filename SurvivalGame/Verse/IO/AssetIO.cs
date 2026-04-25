@@ -2,11 +2,13 @@ using System;
 using System.IO;
 using System.Collections.Generic;
 using Verse.Collections;
+using Verse.Workspaces;
+using SurvivalGame.Verse.Collections;
 namespace Verse.IO;
 
-public class AssetSerializer
+public class AssetIO : Workspace.Service
 {
-    private DenseList<string> loadedLocations = new DenseList<string>();
+    private DenseList<string> loadedPaths = new DenseList<string>();
     private List<LoadedAsset> pendingAssets = new List<LoadedAsset>();
 
     public void LoadTexture(string location)
@@ -43,7 +45,7 @@ public class AssetSerializer
             }
 
             pendingAssets.Add(new LoadedAsset(LoadedAsset.Type.Texture, memoryStream, fileName));
-            loadedLocations.Add(location);
+            loadedPaths.Add(location);
         }
         catch(Exception ex)
         {
@@ -84,4 +86,6 @@ public class AssetSerializer
         return array;
     }
 
+
+    public IReadOnlyDenseList<string> LoadedPaths => loadedPaths;
 }

@@ -1,10 +1,11 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using SurvivalGame.Verse.Collections;
 
 namespace Verse.Collections;
 
-public sealed class DenseList<T> : ICollection, IEnumerable<T>
+public sealed class DenseList<T> : ICollection, IEnumerable<T>, IReadOnlyDenseList<T>
 {
     public DenseList(int capacity = 16)
     {
@@ -82,11 +83,6 @@ public sealed class DenseList<T> : ICollection, IEnumerable<T>
         count = 0;
     }
 
-    public Type GetValueType()
-    {
-        return typeof(T);
-    }
-
     public void CopyTo(Array array, int index)
     {
         items.CopyTo(array, index);
@@ -104,6 +100,13 @@ public sealed class DenseList<T> : ICollection, IEnumerable<T>
     {
         T[] result = new T[count];
         Array.Copy(items, result, count);
+        return result;
+    }
+
+    public List<T> ToList()
+    {
+        var array = ToArray();
+        var result = new List<T>(array);
         return result;
     }
 }

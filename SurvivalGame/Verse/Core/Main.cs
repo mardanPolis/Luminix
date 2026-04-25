@@ -1,7 +1,7 @@
 using System;
 using System.Diagnostics;
 using System.Threading;
-using GameSrc;
+using Game;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
 using Verse.Bridges;
@@ -11,7 +11,7 @@ using Verse.Resources;
 using Verse.Threading;
 
 namespace Verse;
-public class Main : Game
+public class Main : Microsoft.Xna.Framework.Game
 {
     public const string VERSION = "1.0v";
 

@@ -1,11 +1,9 @@
 using System;
-using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
 using Verse;
-using Verse.Rendering;
 using Verse.Simulation;
 
-namespace SurvivalGame.GameSrc.Simulation;
+namespace Game.Simulation;
 
 public class CameraMover : WorldComponent
 {
