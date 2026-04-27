@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using Luminix.Threading;
 
 namespace Luminix.Workspaces;
@@ -21,21 +22,46 @@ public sealed class Workspace
 
         public virtual void Initialize() {}
 
+        public virtual void Update() {}
+
         public override string ToString()
         {
             return $"Service {this.GetType().Name}";
         }
     }
 
-    public Workspace()
+    private Workspace() { }
+
+    private static ThreadLocal<Workspace> instance = new ThreadLocal<Workspace>(true);
+    public static Workspace Current => instance.Value;
+
+    public static Workspace Create()
     {
-        if(WorkerThread.CurrentThread == null)
-            throw new InvalidOperationException("Workspaces can be created only for WorkerThreads.");
+        var existing = instance.Value ?? WorkerThread.CurrentThread?.Workspace;
+        
+        if (existing != null)
+        {
+            instance.Value = existing;
+            Logger.Get().Wrn("Workspace already exists; returning existing instance.");
+            return existing;
+        }
 
-        WorkerThread.CurrentThread.AssignWorkspace(this);
+        try
+        {
+            var workspace = new Workspace();
+            
+            if (WorkerThread.CurrentThread != null)
+                WorkerThread.CurrentThread.AssignWorkspace(workspace);
+
+            instance.Value = workspace;
+            return workspace;
+        }
+        catch (Exception ex)
+        {
+            Logger.Get().Err($"Critical failure creating workspace: {ex.Message}");
+            return null; 
+        }
     }
-
-    public static Workspace Current => WorkerThread.CurrentThread.Workspace;
 
     private readonly Dictionary<Type, Service> services = new();
     private void AddService(Service service)

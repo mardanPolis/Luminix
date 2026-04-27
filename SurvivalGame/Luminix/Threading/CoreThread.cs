@@ -28,7 +28,7 @@ public sealed class CoreThread : WorkerThread
 
     protected sealed override void Initialize()
     {
-        var workspace = new Workspace();
+        Workspace.Create();
         universe = new Universe(out universeController);
         input = new Input();
     }
