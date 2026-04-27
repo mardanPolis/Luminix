@@ -7,7 +7,6 @@ using Microsoft.Xna.Framework.Input;
 using Verse.Bridges;
 using Verse.Collections;
 using Verse.Rendering;
-using Verse.Resources;
 using Verse.Threading;
 
 namespace Verse;
@@ -19,7 +18,7 @@ public class Main : Microsoft.Xna.Framework.Game
     {
         stopwatch = Stopwatch.StartNew();
         graphics = new GraphicsDeviceManager(this);
-        Content = new ContentManager(Services)
+        Content = new ResourceManager(Services)
         {
             RootDirectory = "Content"
         };

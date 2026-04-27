@@ -3,17 +3,17 @@ using System.IO;
 
 namespace Verse.IO;
 
-public struct LoadedAsset(LoadedAsset.Type type,  Stream assetStream, string assetName)
+internal struct LoadedAsset(string assetType,  Stream assetStream, string assetName)
 {
-    public enum Type
+    public static class GenericTypes
     {
-        Texture,
-        Audio,
-        Effect,
-        Font,
-    }
+        public const string Texture = "Texture";
+        public const string Effect = "Effect";
+        public const string Font = "Font";
+        public const string Audio = "Audio";
 
-    public readonly Type AssetType = type;
+    }
+    public readonly string AssetType = assetType;
     public readonly Stream AssetStream = assetStream;
     public readonly string AssetName = assetName;
 }

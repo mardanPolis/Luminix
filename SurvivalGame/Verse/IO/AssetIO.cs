@@ -6,78 +6,89 @@ using Verse.Workspaces;
 using SurvivalGame.Verse.Collections;
 namespace Verse.IO;
 
-public class AssetIO : Workspace.Service
+internal class AssetIO : Workspace.Service
 {
     private DenseList<string> loadedPaths = new DenseList<string>();
     private List<LoadedAsset> pendingAssets = new List<LoadedAsset>();
 
-    public void LoadTexture(string location)
+    public void Load(string path)
     {
-        if (string.IsNullOrEmpty(location))
-            throw new ArgumentNullException("location");
+        if (string.IsNullOrEmpty(path))
+            throw new ArgumentNullException(nameof(path));
 
-        string extension = Path.GetExtension(location).ToLower().Replace(".", "");
-        string fileName = Path.GetFileNameWithoutExtension(location);
+        string extension = Path.GetExtension(path).ToLower().Replace(".", "");
+        string fileName = Path.GetFileNameWithoutExtension(path);
+
+        if (string.IsNullOrEmpty(extension))
+        {
+            if(File.Exists(path))
+                return;
+            
+            string[] extensions = { "png", "jpg", "xnb", "jpeg", "package" };
+            for (int i = 0; i < extension.Length; i++) {
+                string fullPath = path + "." + extensions[i];
+                if (File.Exists(fullPath))
+                {
+                    extension = extensions[i];
+                    break;
+                }
+
+                if(i == extension.Length - 1)
+                {
+                    Logger.Get().Wrn($"Could not find {path} with any known extension.");
+                    return;
+                }
+            }
+        }
 
         try
         {
-            MemoryStream memoryStream = null;
-            switch (extension)
-            {
-                case "png":
-                    memoryStream = LoadTexture(location, "png");
-                    break;
-                case "jpg":
-                    memoryStream =  LoadTexture(location, "jpg");
-                    break;
-                case "jpeg":
-                    memoryStream =  LoadTexture(location, "jpeg");
-                    break;
-                case "xnb":
-                    memoryStream =  LoadTexture(location, "xnb");
-                    break;
-                case "asset":
-                    memoryStream =  LoadTextureAsset(location);
-                    break;
-                default:
-                    Logger.Get().Wrn($"Unsupported texture format: {extension} at {location}");
-                    return;
-            }
+            MemoryStream memoryStream;
+            string header;
 
-            pendingAssets.Add(new LoadedAsset(LoadedAsset.Type.Texture, memoryStream, fileName));
-            loadedPaths.Add(location);
+            if (string.IsNullOrEmpty(extension))
+                LoadStream(path, out memoryStream, out header);
+            else
+                LoadStream(path, extension, out memoryStream, out header);
+
+            pendingAssets.Add(new LoadedAsset(LoadedAsset.GenericTypes.Texture, memoryStream, fileName));
         }
         catch(Exception ex)
         {
-            Logger.Get().Err($"Failed to load texture at location: {location}, exception: {ex}");
+            Logger.Get().Err($"Failed to load asset at location: {path}, exception: {ex}");
         }
     }
 
-    private MemoryStream LoadTexture(string location, string fileType)
+    private void LoadStream(string location, string extension, out MemoryStream _stream, out string _header)
+    {
+        LoadStream(location + "." + extension, out _stream, out _header);
+    }
+
+    private void LoadStream(string location, out MemoryStream _stream, out string _header)
     {
         try
         {
-            using (FileStream fs = File.OpenRead(location + "." + fileType))
+            using (FileStream fs = File.OpenRead(location))
             {
-                MemoryStream ms = new MemoryStream();
-                fs.CopyTo(ms);
-                ms.Position = 0;
+                byte[] headerBytes = new byte[4];
+                int bytesRead = fs.Read(headerBytes, 0, 4);
                 
-                return ms;
+                _header = System.Text.Encoding.ASCII.GetString(headerBytes, 0, bytesRead).Trim();
+
+                fs.Position = 0;
+
+                _stream = new MemoryStream();
+                fs.CopyTo(_stream);
+                _stream.Position = 0;
             }
         }
         catch (Exception ex)
         {
-            Logger.Get().Err($"Failed to stream file, {location + "." + fileType}: {ex.Message}");
-            return null;
+            Logger.Get().Err($"Failed to stream file, {location}: {ex.Message}");
+            _header = null;
+            _stream = null;
         }
     }
-
-    private MemoryStream LoadTextureAsset(string location)
-    {
-        throw new NotImplementedException("LoadTextureAsset(string location)");
-    }
-
 
     internal LoadedAsset[] GetPendingAssets()
     {

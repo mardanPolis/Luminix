@@ -2,7 +2,7 @@ using System;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 
-namespace Verse.Resources;
+namespace Verse.Rendering;
 public class TextureRegion
 {
     public TextureRegion(Texture2D texture, int x, int y, int width, int height)

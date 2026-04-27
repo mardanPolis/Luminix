@@ -1,16 +1,15 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Audio;
 using Microsoft.Xna.Framework.Graphics;
 using Verse.Rendering;
 
-namespace Verse.Resources;
-public sealed class ContentManager : Microsoft.Xna.Framework.Content.ContentManager
+namespace Verse;
+public sealed class ResourceManager : Microsoft.Xna.Framework.Content.ContentManager
 {
-    public ContentManager(IServiceProvider serviceProvider) : base(serviceProvider)
+    public ResourceManager(IServiceProvider serviceProvider) : base(serviceProvider)
     {
         textureRegions = new Dictionary<string, TextureRegion>();
         textures = new Dictionary<string, Texture2D>();

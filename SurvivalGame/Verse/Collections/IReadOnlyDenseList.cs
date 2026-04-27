@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace SurvivalGame.Verse.Collections;
+namespace Verse.Collections;
 
 public interface IReadOnlyDenseList<T>
 {
