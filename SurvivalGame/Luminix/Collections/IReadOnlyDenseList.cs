@@ -1,17 +1,13 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 
 namespace Luminix.Collections;
 
-public interface IReadOnlyDenseList<T>
+public interface IReadOnlyDenseList<T> : IReadOnlyCollection<T>, IReadOnlyList<T>
 {
-    public int Count { get; }
-    public bool IsSynchronized { get; }
-    public object SyncRoot { get; }
-
-    public T this[int index] { get; }
-
     public bool Contains(T item);
+    public int IndexOf(T item);
 
     public Type GetValueType()
     {
