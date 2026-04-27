@@ -29,6 +29,5 @@
   <ItemGroup>
     <Folder Include="Content/bin/DesktopGL/Content/Effects/" />
     <Folder Include="Game/Core/" />
-    <Folder Include="Verse/Core/RegistryBuilders/" />
   </ItemGroup>
 </Project>

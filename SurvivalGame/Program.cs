@@ -1,8 +1,8 @@
 ﻿using System;
-using Verse;
-using Verse.Threading;
+using Luminix;
+using Luminix.Threading;
 
-using var engine = new Verse.Main();
+using var engine = new Luminix.Main();
 try
 {
     engine.Run();
@@ -14,6 +14,6 @@ catch(Exception ex)
         workerThread.Stop();
 }
 
-Verse.Logger[] loggers = Logger.GetAll();
+Luminix.Logger[] loggers = Logger.GetAll();
 foreach(var logger in loggers)
     logger.Flush();
