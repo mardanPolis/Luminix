@@ -7,7 +7,7 @@ using Microsoft.Xna.Framework.Graphics;
 using Luminix.Rendering;
 
 namespace Luminix;
-public sealed class ResourceManager : Microsoft.Xna.Framework.Content.ContentManager
+internal sealed class ResourceManager : Microsoft.Xna.Framework.Content.ContentManager
 {
     public ResourceManager(IServiceProvider serviceProvider) : base(serviceProvider)
     {
