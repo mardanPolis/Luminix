@@ -2,65 +2,79 @@ using System;
 using System.IO;
 using System.Collections.Generic;
 using Luminix.Collections;
-using Luminix.Workspaces;
+using System.Linq;
 namespace Luminix.IO;
 
-internal class AssetIO : Workspace.Service
+internal class AssetIO
 {
     private DenseList<string> loadedPaths = new DenseList<string>();
     private List<LoadedAsset> pendingAssets = new List<LoadedAsset>();
+
+    static readonly string[] allowedExtensions = { "png", "jpg", "xnb", "jpeg", "package" };
+    static readonly string formattedList = string.Join(", ", allowedExtensions.Select(ext => $"'{ext}'"));
+    static readonly HashSet<string> allowedExtensionsSet = allowedExtensions.ToHashSet();
+
+    private bool TryGetLoadablePath(string path, out string _path)
+    {
+        _path = path;
+
+        var extension = Path.GetExtension(path).ToLower().TrimStart('.') ?? "";
+
+        if (string.IsNullOrEmpty(extension)) // getting extension
+        {
+            string fullPath = "";
+            for (int i = 0; i < extension.Length; i++) {
+                fullPath = path + "." + allowedExtensions[i];
+                if (File.Exists(fullPath))
+                {
+                    _path = fullPath;
+                    return true;
+                }
+            }
+
+            Logger.Get().Err($"Could not find '{path}' with any known extension. Known extensions -> [{formattedList}] ");
+            _path = "";
+            return false;
+        }
+        else //validating extension
+        {
+            if (!allowedExtensionsSet.Contains(extension))
+            {
+                Logger.Get().Err($"Unsupported extension '.{extension}' for path: {path}");
+                return false;
+            }
+
+            if (!File.Exists(path))
+            {
+                Logger.Get().Err($"File not found: {path}");
+                return false;
+            }
+
+            
+            _path = path;
+            return true;
+        }
+    }
 
     public void Load(string path)
     {
         if (string.IsNullOrEmpty(path))
             throw new ArgumentNullException(nameof(path));
 
-        string extension = Path.GetExtension(path).ToLower().Replace(".", "");
+        if(!TryGetLoadablePath(path, out path))
+            return;
+
         string fileName = Path.GetFileNameWithoutExtension(path);
-
-        if (string.IsNullOrEmpty(extension))
-        {
-            if(File.Exists(path))
-                return;
-            
-            string[] extensions = { "png", "jpg", "xnb", "jpeg", "package" };
-            for (int i = 0; i < extension.Length; i++) {
-                string fullPath = path + "." + extensions[i];
-                if (File.Exists(fullPath))
-                {
-                    extension = extensions[i];
-                    break;
-                }
-
-                if(i == extension.Length - 1)
-                {
-                    Logger.Get().Wrn($"Could not find {path} with any known extension.");
-                    return;
-                }
-            }
-        }
 
         try
         {
-            MemoryStream memoryStream;
-            string header;
-
-            if (string.IsNullOrEmpty(extension))
-                LoadStream(path, out memoryStream, out header);
-            else
-                LoadStream(path, extension, out memoryStream, out header);
-
+            LoadStream(path, out MemoryStream memoryStream, out string header);
             pendingAssets.Add(new LoadedAsset(LoadedAsset.GenericTypes.Texture, memoryStream, fileName));
         }
         catch(Exception ex)
         {
             Logger.Get().Err($"Failed to load asset at location: {path}, exception: {ex}");
         }
-    }
-
-    private void LoadStream(string location, string extension, out MemoryStream _stream, out string _header)
-    {
-        LoadStream(location + "." + extension, out _stream, out _header);
     }
 
     private void LoadStream(string location, out MemoryStream _stream, out string _header)

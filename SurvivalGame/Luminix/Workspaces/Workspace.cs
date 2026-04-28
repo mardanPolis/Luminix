@@ -14,7 +14,7 @@ public sealed class Workspace
         public Service()
         {
             if(Workspace.Current == null)
-                throw new InvalidOperationException("Service cannot be initialized: No active Workspace found.");
+                throw new InvalidOperationException($"Workspace.Service of type '{GetType().Name}' cannot be created: No active Workspace found.");
 
             Workspace = Workspace.Current;
             Workspace.AddService(this);

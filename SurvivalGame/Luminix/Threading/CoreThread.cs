@@ -30,7 +30,7 @@ public sealed class CoreThread : WorkerThread
     {
         Workspace.Create();
         universe = new Universe(out universeController);
-        input = new Input();
+        input    = new Input();
     }
 
     protected sealed override void OnTick()
@@ -39,7 +39,7 @@ public sealed class CoreThread : WorkerThread
 
         input.ReadFrom(Bridges.RenderToCore.InputBridge);
 
-        GameTick();
+        Tick();
         Render();
     }
 
@@ -49,7 +49,7 @@ public sealed class CoreThread : WorkerThread
 
         input.ReadFrom(Bridges.RenderToCore.InputBridge);
 
-        GameTick();
+        Tick();
         long updateTime = CurrentElapsedTicks;
         Render();
         long renderTime = CurrentElapsedTicks;
@@ -62,7 +62,7 @@ public sealed class CoreThread : WorkerThread
         Interlocked.Exchange(ref tickRenderTime, elapsedRenderTime.TotalMicroseconds);
     }
 
-    private void GameTick()
+    private void Tick()
     {
         universeController.TickRate = TickRate;
         universeController.DeltaTime = UnsafeTickDeltaTime;

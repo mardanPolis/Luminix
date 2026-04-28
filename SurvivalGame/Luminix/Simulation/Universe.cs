@@ -45,7 +45,7 @@ public sealed class Universe : Workspace.Service
     public long TickCount { get; private set; }
     public double DeltaTime { get; private set; }
 
-    public Viewport Viewport { get; private set; }
+    public Viewport Viewport { get; private set; } // TO DO: create a way to get the viewport over the bridge
 
     //Renderers
 
