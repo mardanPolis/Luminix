@@ -26,8 +26,4 @@
     <PackageReference Include="MonoGame.Framework.DesktopGL" Version="3.8.*" />
     <PackageReference Include="MonoGame.Content.Builder.Task" Version="3.8.*" />
   </ItemGroup>
-  <ItemGroup>
-    <Folder Include="Content/bin/DesktopGL/Content/Effects/" />
-    <Folder Include="Game/Core/" />
-  </ItemGroup>
 </Project>
