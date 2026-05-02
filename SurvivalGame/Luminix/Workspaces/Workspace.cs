@@ -126,6 +126,7 @@ public sealed class Workspace
     internal void SetState(State value)
     {
         state = value;
+        subState = null;
     }
 
     public bool IsState(State value)
