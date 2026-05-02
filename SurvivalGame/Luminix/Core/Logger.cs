@@ -82,6 +82,14 @@ public sealed class Logger
     private readonly string logDir;
     private readonly List<Log> logs;
     
+    public Log[] Logs
+    {
+        get
+        {
+            return logs.ToArray();
+        }
+    }
+
     private string GetThreadLogPath()
     {
         string name = Thread.CurrentThread.Name;
@@ -139,20 +147,10 @@ public sealed class Logger
         logs.Clear();
     }
 
-
-    public Log[] Logs
-    {
-        get
-        {
-            return logs.ToArray();
-        }
-    }
-
     public static Logger Get()
     {
         return instance.Value;
     }
-
     public static Logger[] GetAll()
     {
         return instance.Values.ToArray();
