@@ -29,8 +29,25 @@ public sealed class Workspace
             return $"Service {this.GetType().Name}";
         }
     }
+    public enum State
+    {
+        Initialize,
+        Running,
+        Stopped,
+    }
 
-    private Workspace() { }
+    public static string GetStateString(State value)
+    {
+        switch(value)
+        {
+            case State.Running:
+                return "Running";
+            case State.Initialize:
+                return "Initialize";
+            default:
+                return "Stopped";
+        }
+    }
 
     private static ThreadLocal<Workspace> instance = new ThreadLocal<Workspace>(true);
     public static Workspace Current => instance.Value;
@@ -63,6 +80,22 @@ public sealed class Workspace
         }
     }
 
+    private Workspace() { }
+
+    private State state;
+    private string subState;
+
+    public string FullCurrentState
+    {
+        get
+        {
+            if(string.IsNullOrWhiteSpace(subState))
+                return GetStateString(state);
+
+            return GetStateString(state) + " | " + subState;
+        }
+    }
+    
     private readonly Dictionary<Type, Service> services = new();
     private void AddService(Service service)
     {
@@ -88,6 +121,34 @@ public sealed class Workspace
             throw new KeyNotFoundException($"Service of type {typeof(T).Name} is not registered.");
 
         return (T)service;
+    }
+
+    internal void SetState(State value)
+    {
+        state = value;
+    }
+
+    public bool IsState(State value)
+    {
+        return state == value;
+    }
+
+    public State GetState()
+    {
+        return state;
+    }
+
+    public void SetSubState(string value)
+    {
+        subState = value;
+    }
+    public bool IsSubState(string value)
+    {
+        return subState == value;
+    }
+    public string GetSubState()
+    {
+        return subState;
     }
 
     public override string ToString()
