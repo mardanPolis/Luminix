@@ -10,6 +10,15 @@ public readonly record struct ID : IEquatable<ID>
     {
         this.value = value;
     }
+    public static implicit operator ID(uint value) => new ID(value);
+
+    public static explicit operator ID(long value) => new ID((uint)value);
+    public static explicit operator ID(ulong value) => new ID((uint)value);
+
+    public static implicit operator uint(ID id) => id.Value;
+    public static implicit operator int(ID id) => (int)id.Value;
+    public static implicit operator long(ID id) => id.Value;
+    public static implicit operator ulong(ID id) => id.Value;
 
     public uint Value => value;
 
