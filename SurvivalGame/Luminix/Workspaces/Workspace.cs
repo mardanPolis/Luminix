@@ -70,6 +70,8 @@ public sealed class Workspace
             if (WorkerThread.CurrentThread != null)
                 WorkerThread.CurrentThread.AssignWorkspace(workspace);
 
+            workspace.SetState(Workspace.State.Initialize);
+
             instance.Value = workspace;
             return workspace;
         }

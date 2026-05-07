@@ -41,6 +41,16 @@ internal static class CoreToRender
 internal static class RenderToCore
 {
     internal static volatile bool WindowIsActive = false;
-    private readonly static InputBridge inputBridge = new InputBridge();
+
+    private static InputBridge inputBridge;
+    private static ResourceBridge resourceBridge;
+
     public static InputBridge InputBridge => inputBridge;
+    public static ResourceBridge ResourceBridge => resourceBridge;
+
+    public static void Initialize()
+    {
+        inputBridge = new InputBridge();
+        resourceBridge = new ResourceBridge();
+    }
 }

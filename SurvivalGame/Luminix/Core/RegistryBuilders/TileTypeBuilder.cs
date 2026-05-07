@@ -2,9 +2,8 @@ using System;
 using System.Collections.Generic;
 using SurvivalGame.Verse.Simulation;
 using Luminix.Identifiers;
-using Luminix.Resources;
 
-namespace Luminix.Core.RegistryBuilders;
+namespace Luminix.RegistryBuilders;
 
 public class TileTypeBuilder
 {

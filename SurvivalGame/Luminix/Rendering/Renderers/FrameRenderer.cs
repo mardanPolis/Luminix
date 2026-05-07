@@ -3,7 +3,6 @@ using System.Runtime.CompilerServices;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Luminix.Rendering.RenderItems;
-using Luminix.Resources;
 
 namespace Luminix.Rendering;
 
@@ -22,7 +21,7 @@ internal sealed class FrameRenderer
         VertexDeclaration IVertexType.VertexDeclaration => VertexDeclaration;
     }
 
-    public FrameRenderer(SpriteBatch spriteBatch, GraphicsDevice device)
+    public FrameRenderer(SpriteBatch spriteBatch, Main main)
     {
         this.spriteBatch = spriteBatch;
 
@@ -32,6 +31,9 @@ internal sealed class FrameRenderer
             new (new Vector3(1, 1, 0), Color.White, new Vector2(1, 1)),
             new (new Vector3(0, 1, 0), Color.White, new Vector2(0, 1))
         };
+        var device = main.GraphicsDevice;
+        var resourceManager = main.ResourceManager;
+
         quadBuffer = new VertexBuffer(device, typeof(VertexPositionColorTexture), 4, BufferUsage.WriteOnly);
         quadBuffer.SetData(vertices);
 
@@ -42,7 +44,7 @@ internal sealed class FrameRenderer
         instanceDataArray = new InstanceData[50000];
         instanceBuffer = new DynamicVertexBuffer(device, typeof(InstanceData), 50000, BufferUsage.WriteOnly);
 
-        instancingEffect = ResourceManager.GenericShader;
+        instancingEffect = resourceManager.;
 
         bindings =
         [

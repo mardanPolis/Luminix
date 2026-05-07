@@ -99,9 +99,11 @@ public sealed class Logger
         );
     }
 
-    internal static void Initialize()
+    internal static Logger Initialize()
     {
-        instance.Value = new Logger();
+        var logger = new Logger();
+        instance.Value = logger;
+        return logger;
     }
 
     private void Print(Log log)

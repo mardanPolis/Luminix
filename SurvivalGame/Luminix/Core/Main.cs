@@ -1,13 +1,16 @@
 using System;
 using System.Diagnostics;
 using System.Threading;
-using Game;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
+using Microsoft.Xna.Framework.Content;
+using Game;
 using Luminix.Bridges;
 using Luminix.Collections;
 using Luminix.Rendering;
 using Luminix.Threading;
+using Luminix.Workspaces;
+using Luminix.Core.InputHandlers;
 
 namespace Luminix;
 public class Main : Microsoft.Xna.Framework.Game
@@ -16,21 +19,12 @@ public class Main : Microsoft.Xna.Framework.Game
 
     public Main()
     {
-        stopwatch = Stopwatch.StartNew();
-        graphics = new GraphicsDeviceManager(this);
-        Content = new ResourceManager(Services)
-        {
-            RootDirectory = "Content"
-        };
+        Content = null;
         IsMouseVisible = true;
     }
 
-    private GraphicsDeviceManager graphics;
-
     private Thread mainThread = Thread.CurrentThread;
     private CoreThread coreThread = null;
-
-    private DenseList<Test> testList = new DenseList<Test>();
 
     private long startBytes = 0;
     private long allocated = 0;
@@ -40,6 +34,15 @@ public class Main : Microsoft.Xna.Framework.Game
     private GameTime time;
     private Logger logger;
 
+    private Workspace workspace;
+    private Resources resources;
+    private RenderingSystem renderingSystem;
+
+    private ResourceManager resourceManager;
+    private GraphicsDeviceManager graphics;
+
+    private InputHandler inputHandler;
+
     public double FrameTime => frameTime;
     public double FrameDeltaTime => time != null ? time.ElapsedGameTime.TotalSeconds : 0;
     public double FPS => FrameDeltaTime > 0 ? 1.0 / FrameDeltaTime : double.MaxValue;
@@ -48,88 +51,93 @@ public class Main : Microsoft.Xna.Framework.Game
 
     public GameTime GameTime => time;
 
-    private int mousePosition = 0; // X, Y
-    private byte mouseButtonStates = 0; 
-    private long mouseScrollPositions = 0; // vX, vY, hX, hY
+    public new ContentManager Content
+    {
+        init => base.Content = value;
+    }
 
-    private long[] prevKeyboardStates = new long[4];
-    private long[] currKeyboardStates = new long[4];
+    public Resources Resources => resources;
+    internal ResourceManager ResourceManager => resourceManager;
+    internal GraphicsDeviceManager GraphicsDeviceManager => graphics;
 
     protected override void Initialize()
     {
+        stopwatch = Stopwatch.StartNew();
+        startBytes = GC.GetAllocatedBytesForCurrentThread();
+        
+        logger = Logger.Initialize();
+        logger.Log($"Started initialization");
+
         try
         {
-            startBytes = GC.GetAllocatedBytesForCurrentThread();
-            
-            Logger.Initialize();
+            //workspace
+            workspace = Workspace.Create();
 
-            logger = Logger.Get();
-            logger.Log($"Started: Initialize");
+            //services
+            graphics = new GraphicsDeviceManager(this);
+            resourceManager = new ResourceManager(this);
 
-            mainThread.Priority = ThreadPriority.AboveNormal;
-            mainThread.Name = "RenderThread";
-            
+            //threads
             coreThread = new CoreThread();
-            coreThread.Priority = ThreadPriority.AboveNormal;
+
+            //systems
+            renderingSystem = new RenderingSystem(this);
+
+            //handlers
+            inputHandler = new InputHandler();
 
             //initialize thread bridges
             CoreToRender.Initialize();
+            RenderToCore.Initialize();
 
-            RenderingSystem.Initialize(this, graphics);
+            //threads
+            mainThread.Priority = ThreadPriority.Highest;
+            mainThread.Name = "RenderThread";
 
+            coreThread.Priority = ThreadPriority.Highest;
+
+            //base initialization
             base.Initialize();
 
-            logger.Log($"Successful: Initialize");
+            //Renderer initialization   
+            renderingSystem.Initialize();
+
+            TargetElapsedTime = TimeSpan.FromSeconds(1d / 30d);
+            IsFixedTimeStep = true;
+
+            //starting threads
+            coreThread.Start();
+
         }
         catch
         {
-            Logger.Get().Err($"Exception happened during 'Initialize'");
+            Logger.Get().Err($"Exception happened during initialization");
             throw;
         }
 
-        ProcessThreadCollection currentThreads = Process.GetCurrentProcess().Threads;
-
-        foreach (ProcessThread thread in currentThreads)
-            Console.WriteLine($"Thread ID: {thread.Id} | State: {thread.ThreadState}");
-
+        logger.Log($"Successful initialization");
+        
         long endBytes = GC.GetAllocatedBytesForCurrentThread();
         allocated = endBytes - startBytes;
 
-        logger.Log($"Game fully initialized in {stopwatch.Elapsed.Milliseconds}ms");
+        logger.Log($"Game initialized in {stopwatch.Elapsed.Milliseconds}ms");
         logger.Log($"Game allocated {allocated} bytes during initialization!");
+
+        workspace.SetState(Workspace.State.Running);
     }
-
-    protected override void LoadContent()
-    {
-        try
-        {
-            logger.Log($"Started: LoadContent");
-
-            int assetLoadStart = stopwatch.Elapsed.Milliseconds;
-
-            logger.Log($"Loaded Game assets in {stopwatch.Elapsed.Milliseconds - assetLoadStart}ms");
-            logger.Log($"Successful: LoadContent");
-            base.LoadContent();
-        }
-        catch
-        {
-            Logger.Get().Err($"Exception happened during 'LoadContent'");
-            throw;
-        }
-    }
-
     protected override void Update(GameTime gameTime)
     {
         stopwatch.Restart();
         startBytes = GC.GetAllocatedBytesForCurrentThread();
 
-        HandleInput();
+        inputHandler.Update(IsActive);
+        RenderToCore.WindowIsActive = IsActive;
 
         base.Update(gameTime);
     }
     protected override void Draw(GameTime gameTime)
     {
-        RenderingSystem.DrawFrame(coreThread.PartialTick);
+        renderingSystem.DrawFrame(coreThread.PartialTick);
         base.Draw(gameTime);
 
         frameTime = stopwatch.Elapsed.TotalNanoseconds;
@@ -142,124 +150,5 @@ public class Main : Microsoft.Xna.Framework.Game
     {
         coreThread.Stop();
         //save current world
-    }
-
-    private void HandleInput()
-    {
-        if(IsActive)
-        {
-            HandleKeyboardInput();
-            HandleMouseInput();
-            RenderToCore.InputBridge.Write(currKeyboardStates, mousePosition, mouseButtonStates);
-        }
-        else
-        {
-            Array.Clear(currKeyboardStates, 0, 4);
-
-            var mouseState = Mouse.GetState();
-            mousePosition = (mouseState.X << 16) | mouseState.Y; 
-            RenderToCore.InputBridge.Write(currKeyboardStates, mousePosition, 0);
-        }
-
-        RenderToCore.WindowIsActive = IsActive;
-    }
-
-    private void HandleKeyboardInput()
-    {
-        Array.Copy(currKeyboardStates, prevKeyboardStates, 4);
-        Array.Clear(currKeyboardStates, 0, 4);
-
-        var keyboardState = Keyboard.GetState();
-        
-        if(keyboardState.GetPressedKeyCount() > 0)
-        {
-            for (int i = 0; i < 256; i++)
-            {
-                if (keyboardState.IsKeyDown((Keys)i))
-                {
-                    currKeyboardStates[i >> 6] |= 1L << (i & 63);
-                }
-            }
-        }
-
-        for (int i = 0; i < 4; i++)
-        {
-            long current = currKeyboardStates[i];
-            long previous = prevKeyboardStates[i];
-            
-            long changed = current ^ previous;
-            if (changed == 0) continue;
-
-            long pressed = changed & current;
-            long released = changed & previous;
-
-            if (pressed != 0) DispatchEvents(i, pressed, true);
-            if (released != 0) DispatchEvents(i, released, false);
-        }
-
-    }
-
-    private void DispatchEvents(int chunkIndex, long mask, bool isDown)
-    {
-        int offset = chunkIndex << 6;
-        for (int bit = 0; bit < 64; bit++)
-        {
-            if ((mask & (1L << bit)) != 0)
-            {
-                Keys key = (Keys)(offset | bit);
-                if (isDown) RenderToCore.InputBridge.PressKeyEvent(key);
-                else RenderToCore.InputBridge.ReleaseKeyEvent(key);
-            }
-        }
-    }
-
-    private void HandleMouseInput()
-    {
-        var mouseState = Mouse.GetState();
-
-        //position
-        short mouseX = (short)mouseState.X;
-        short mouseY = (short)mouseState.Y;
-
-        int currMousePosition = (mouseX << 16) | (int)mouseY;
-
-        //mouseButtons
-
-        byte currMouseButtonStates = 0;
-
-        if (mouseState.LeftButton == ButtonState.Pressed) currMouseButtonStates = 1;
-        if (mouseState.RightButton == ButtonState.Pressed) currMouseButtonStates |= 2;
-        if (mouseState.MiddleButton == ButtonState.Pressed) currMouseButtonStates |= 4; 
-        if (mouseState.XButton1 == ButtonState.Pressed) currMouseButtonStates |= 8;
-        if (mouseState.XButton2 == ButtonState.Pressed) currMouseButtonStates |= 16;
-
-        int changedButtons = currMouseButtonStates ^ mouseButtonStates;
-
-        if (changedButtons != 0)
-        {
-            short X = (short)mouseState.X;
-            short Y = (short)mouseState.Y;
-
-            for (byte i = 0; i < 5; i++)
-            {
-                int mask = 1 << i;
-                if ((changedButtons & mask) != 0)
-                {
-                    bool isDown = (currMouseButtonStates & mask) == 0;
-                    DispatchMouseEvent(i, X, Y, isDown);
-                }
-            }
-        }
-
-        mousePosition = currMousePosition;
-        mouseButtonStates = currMouseButtonStates;
-    }
-
-    private void DispatchMouseEvent(byte button, short X, short Y, bool down)
-    {
-        if(down)
-            RenderToCore.InputBridge.ReleaseButtonEvent(button, X, Y);
-        else
-            RenderToCore.InputBridge.PressButtonEvent(button, X, Y);
     }
 }

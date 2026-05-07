@@ -4,32 +4,39 @@ using System.Threading;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Luminix.Bridges;
+using Luminix.Workspaces;
 
 namespace Luminix.Rendering;
 
-internal static class RenderingSystem
+internal sealed class RenderingSystem
 {
-    private static Main main;
-    private static FrameRenderer frameRenderer;
-    private static GraphicsDeviceManager graphics;
+    private Main main;
+    private FrameRenderer frameRenderer;
+    private GraphicsDeviceManager graphics;
 
-    private static RenderStack readStack; // the stack currently used to draw frames
+    private RenderStack readStack; // the stack currently used to draw frames
 
-    private static ulong frameCount = 0;
-    private static long drawCount = 0;
+    private ulong frameCount = 0;
+    private long drawCount = 0;
 
-    public static GraphicsDeviceManager GraphicsDeviceManager => graphics;
-    public static GraphicsDevice GraphicsDevice => graphics.GraphicsDevice;
-    public static ulong FrameCount => Interlocked.Read(ref frameCount);
-    public static long DrawCount => Interlocked.Read(ref drawCount);
+    public GraphicsDeviceManager GraphicsDeviceManager => graphics;
+    public GraphicsDevice GraphicsDevice => graphics.GraphicsDevice;
+    public ulong FrameCount => Interlocked.Read(ref frameCount);
+    public long DrawCount => Interlocked.Read(ref drawCount);
 
-    private static List<DebugRenderer> debugRenderers;
+    private List<DebugRenderer> debugRenderers;
 
-    public static void Initialize(Main main, GraphicsDeviceManager graphics)
+    public RenderingSystem(Main main)
     {
-        RenderingSystem.main = main;
-        RenderingSystem.graphics = graphics;
+        ArgumentNullException.ThrowIfNull(main);
+        ArgumentNullException.ThrowIfNull(main.GraphicsDeviceManager);
 
+        this.main = main;
+        this.graphics = main.GraphicsDeviceManager;
+    }
+
+    public void Initialize()
+    {
         graphics.PreferredBackBufferWidth = 1920;
         graphics.PreferredBackBufferHeight = 1080;
         graphics.IsFullScreen = false;
@@ -37,20 +44,17 @@ internal static class RenderingSystem
         ApplyChanges();
 
         readStack = CoreToRender.Read();
-    }
 
-    public static void InitializeRenderers(bool isDebug)
-    {
         var spriteBatch = new SpriteBatch(graphics.GraphicsDevice, 10000);
-        frameRenderer = new FrameRenderer(spriteBatch, graphics.GraphicsDevice);
+        frameRenderer = new FrameRenderer(spriteBatch, main);
 
-        if (isDebug)
+        if (Settings.Debug)
         {
             
         }
     }
 
-    public static void DrawFrame(float partialTick)
+    public void DrawFrame(float partialTick)
     {
         if (CoreToRender.PendingStack)
             readStack = CoreToRender.Read();
@@ -67,7 +71,7 @@ internal static class RenderingSystem
         Interlocked.Exchange(ref drawCount, GraphicsDevice.Metrics.DrawCount);
     }
 
-    public static void ToggleVSync(bool? state = null)
+    public void ToggleVSync(bool? state = null)
     {
         if (graphics == null) return;
 
@@ -75,7 +79,7 @@ internal static class RenderingSystem
         graphics.ApplyChanges();
     }
 
-    public static void ApplyChanges()
+    public void ApplyChanges()
     {
         if(graphics.SynchronizeWithVerticalRetrace)
         {

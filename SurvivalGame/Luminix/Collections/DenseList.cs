@@ -40,7 +40,11 @@ public sealed class DenseList<T> : ICollection<T>, IEnumerable<T>, IList<T>, IRe
             if (index < 0 || index >= count)
                 throw new IndexOutOfRangeException($"Index {index} is out of range for DenseList<{typeof(T).Name}> with count {count}.");
 
+            var oldItem = items[index];
+            indexMap.Remove(oldItem);
+            
             items[index] = value;
+            indexMap[value] = index;
         }
     }
     

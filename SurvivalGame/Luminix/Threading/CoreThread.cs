@@ -23,14 +23,18 @@ public sealed class CoreThread : WorkerThread
     public double TickRenderTime => Volatile.Read(ref tickRenderTime);
 
     private Universe universe;
+    private Resources resources;
+    private TypeRegistry typeRegistry;
     private Universe.Controller universeController;
     private Input input;
 
     protected sealed override void Initialize()
     {
         Workspace.Create();
-        universe = new Universe(out universeController);
-        input    = new Input();
+        typeRegistry = new TypeRegistry();
+        resources = new Resources();
+        universe  = new Universe(out universeController);
+        input     = new Input();
     }
 
     protected sealed override void OnTick()

@@ -1,10 +1,11 @@
 using System;
 using System.Collections.Generic;
-using Luminix.Core.RegistryBuilders;
+using Luminix.RegistryBuilders;
+using Luminix.Workspaces;
 
-namespace Luminix.Core;
+namespace Luminix;
 
-public sealed class TypeRegistry
+public sealed class TypeRegistry : Workspace.Service
 {
     private bool finalized;
     private Dictionary<string, TileTypeBuilder> tileTypeBuilders = new();

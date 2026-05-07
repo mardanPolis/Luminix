@@ -1,7 +1,6 @@
 using System;
 
-namespace SurvivalGame.Game.Core;
-
+namespace SurvivalGame;
 public class Main
 {
     
