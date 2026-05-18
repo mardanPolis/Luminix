@@ -23,14 +23,7 @@ public sealed class WorkerThread : BaseThread
     public BlockingCollection<Action> InternalTasks => internalWork;
 
     private readonly WorkerThreadPool pool;
-
-    public WorkerThreadPool Pool
-    {
-        get
-        {
-            return pool;
-        }
-    }
+    public WorkerThreadPool Pool => pool;
 
     public void Do(Action work)
     {

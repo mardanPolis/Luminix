@@ -31,6 +31,7 @@ public sealed class CoreThread : TickedThread
     private TypeRegistry typeRegistry;
     private Universe.Controller universeController;
     private Input input;
+    private WorkerThreadPool workerThreadPool;
 
     protected sealed override void Initialize()
     {
@@ -39,6 +40,7 @@ public sealed class CoreThread : TickedThread
         resources = new Resources();
         universe  = new Universe(out universeController);
         input     = new Input();
+        workerThreadPool = new WorkerThreadPool(workerThreadCount);
 
         //TO DO: add mod loading.
 

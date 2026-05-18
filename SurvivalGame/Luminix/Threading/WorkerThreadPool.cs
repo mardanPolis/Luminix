@@ -1,10 +1,11 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using Luminix.Workspaces;
 
 namespace Luminix.Threading;
 
-public sealed class WorkerThreadPool
+public sealed class WorkerThreadPool : Workspace.Service
 {
     public WorkerThreadPool(int workerThreadCount)
     {
@@ -20,7 +21,7 @@ public sealed class WorkerThreadPool
     public int WorkerThreadCount => workerThreadCount;
     public IReadOnlyList<WorkerThread> WorkerThreads => workerThreads;
 
-    public void Initialize()
+    public override void Initialize()
     {
         workerThreads = new List<WorkerThread>(workerThreadCount);
         for (int i = 0; i < workerThreadCount; i++)
