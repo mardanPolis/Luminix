@@ -6,10 +6,9 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Luminix.Collections;
 using Luminix.Identifiers;
-using System.Linq;
 
 namespace Luminix;
-internal sealed class ResourceManager : Microsoft.Xna.Framework.Content.ContentManager
+public sealed class ResourceManager : Microsoft.Xna.Framework.Content.ContentManager
 {
     public struct TextureRegion
     {
@@ -104,22 +103,7 @@ internal sealed class ResourceManager : Microsoft.Xna.Framework.Content.ContentM
 
             sourcesStrings[name] = new SourceTexture(name, texture);
         }
-        public void RemSource(string name)
-        {
-            ArgumentNullException.ThrowIfNullOrWhiteSpace(name, nameof(name));
-
-            if(!sourcesStrings.ContainsKey(name))
-                return;
-
-            var source = sourcesStrings[name];
-            for (int i = 0; i < source.Regions.Count; i++)
-                Remove(source.Regions[i]);
-
-            sourcesStrings.Remove(name);
-            sourceTextures.Remove(source.Texture);
-        }
-
-        public ID Append(Texture2D texture, int x, int y, int width, int height)
+        public ID NewRegion(Texture2D texture, int x, int y, int width, int height)
         {
             if(texture == null) throw new ArgumentNullException(nameof(texture));
             if(!sourceTextures.TryGetValue(texture, out SourceTexture sourceTexture)) throw new ArgumentException("The provided texture is not registered as a source texture.", nameof(texture));
@@ -153,7 +137,22 @@ internal sealed class ResourceManager : Microsoft.Xna.Framework.Content.ContentM
             return id;
         }
 
-        public void Remove(ID id)
+        public bool Remove(string name)
+        {
+            ArgumentNullException.ThrowIfNullOrWhiteSpace(name, nameof(name));
+
+            if(!sourcesStrings.ContainsKey(name))
+                return false;
+
+            var source = sourcesStrings[name];
+            for (int i = 0; i < source.Regions.Count; i++)
+                Remove(source.Regions[i]);
+
+            sourcesStrings.Remove(name);
+            sourceTextures.Remove(source.Texture);
+            return true;
+        }
+        private void Remove(ID id)
         {
             int idx = id;
             if (idx < 0 || idx >= data.Length || !slotStatus[idx])
@@ -175,30 +174,11 @@ internal sealed class ResourceManager : Microsoft.Xna.Framework.Content.ContentM
         }
     }
 
-    public static bool HeaderIsXNB(byte[] header)
-    {
-        return header[0] == 'X' && header[1] == 'N' && header[2] == 'B';
-    }
-    public static bool HeaderIsTexture(byte[] header)
-    {
-        return (header[0] == 0x89 && header[1] == 0x50 && header[2] == 0x4E && header[3] == 0x47) ||
-            (header[0] == 0xFF && header[1] == 0xD8 && header[2] == 0xFF);
-    }
-    public static bool HeaderIsAudio(byte[] header)
-    {
-        return header[0] == 'R' && header[1] == 'I' && header[2] == 'F' && header[3] == 'F';
-    }
-    public static bool HeaderIsSong(byte[] header)
-    {
-        return (header[0] == 0x49 && header[1] == 0x44 && header[2] == 0x33) ||
-            (header[0] == 0x4F && header[1] == 0x67 && header[2] == 0x67 && header[3] == 0x53);
-    }
-
-    public ResourceManager(Main main) : base(main.Services)
+    internal ResourceManager(Main main) : base(main.Services)
     {
         resources = new Dictionary<string, Resource>();
 
-        RootDirectory = "Assets";
+        RootDirectory = null;
 
         MethodInfo method = typeof(Microsoft.Xna.Framework.Content.ContentManager).GetMethod("RecordDisposable", BindingFlags.Instance | BindingFlags.NonPublic) ??
          throw new InvalidOperationException("Could not find method RecordDisposable on ContentManager.");
@@ -213,14 +193,13 @@ internal sealed class ResourceManager : Microsoft.Xna.Framework.Content.ContentM
     private Main main;
     private GraphicsDevice graphicsDevice;
 
+    private Stream openedStream = null; 
+    private bool disposed = false;
+
     private readonly Dictionary<string, Resource> resources;
     private readonly Textures engineTextures;
     private readonly FreeList<Effect> effects;
     private readonly FreeList<SpriteFont> fonts;
-
-    private Stream openedStream = null; 
-
-    private bool disposed = false;
 
     public void CreateTexture(string name, Color[] colors, Vector2 scale)
     {
@@ -239,7 +218,60 @@ internal sealed class ResourceManager : Microsoft.Xna.Framework.Content.ContentM
         ArgumentNullException.ThrowIfNullOrWhiteSpace(name, nameof(name));
         ArgumentNullException.ThrowIfNullOrWhiteSpace(textureName, nameof(textureName));
 
-        throw new NotImplementedException("Creating texture regions is not yet implemented.");
+        Texture2D texture = engineTextures[textureName];
+        if(texture == null)
+            throw new ArgumentException($"No source texture with the name '{textureName}' exists.", nameof(textureName));
+
+        ID id = engineTextures.NewRegion(texture, (int)position.X, (int)position.Y, (int)scale.X, (int)scale.Y);
+        TextureResource resource = new TextureResource(name, id, (int)scale.X, (int)scale.Y);
+        resources[name] = resource;
+    }
+
+    public void Create<T>(string name, Stream stream)
+    {
+        ArgumentNullException.ThrowIfNullOrWhiteSpace(name, nameof(name));
+        ArgumentNullException.ThrowIfNull(stream, nameof(stream));
+        
+        if (disposed)
+            throw new ObjectDisposedException("ResourceManager");
+
+        if (resources.ContainsKey(name))
+            throw new ArgumentException($"A resource with the name '{name}' already exists.", nameof(name));
+
+        try
+        {
+            openedStream = stream;
+            T asset = ReadAsset<T>(name, null);
+
+            Resource resource = null;
+            if (asset is Texture2D texture)
+            {
+                engineTextures.NewSource(name, texture);
+                ID regionID = engineTextures.NewRegion(texture, 0, 0, texture.Width, texture.Height);
+                resource = new TextureResource(name, regionID, texture.Width, texture.Height);
+            }
+            else if (asset is Effect effect)
+            {
+                ID id = effects.Add(effect);
+                resource = new ShaderResource(name, id);
+            }
+            else if (asset is SpriteFont font)
+            {
+                ID id = fonts.Add(font);
+                resource = new FontResource(name, id);
+            }
+            else
+            {
+                throw new NotSupportedException($"Asset type '{typeof(T)}' is not supported by ResourceManager.");
+            }
+
+            resources[name] = resource;
+        }
+        finally
+        {
+            openedStream = null;
+        }
+
     }
 
     protected sealed override Stream OpenStream(string name)
@@ -261,11 +293,11 @@ internal sealed class ResourceManager : Microsoft.Xna.Framework.Content.ContentM
 
         if (disposed)
         {
-            throw new ObjectDisposedException("ContentManager");
+            throw new ObjectDisposedException("ResourceManager");
         }
 
         resources.Remove(name);
-        engineTextures.RemSource(name);
+        engineTextures.Remove(name);
 
         base.UnloadAsset(name);
 
@@ -285,6 +317,8 @@ internal sealed class ResourceManager : Microsoft.Xna.Framework.Content.ContentM
         disposed = true;
     }
 }
+        
+        
         // NullTexture = LoadTexture("null_texture.png");
         // NullTextureRegion = NewTextureRegion("null_texture", "null_texture.png", 0, 0, 32, 32);
 

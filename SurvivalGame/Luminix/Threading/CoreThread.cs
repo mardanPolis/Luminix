@@ -4,16 +4,18 @@ using System.Threading;
 using Luminix.Simulation;
 using Luminix.Rendering;
 using Luminix.Workspaces;
+using SurvivalGame.Luminix.IO;
 
 namespace Luminix.Threading;
 
-public sealed class CoreThread : WorkerThread
+public sealed class CoreThread : TickedThread
 {
-    internal CoreThread() : base(20)
+    internal CoreThread(int workerThreadCount) : base(20)
     {   
 
         this.Name = "CoreThread";
         this.IsBackground = false;
+        this.workerThreadCount = workerThreadCount;
     }
 
     private double tickUpdateTime = 0;
@@ -21,6 +23,8 @@ public sealed class CoreThread : WorkerThread
 
     public double TickUpdateTime => Volatile.Read(ref tickUpdateTime);
     public double TickRenderTime => Volatile.Read(ref tickRenderTime);
+
+    private int workerThreadCount;
 
     private Universe universe;
     private Resources resources;
@@ -35,24 +39,31 @@ public sealed class CoreThread : WorkerThread
         resources = new Resources();
         universe  = new Universe(out universeController);
         input     = new Input();
+
+        //TO DO: add mod loading.
+
+        AssetIO assetIO = new AssetIO();
+        //multithreaded
+        //first load all boot assets multithreaded, give them all to the render thread, wait, receive resource handles.
+        //then load the rest of the assets, giving them to the render thread. multithreaded. BootRender should only called once a asset stream is received from worker thread or created in this thread.
+        //load boot assets, no rendering
+
+        //load assets
+        foreach (var entry in assetIO.LoadAssets())
+        {
+
+            BootRender();
+        }
     }
 
     protected sealed override void OnTick()
     {
-        Bridges.CoreToRender.Swap();
-
-        input.ReadFrom(Bridges.RenderToCore.InputBridge);
-
         Tick();
         Render();
     }
 
     protected sealed override void OnDebugTick()
     {
-        Bridges.CoreToRender.Swap();
-
-        input.ReadFrom(Bridges.RenderToCore.InputBridge);
-
         Tick();
         long updateTime = CurrentElapsedTicks;
         Render();
@@ -68,6 +79,10 @@ public sealed class CoreThread : WorkerThread
 
     private void Tick()
     {
+        Bridges.CoreToRender.RenderBridge.Swap();
+
+        input.ReadFrom(Bridges.RenderToCore.InputBridge);
+
         universeController.TickRate = TickRate;
         universeController.DeltaTime = UnsafeTickDeltaTime;
         universeController.TickCount = UnsafeTickCount;
@@ -78,6 +93,11 @@ public sealed class CoreThread : WorkerThread
     private void Render()
     {
         Optimize(TickIntervalInTicks, CurrentElapsedTicks);
+    }
+
+    private void BootRender()
+    {
+        
     }
 
     private void Optimize(long maxTime, long time)

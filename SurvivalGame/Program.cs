@@ -10,8 +10,8 @@ try
 catch(Exception ex)
 {
     Logger.Get().Err(ex);
-    foreach(var workerThread in WorkerThread.Threads)
-        workerThread.Stop();
+    foreach(var threads in BaseThread.Threads)
+        threads.Stop();
 }
 
 Luminix.Logger[] loggers = Logger.GetAll();

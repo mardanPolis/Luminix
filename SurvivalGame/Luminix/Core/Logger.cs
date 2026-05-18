@@ -105,6 +105,15 @@ public sealed class Logger
         instance.Value = logger;
         return logger;
     }
+    internal static void Shutdown()
+    {
+        var logger = instance.Value;
+        if(logger != null)
+        {
+            logger.Flush();
+            instance.Value = null;
+        }
+    }
 
     private void Print(Log log)
     {

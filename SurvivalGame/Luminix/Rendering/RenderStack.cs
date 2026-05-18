@@ -6,7 +6,7 @@ using System.Collections.Generic;
 
 namespace Luminix.Rendering;
 
-public sealed class RenderStack(ID iD)
+public sealed class RenderBuffer(ID iD)
 {
     internal record struct CameraData(Vector2 Position0, Vector2 Position, float OrthographicSize0, float OrthographicSize)
     {
@@ -149,7 +149,6 @@ public sealed class RenderStack(ID iD)
     }
 
     //TO DO: implement ToggleTileMap method.
-
 
     // internal void Optimize()
     // {

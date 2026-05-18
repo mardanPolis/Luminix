@@ -2,7 +2,6 @@ using System;
 using System.Runtime.CompilerServices;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using Luminix.Rendering.RenderItems;
 
 namespace Luminix.Rendering;
 
@@ -44,8 +43,6 @@ internal sealed class FrameRenderer
         instanceDataArray = new InstanceData[50000];
         instanceBuffer = new DynamicVertexBuffer(device, typeof(InstanceData), 50000, BufferUsage.WriteOnly);
 
-        instancingEffect = resourceManager.;
-
         bindings =
         [
             new VertexBufferBinding(quadBuffer),
@@ -58,7 +55,6 @@ internal sealed class FrameRenderer
     private DynamicVertexBuffer instanceBuffer;
     private VertexBuffer quadBuffer;
     private IndexBuffer indexBuffer;
-    private Effect instancingEffect;
     private VertexBufferBinding[] bindings;
     private InstanceData[] instanceDataArray;
 
@@ -69,7 +65,7 @@ internal sealed class FrameRenderer
     private Matrix projection;
 
     private SpriteBatch spriteBatch;
-    public void RenderFrame(RenderStack renderStack, Viewport viewport, float partialTick)
+    public void RenderFrame(RenderBuffer renderStack, Viewport viewport, float partialTick)
     {
         if (viewport.Width != lastViewport.Width || viewport.Height != lastViewport.Height)
         {
@@ -89,7 +85,7 @@ internal sealed class FrameRenderer
         Render(renderStack, viewMatrix * projection);
     }
 
-    private void Render(RenderStack renderStack, Matrix matrixTransform)
+    private void Render(RenderBuffer renderStack, Matrix matrixTransform)
     {
         int i = 0;
         int count = 0;
@@ -97,7 +93,7 @@ internal sealed class FrameRenderer
 
         try
         {
-            instancingEffect.Parameters["MatrixTransform"].SetValue(matrixTransform);
+            //instancingEffect.Parameters["MatrixTransform"].SetValue(matrixTransform);
 
             // var spritesBatch = renderStack.SpriteBatchRenderItemStack;
             // var spritesBatchDataSet = spritesBatch.DataSet;
@@ -153,7 +149,7 @@ internal sealed class FrameRenderer
             throw;
         }
     }
-    private void Flush(ref int currentInstanceCount)
+    private void Flush(Effect effect, ref int currentInstanceCount)
     {
         if (currentInstanceCount == 0) return;
 
@@ -162,7 +158,7 @@ internal sealed class FrameRenderer
         device.Indices = indexBuffer;
         device.SetVertexBuffers(bindings);
 
-        foreach (var pass in instancingEffect.CurrentTechnique.Passes)
+        foreach (var pass in effect.CurrentTechnique.Passes)
         {
             pass.Apply();
             device.DrawInstancedPrimitives(PrimitiveType.TriangleList, 0, 0, 2, currentInstanceCount);

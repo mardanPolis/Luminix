@@ -14,7 +14,7 @@ internal sealed class RenderingSystem
     private FrameRenderer frameRenderer;
     private GraphicsDeviceManager graphics;
 
-    private RenderStack readStack; // the stack currently used to draw frames
+    private RenderBuffer readStack; // the stack currently used to draw frames
 
     private ulong frameCount = 0;
     private long drawCount = 0;
@@ -43,7 +43,7 @@ internal sealed class RenderingSystem
         ToggleVSync(false);
         ApplyChanges();
 
-        readStack = CoreToRender.Read();
+        readStack = CoreToRender.RenderBridge.Read();
 
         var spriteBatch = new SpriteBatch(graphics.GraphicsDevice, 10000);
         frameRenderer = new FrameRenderer(spriteBatch, main);
@@ -56,8 +56,8 @@ internal sealed class RenderingSystem
 
     public void DrawFrame(float partialTick)
     {
-        if (CoreToRender.PendingStack)
-            readStack = CoreToRender.Read();
+        if (CoreToRender.RenderBridge.PendingStack)
+            readStack = CoreToRender.RenderBridge.Read();
 
         partialTick = Math.Clamp(partialTick, 0f, 1f);
 

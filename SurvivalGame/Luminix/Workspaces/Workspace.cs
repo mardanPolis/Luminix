@@ -54,7 +54,7 @@ public sealed class Workspace
 
     public static Workspace Create()
     {
-        var existing = instance.Value ?? WorkerThread.CurrentThread?.Workspace;
+        var existing = instance.Value;
         
         if (existing != null)
         {
@@ -67,9 +67,6 @@ public sealed class Workspace
         {
             var workspace = new Workspace();
             
-            if (WorkerThread.CurrentThread != null)
-                WorkerThread.CurrentThread.AssignWorkspace(workspace);
-
             workspace.SetState(Workspace.State.Initialize);
 
             instance.Value = workspace;
@@ -156,6 +153,6 @@ public sealed class Workspace
 
     public override string ToString()
     {
-        return $"{WorkerThread.CurrentThread.Name} workspace";
+        return $"{TickedThread.CurrentThread.Name} workspace";
     }
 }

@@ -6,6 +6,7 @@
         "Lerp",
         "Luminix",
         "mgstats",
+        "Rasterizer",
         "Renderable",
         "renderables"
     ]
