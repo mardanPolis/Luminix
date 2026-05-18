@@ -14,21 +14,26 @@ public static class Settings
                 throw new ArgumentException("Cant create a Settings.Controller, settings class is already initialized!");
         }
 
-        public bool Debug { set => Settings.Debug = value; }
-        public int PixelsPerUnit { set => Settings.PixelsPerUnit = value; }
-        public int MaxWorkerThreadCount { set => Settings.MaxWorkerThreadCount = value; }
-        public int MinWorkerThreadCount { set => Settings.MinWorkerThreadCount = value; }
+        public bool Debug { set => Settings.debug = value; }
+        public int PixelsPerUnit { set => Settings.pixelsPerUnit = value; }
+        public int MaxWorkerThreadCount { set => Settings.maxWorkerThreadCount = value; }
+        public int MinWorkerThreadCount { set => Settings.minWorkerThreadCount = value; }
     }
     private static volatile bool initialized;
+    
+    private static volatile bool debug;
+    private static volatile bool debugInfo;
+    private static volatile bool debugGizmos;
+    private static volatile int pixelsPerUnit = 32;
+    private static volatile int maxWorkerThreadCount = 5;
+    private static volatile int minWorkerThreadCount = 5;
 
-    public static bool Debug { get; private set; }
-    public static bool DebugInfo { get; set; }
-    public static bool DebugGizmos { get; set; }
-
-    public static int PixelsPerUnit { get; private set; } = 32;
-
-    public static int MaxWorkerThreadCount { get; private set; } = 5;
-    public static int MinWorkerThreadCount { get; private set; } = 5;
+    public static bool Debug { get => debug; }
+    public static bool DebugInfo { get => debugInfo; set => debugInfo = value; }
+    public static bool DebugGizmos { get => debugGizmos; set => debugGizmos = value; }
+    public static int PixelsPerUnit { get => pixelsPerUnit; }
+    public static int MaxWorkerThreadCount { get => maxWorkerThreadCount; }
+    public static int MinWorkerThreadCount { get => minWorkerThreadCount; }
 
     private static volatile bool finalized;
     private static Flags options { get; } = new Flags();
