@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics;
 using System.Threading;
+using Luminix.Workspaces;
 
 namespace Luminix.Threading;
 
@@ -88,6 +89,8 @@ public class TickedThread : BaseThread
             internalStopwatch = new Stopwatch();
             stopwatch = Stopwatch.StartNew();
     
+            Workspace.Current?.SetState(Workspace.State.Running);
+
             while (running)
             {
                 long currentTicks = stopwatch.ElapsedTicks;
@@ -151,6 +154,8 @@ public class TickedThread : BaseThread
 
             nextTick = stopwatch.ElapsedTicks;
     
+            Workspace.Current?.SetState(Workspace.State.Running);
+
             while (running)
             {
                 long currentTicks = stopwatch.ElapsedTicks;
