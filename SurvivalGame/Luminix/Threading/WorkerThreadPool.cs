@@ -28,6 +28,7 @@ public sealed class WorkerThreadPool : Workspace.Service
         {
             var worker = new WorkerThread(globalTasks, this);
             worker.Name = $"WorkerThread-{i}";
+            worker.Priority = System.Threading.ThreadPriority.Normal;
             workerThreads.Add(worker);
             worker.Start();
         }

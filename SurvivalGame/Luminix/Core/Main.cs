@@ -92,10 +92,10 @@ public class Main : Microsoft.Xna.Framework.Game
             RenderToCore.Initialize();
 
             //threads
-            mainThread.Priority = ThreadPriority.Highest;
+            mainThread.Priority = ThreadPriority.AboveNormal;
             mainThread.Name = "RenderThread";
 
-            coreThread.Priority = ThreadPriority.Highest;
+            coreThread.Priority = ThreadPriority.AboveNormal;
 
             //base initialization
             base.Initialize();
