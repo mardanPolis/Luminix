@@ -46,24 +46,30 @@ public sealed class CoreThread : TickedThread
         workerThreadPool = new WorkerThreadPool(workerThreadCount);
         assetIO          = new AssetIO();
 
+        Workspace.Current.SetSubState("Loading BootAssets");
         var assetLoader = new AssetLoadingHandler(workerThreadPool, assetIO, CoreToRender.AssetBridge);
         assetLoader.RunBootLoadingPhase();
         resources.WaitForResources(assetLoader.GetLoadedBootAssets(), RenderToCore.ResourceBridge);
 
         //Initialize Boot Renderers
 
+        Workspace.Current.SetSubState("Loading Assets");
         assetLoader.RunLoadingPhase((string assetPath, int loaded, int toLoad) =>
         {
-            //BootRender()
+            BootRender(assetPath, loaded, toLoad);
         }); //Lambda - OnLoad
-        resources.WaitForResources(assetLoader.GetLoadedAssets(), RenderToCore.ResourceBridge, (string assetPath, int loaded, int toLoad) =>
+
+        Workspace.Current.SetSubState("Receiving Assets");
+        resources.WaitForResources(assetLoader.GetLoadedAssets(), RenderToCore.ResourceBridge, (string asset, int received, int toReceive) =>
         {
-            //BootRender()
+            BootRender(asset, received, toReceive);
         }); //Lambda - OnReceive
 
+        Workspace.Current.SetSubState("Initializing Renderers");
         //Renderers
 
-        //Entity types
+        Workspace.Current.SetSubState("Creating Types");
+        //Types
 
     }
 
@@ -106,7 +112,7 @@ public sealed class CoreThread : TickedThread
         Optimize(TickIntervalInTicks, CurrentElapsedTicks);
     }
 
-    private void BootRender()
+    private void BootRender(string info, int current, int max)
     {
         
     }

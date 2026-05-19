@@ -14,6 +14,7 @@ public sealed class AssetIO : Workspace.Service
 
     private DenseList<string> loadedAssets;
 
+    private IReadOnlyDenseList<string> LoadedAssets => loadedAssets;
     public AssetIO(string root = "")
     {
         if(root != "" && !Directory.Exists(root))
