@@ -2,7 +2,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using Microsoft.Xna.Framework.Input;
-using Luminix.Bridges;
+using Luminix.Threading.Bridges;
 using Luminix.Workspaces;
 
 namespace Luminix;

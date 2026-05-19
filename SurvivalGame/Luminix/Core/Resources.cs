@@ -1,5 +1,8 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Security.Cryptography.X509Certificates;
+using Luminix.Threading.Bridges;
 using Luminix.Identifiers;
 using Luminix.Workspaces;
 
@@ -50,6 +53,34 @@ public sealed class Resources : Workspace.Service
         foreach (var assetName in assetNames)
         {
             UnloadResource(assetName);
+        }
+    }
+
+    internal void WaitForResources(HashSet<string> resourceNames, ResourceBridge bridge)
+    {
+        while(resourceNames.Count > 0)
+        {
+            Resource item = bridge.AppendedResources.Take();
+
+            resources.Add(item.Name, item);
+            
+            resourceNames.Remove(item.Name);
+        }
+    }
+
+    internal void WaitForResources(HashSet<string> resourceNames, ResourceBridge bridge, Action<string, int, int> onReceive)
+    {
+        int resourceEndingCount = resourceNames.Count;
+
+        while(resourceNames.Count > 0)
+        {
+            Resource item = bridge.AppendedResources.Take();
+            
+            resources.Add(item.Name, item);
+            
+            resourceNames.Remove(item.Name);
+
+            onReceive(item.Name, resourceEndingCount - resourceNames.Count, resourceEndingCount);
         }
     }
 }

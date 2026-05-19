@@ -2,9 +2,10 @@ using System;
 using System.Diagnostics;
 using System.Threading;
 using Luminix.Simulation;
-using Luminix.Rendering;
 using Luminix.Workspaces;
-using SurvivalGame.Luminix.IO;
+using Luminix.IO;
+using Luminix.Core.AssetHandlers;
+using Luminix.Threading.Bridges;
 
 namespace Luminix.Threading;
 
@@ -32,30 +33,37 @@ public sealed class CoreThread : TickedThread
     private Universe.Controller universeController;
     private Input input;
     private WorkerThreadPool workerThreadPool;
+    private AssetIO assetIO;
 
     protected sealed override void Initialize()
     {
         Workspace.Create();
         typeRegistry = new TypeRegistry();
-        resources = new Resources();
-        universe  = new Universe(out universeController);
-        input     = new Input();
+        resources    = new Resources();
+        universe     = new Universe(out universeController);
+        input        = new Input();
         workerThreadPool = new WorkerThreadPool(workerThreadCount);
+        assetIO          = new AssetIO();
 
-        //TO DO: add mod loading.
+        var assetLoader = new AssetLoadingHandler(workerThreadPool, assetIO, CoreToRender.AssetBridge);
+        assetLoader.RunBootLoadingPhase();
+        resources.WaitForResources(assetLoader.GetLoadedBootAssets(), RenderToCore.ResourceBridge);
 
-        AssetIO assetIO = new AssetIO();
-        //multithreaded
-        //first load all boot assets multithreaded, give them all to the render thread, wait, receive resource handles.
-        //then load the rest of the assets, giving them to the render thread. multithreaded. BootRender should only called once a asset stream is received from worker thread or created in this thread.
-        //load boot assets, no rendering
+        //Initialize Boot Renderers
 
-        //load assets
-        foreach (var entry in assetIO.LoadAssets())
+        assetLoader.RunLoadingPhase((string assetPath, int loaded, int toLoad) =>
         {
+            //BootRender()
+        }); //Lambda - OnLoad
+        resources.WaitForResources(assetLoader.GetLoadedAssets(), RenderToCore.ResourceBridge, (string assetPath, int loaded, int toLoad) =>
+        {
+            //BootRender()
+        }); //Lambda - OnReceive
 
-            BootRender();
-        }
+        //Renderers
+
+        //Entity types
+
     }
 
     protected sealed override void OnTick()

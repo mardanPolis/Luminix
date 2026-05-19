@@ -1,16 +1,18 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using Luminix;
+using Luminix.Collections;
 using Luminix.Workspaces;
 
-namespace SurvivalGame.Luminix.IO;
+namespace Luminix.IO;
 
 public sealed class AssetIO : Workspace.Service
 {
     public const string ASSET_DIRECTORY = "Assets";
 
     private readonly string root;
+
+    private DenseList<string> loadedAssets;
 
     public AssetIO(string root = "")
     {
@@ -24,6 +26,8 @@ public sealed class AssetIO : Workspace.Service
             root = AppContext.BaseDirectory;
         }
         this.root = root;
+
+        loadedAssets = new DenseList<string>();
     }
 
     public IEnumerable<AssetEntry> LoadAssets()
@@ -55,7 +59,8 @@ public sealed class AssetIO : Workspace.Service
                 continue;
             }
 
-            string relativePath = Path.GetRelativePath(assetDir, path);
+            string relativePath = Path.GetRelativePath(root, path);
+            loadedAssets.Add(relativePath);
             yield return new AssetEntry(relativePath, stream);
         }
     }

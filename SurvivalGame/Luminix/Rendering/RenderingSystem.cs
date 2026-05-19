@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Threading;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using Luminix.Bridges;
+using Luminix.Threading.Bridges;
 using Luminix.Workspaces;
 
 namespace Luminix.Rendering;

@@ -1,5 +1,5 @@
 using System;
-using Luminix.Bridges;
+using Luminix.Threading.Bridges;
 using Microsoft.Xna.Framework.Input;
 
 namespace Luminix.Core.InputHandlers;

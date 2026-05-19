@@ -5,10 +5,10 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Input;
 using Microsoft.Xna.Framework.Content;
 using Game;
-using Luminix.Bridges;
 using Luminix.Collections;
 using Luminix.Rendering;
 using Luminix.Threading;
+using Luminix.Threading.Bridges;
 using Luminix.Workspaces;
 using Luminix.Core.InputHandlers;
 
