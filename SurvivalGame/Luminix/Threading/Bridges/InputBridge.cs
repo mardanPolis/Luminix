@@ -2,7 +2,7 @@ using System;
 using System.Collections.Concurrent;
 using Microsoft.Xna.Framework.Input;
 
-namespace Luminix.Bridges;
+namespace Luminix.Threading.Bridges;
 
 internal class InputBridge
 {

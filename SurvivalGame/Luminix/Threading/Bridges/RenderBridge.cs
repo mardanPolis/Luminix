@@ -1,7 +1,6 @@
-using System;
 using Luminix.Rendering;
 
-namespace Luminix.Bridges;
+namespace Luminix.Threading.Bridges;
 
 internal class RenderBridge
 {

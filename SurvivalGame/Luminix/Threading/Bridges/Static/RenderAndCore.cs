@@ -1,15 +1,19 @@
 using Luminix.Bridges;
 using Luminix.Rendering;
 
-namespace Luminix.Bridges;
+namespace Luminix.Threading.Bridges;
 
 internal static class CoreToRender
 {
     private static RenderBridge renderBridge;
+    private static AssetBridge assetBridge;
+
     public static RenderBridge RenderBridge => renderBridge;
+    public static AssetBridge AssetBridge => assetBridge;
     public static void Initialize()
     {
         renderBridge = new RenderBridge();
+        assetBridge = new AssetBridge();
     }
 }
 

@@ -1,6 +1,6 @@
 using System;
 
-namespace Luminix.Bridges;
+namespace Luminix.Threading.Bridges;
 
 internal class UIToRender
 {

@@ -2,21 +2,24 @@ using System;
 using System.Collections.Concurrent;
 using System.Linq;
 
-namespace Luminix.Bridges;
+namespace Luminix.Threading.Bridges;
 
 internal class ResourceBridge
 {
-    ConcurrentQueue<Resource> resources;
-    ConcurrentQueue<Resource> resourcesRemoved;
+    private BlockingCollection<Resource> resources;
+    private BlockingCollection<Resource> resourcesRemoved;
+
+    public BlockingCollection<Resource> AppendedResources => resources;
+    public BlockingCollection<Resource> RemovedResources => resourcesRemoved;
 
     public void Read(Action<Resource, bool> action)
     {
-        while(resources.TryDequeue(out Resource resource))
+        while(resources.TryTake(out Resource resource))
         {
             action(resource, true);
         }
 
-        while(resourcesRemoved.TryDequeue(out Resource resource))
+        while(resourcesRemoved.TryTake(out Resource resource))
         {
             action(resource, false);
         }
