@@ -4,7 +4,8 @@ using System.Threading;
 using Luminix.Simulation;
 using Luminix.Workspaces;
 using Luminix.IO;
-using Luminix.Core.AssetHandlers;
+using Luminix.Resources;
+using Luminix.Resources.AssetHandlers;
 using Luminix.Threading.Bridges;
 
 namespace Luminix.Threading;
@@ -28,7 +29,7 @@ public sealed class CoreThread : TickedThread
     private int workerThreadCount;
 
     private Universe universe;
-    private Resources resources;
+    private ResourceProvider resources;
     private TypeRegistry typeRegistry;
     private Universe.Controller universeController;
     private Input input;
@@ -39,7 +40,7 @@ public sealed class CoreThread : TickedThread
     {
         Workspace.Create();
         typeRegistry = new TypeRegistry();
-        resources    = new Resources();
+        resources    = new ResourceProvider();
         universe     = new Universe(out universeController);
         input        = new Input();
         workerThreadPool = new WorkerThreadPool(workerThreadCount);

@@ -7,6 +7,7 @@ using Microsoft.Xna.Framework.Content;
 using Game;
 using Luminix.Collections;
 using Luminix.Rendering;
+using Luminix.Resources;
 using Luminix.Threading;
 using Luminix.Threading.Bridges;
 using Luminix.Workspaces;
@@ -35,7 +36,7 @@ public class Main : Microsoft.Xna.Framework.Game
     private Logger logger;
 
     private Workspace workspace;
-    private Resources resources;
+    private ResourceProvider resources;
     private RenderingSystem renderingSystem;
 
     private ResourceManager resourceManager;
@@ -56,7 +57,7 @@ public class Main : Microsoft.Xna.Framework.Game
         init => base.Content = value;
     }
 
-    public Resources Resources => resources;
+    public ResourceProvider Resources => resources;
     internal ResourceManager ResourceManager => resourceManager;
     internal GraphicsDeviceManager GraphicsDeviceManager => graphics;
 

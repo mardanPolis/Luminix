@@ -7,7 +7,7 @@ using Microsoft.Xna.Framework.Graphics;
 using Luminix.Collections;
 using Luminix.Identifiers;
 
-namespace Luminix;
+namespace Luminix.Resources;
 public sealed class ResourceManager : Microsoft.Xna.Framework.Content.ContentManager
 {
     public struct TextureRegion
@@ -213,7 +213,7 @@ public sealed class ResourceManager : Microsoft.Xna.Framework.Content.ContentMan
         RecordDisposable(texture);
     }
 
-    public void CreateTextureRegion(string textureName, string name, Vector2 position, Vector2 scale)
+    public void CreateTextureRegion(string textureName, string name, Vector2 position, Vector2 scale, out Resource resource)
     {
         ArgumentNullException.ThrowIfNullOrWhiteSpace(name, nameof(name));
         ArgumentNullException.ThrowIfNullOrWhiteSpace(textureName, nameof(textureName));
@@ -223,11 +223,11 @@ public sealed class ResourceManager : Microsoft.Xna.Framework.Content.ContentMan
             throw new ArgumentException($"No source texture with the name '{textureName}' exists.", nameof(textureName));
 
         ID id = engineTextures.NewRegion(texture, (int)position.X, (int)position.Y, (int)scale.X, (int)scale.Y);
-        TextureResource resource = new TextureResource(name, id, (int)scale.X, (int)scale.Y);
+        resource = new TextureResource(name, id, (int)scale.X, (int)scale.Y);
         resources[name] = resource;
     }
 
-    public void Create<T>(string name, Stream stream)
+    public void Create<T>(string name, Stream stream, out Resource resource)
     {
         ArgumentNullException.ThrowIfNullOrWhiteSpace(name, nameof(name));
         ArgumentNullException.ThrowIfNull(stream, nameof(stream));
@@ -243,7 +243,6 @@ public sealed class ResourceManager : Microsoft.Xna.Framework.Content.ContentMan
             openedStream = stream;
             T asset = ReadAsset<T>(name, null);
 
-            Resource resource = null;
             if (asset is Texture2D texture)
             {
                 engineTextures.NewSource(name, texture);

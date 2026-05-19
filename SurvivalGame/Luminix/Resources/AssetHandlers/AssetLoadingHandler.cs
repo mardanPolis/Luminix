@@ -2,9 +2,9 @@ using System;
 using System.Collections.Generic;
 using Luminix.Threading;
 using Luminix.IO;
-using Luminix.Bridges
+using Luminix.Threading.Bridges;
 
-namespace Luminix.Core.AssetHandlers;
+namespace Luminix.Resources.AssetHandlers;
 
 internal class AssetLoadingHandler
 {

@@ -1,16 +1,14 @@
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Security.Cryptography.X509Certificates;
 using Luminix.Threading.Bridges;
 using Luminix.Identifiers;
 using Luminix.Workspaces;
 
-namespace Luminix;
+namespace Luminix.Resources;
 
-public sealed class Resources : Workspace.Service
+public sealed class ResourceProvider : Workspace.Service
 {
-    internal Resources()
+    internal ResourceProvider()
     {
         resources = new Dictionary<string, Resource>();
     }
