@@ -17,10 +17,12 @@ namespace Luminix;
 public class Main : Microsoft.Xna.Framework.Game
 {
     public const string VERSION = "1.0v";
+    public const string ENGINE_PACKAGE_ASSET_EXTENSION = ".lxpkg";
 
     public Main()
     {
-        Content = null;
+        graphics = new GraphicsDeviceManager(this);
+        resourceManager = new ResourceManager(this);
         IsMouseVisible = true;
     }
 
@@ -66,7 +68,7 @@ public class Main : Microsoft.Xna.Framework.Game
         stopwatch = Stopwatch.StartNew();
         startBytes = GC.GetAllocatedBytesForCurrentThread();
         
-        logger = Logger.Initialize();
+        logger = Logger.Get();
         logger.Log($"Started initialization");
 
         try
@@ -74,12 +76,9 @@ public class Main : Microsoft.Xna.Framework.Game
             //workspace
             workspace = Workspace.Create();
 
-            //services
-            graphics = new GraphicsDeviceManager(this);
-            resourceManager = new ResourceManager(this);
-
             //threads
-            coreThread = new CoreThread();
+            coreThread = new CoreThread(4);
+            logger.Wrn("Worker threads are fixed");
 
             //systems
             renderingSystem = new RenderingSystem(this);
@@ -92,9 +91,6 @@ public class Main : Microsoft.Xna.Framework.Game
             RenderToCore.Initialize();
 
             //threads
-            mainThread.Priority = ThreadPriority.AboveNormal;
-            mainThread.Name = "RenderThread";
-
             coreThread.Priority = ThreadPriority.AboveNormal;
 
             //base initialization
