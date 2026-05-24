@@ -14,7 +14,7 @@ public abstract class DebugRenderer
     internal void Initialize(SpriteBatch spriteBatch)
     {
         this.spriteBatch = spriteBatch;
-        pixel = ResourceManager.LoadTexture("pixel");
+        //pixel = ResourceManager.LoadTexture("pixel");
     }
     
     protected Texture2D pixel;
@@ -188,105 +188,105 @@ internal sealed class GameDebugRenderer : DebugRenderer
     }
     public override void Render()
     {
-        Viewport viewport = RenderingSystem.GraphicsDevice.Viewport;
+        // Viewport viewport = RenderingSystem.GraphicsDevice.Viewport;
 
-        float gHeight = 200f;
+        // float gHeight = 200f;
 
-        var tickTimes = coreThread.TickTimes;
-        var currentIndex = (int)((coreThread.TickCount - 1) & 127);
+        // var tickTimes = coreThread.TickTimes;
+        // var currentIndex = (int)((coreThread.TickCount - 1) & 127);
 
-        double frameDeltaTime = main.FrameDeltaTime; 
-        double tickTime = coreThread.TickTime;
-        double tickDeltaTime = coreThread.TickDeltaTime;
+        // double frameDeltaTime = main.FrameDeltaTime; 
+        // double tickTime = coreThread.TickTime;
+        // double tickDeltaTime = coreThread.TickDeltaTime;
 
-        double tickUpdateTime = coreThread.TickUpdateTime; 
-        double tickRenderTime = coreThread.TickRenderTime;
-        double tickOptimizeTime = coreThread.TickOptimizeTime;
+        // double tickUpdateTime = coreThread.TickUpdateTime; 
+        // double tickRenderTime = coreThread.TickRenderTime;
+        // double tickOptimizeTime = coreThread.TickOptimizeTime;
 
-        double budgetUs = 1000000.0 / coreThread.TickRate;
+        // double budgetUs = 1000000.0 / coreThread.TickRate;
 
-        long usedMemory = GC.GetTotalMemory(false);
-        managedMemoryAmounts[currentIndex] = usedMemory / 1024.0 / 1024.0;
+        // long usedMemory = GC.GetTotalMemory(false);
+        // managedMemoryAmounts[currentIndex] = usedMemory / 1024.0 / 1024.0;
         
-        elapsed += frameDeltaTime; // Assuming this is in seconds
+        // elapsed += frameDeltaTime; // Assuming this is in seconds
 
-        if (elapsed >= 0.05) 
-        {
-            fps = main.FPS;
-            frameTime = main.FrameTime; 
-            elapsed = 0;
-        }
+        // if (elapsed >= 0.05) 
+        // {
+        //     fps = main.FPS;
+        //     frameTime = main.FrameTime; 
+        //     elapsed = 0;
+        // }
 
-        sb.Clear();
-        sb.Append("GAME VERSION:").Append(Main.VERSION).Append("\n");
-        AppendDouble(sb, fps, 3, 3);
-        sb.Append(":FPS | ");
-        AppendDouble(sb, tickDeltaTime > 0 ? 1.0 / tickDeltaTime : 0, 3, 3);
-        sb.Append(":TPS\n");
+        // sb.Clear();
+        // sb.Append("GAME VERSION:").Append(Main.VERSION).Append("\n");
+        // AppendDouble(sb, fps, 3, 3);
+        // sb.Append(":FPS | ");
+        // AppendDouble(sb, tickDeltaTime > 0 ? 1.0 / tickDeltaTime : 0, 3, 3);
+        // sb.Append(":TPS\n");
 
-        sb.Append("FrameTime : ");
-        AppendDouble(sb, frameTime / 1000000.0, 4, 2);
-        sb.Append("ms\n");
+        // sb.Append("FrameTime : ");
+        // AppendDouble(sb, frameTime / 1000000.0, 4, 2);
+        // sb.Append("ms\n");
 
-        sb.Append("TickTime  : ");
-        AppendDouble(sb, tickTime / 1000.0, 4, 2);
-        sb.Append("ms\n");
+        // sb.Append("TickTime  : ");
+        // AppendDouble(sb, tickTime / 1000.0, 4, 2);
+        // sb.Append("ms\n");
 
-        sb.Append("tickUpdateTime  : ");
-        AppendDouble(sb, tickUpdateTime / 1000.0, 4, 2);
-        sb.Append("ms\n");
+        // sb.Append("tickUpdateTime  : ");
+        // AppendDouble(sb, tickUpdateTime / 1000.0, 4, 2);
+        // sb.Append("ms\n");
 
-        sb.Append("tickRenderTime  : ");
-        AppendDouble(sb, tickRenderTime / 1000.0, 4, 2);
-        sb.Append("ms\n");
+        // sb.Append("tickRenderTime  : ");
+        // AppendDouble(sb, tickRenderTime / 1000.0, 4, 2);
+        // sb.Append("ms\n");
 
-        sb.Append("tickOptimizeTime  : ");
-        AppendDouble(sb, tickOptimizeTime / 1000.0, 4, 2);
-        sb.Append("ms\n");
+        // sb.Append("tickOptimizeTime  : ");
+        // AppendDouble(sb, tickOptimizeTime / 1000.0, 4, 2);
+        // sb.Append("ms\n");
 
-        sb.Append("FrameDeltaTime : ");
-        AppendDouble(sb, frameDeltaTime * 1000.0, 4, 2);
-        sb.Append("ms\n");
+        // sb.Append("FrameDeltaTime : ");
+        // AppendDouble(sb, frameDeltaTime * 1000.0, 4, 2);
+        // sb.Append("ms\n");
 
-        sb.Append("TickDeltaTime  : ");
-        AppendDouble(sb, tickDeltaTime * 1000.0, 4, 2);
-        sb.Append("ms\n");
+        // sb.Append("TickDeltaTime  : ");
+        // AppendDouble(sb, tickDeltaTime * 1000.0, 4, 2);
+        // sb.Append("ms\n");
 
-        sb.Append("Managed Memory : ");
-        AppendDouble(sb, usedMemory / 1024.0 / 1024.0, 4, 2);
-        sb.Append(" MB\n");
+        // sb.Append("Managed Memory : ");
+        // AppendDouble(sb, usedMemory / 1024.0 / 1024.0, 4, 2);
+        // sb.Append(" MB\n");
 
-        sb.Append("RenderThread allocated: ");
-        AppendLong(sb, main.FrameAllocationAmount, 3);
-        sb.Append(" bytes\n");
+        // sb.Append("RenderThread allocated: ");
+        // AppendLong(sb, main.FrameAllocationAmount, 3);
+        // sb.Append(" bytes\n");
 
-        sb.Append("CoreThread allocated: ");
-        AppendLong(sb, coreThread.TickAllocatedAmount, 3);
-        sb.Append(" bytes\n");
+        // sb.Append("CoreThread allocated: ");
+        // AppendLong(sb, coreThread.TickAllocatedAmount, 3);
+        // sb.Append(" bytes\n");
 
-        sb.Append("DrawCalls : ");
-        sb.Append(RenderingSystem.DrawCount);
+        // sb.Append("DrawCalls : ");
+        // sb.Append(RenderingSystem.DrawCount);
 
-        spriteBatch.Begin();
+        // spriteBatch.Begin();
 
-        spriteBatch.DrawString(ResourceManager.GenericFontMedium, sb,
-            new Vector2(15, 15), Color.White);
+        // spriteBatch.DrawString(ResourceManager.GenericFontMedium, sb,
+        //     new Vector2(15, 15), Color.White);
 
-        Vector2 graphPos = new Vector2(viewport.Width - 20, viewport.Height - gHeight - 20);
-        DrawGraph(graphPos, gHeight, managedMemoryAmounts, 128, 5, 5, currentIndex, true);
+        // Vector2 graphPos = new Vector2(viewport.Width - 20, viewport.Height - gHeight - 20);
+        // DrawGraph(graphPos, gHeight, managedMemoryAmounts, 128, 5, 5, currentIndex, true);
 
-        graphPos = new Vector2(20, viewport.Height - gHeight - 20);
-        DrawGraph(graphPos, gHeight, tickTimes, budgetUs, 5, 5, currentIndex, false);
+        // graphPos = new Vector2(20, viewport.Height - gHeight - 20);
+        // DrawGraph(graphPos, gHeight, tickTimes, budgetUs, 5, 5, currentIndex, false);
 
-        spriteBatch.End();
+        // spriteBatch.End();
 
-        var keyboard = Keyboard.GetState();
-        if(keyboard.IsKeyDown(Keys.Home))
-        {
-            for (int i = 0; i <= GC.MaxGeneration; i++)
-            {
-                Console.WriteLine($"Gen {i} collections: {GC.CollectionCount(i)}");
-            }
-        }
+        // var keyboard = Keyboard.GetState();
+        // if(keyboard.IsKeyDown(Keys.Home))
+        // {
+        //     for (int i = 0; i <= GC.MaxGeneration; i++)
+        //     {
+        //         Console.WriteLine($"Gen {i} collections: {GC.CollectionCount(i)}");
+        //     }
+        // }
     }
 }
