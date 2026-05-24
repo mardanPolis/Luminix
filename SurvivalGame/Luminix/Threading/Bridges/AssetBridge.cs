@@ -14,15 +14,14 @@ internal class AssetBridge
         public Vector2 Scale = scale;
     }
 
-    private struct TextureRegionAsset(string name, string textureName, Vector2 position, Vector2 scale)
+    private struct TextureRegionAsset(string name, string textureName, Rectangle rectangle)
     {
         public string Name = name;
         public string TextureName = textureName;
-        public Vector2 Position = position;
-        public Vector2 Scale = scale;
+        public Rectangle Rectangle = rectangle;
     }
 
-    private struct Asset(string name, Stream stream)
+    private struct StreamAsset(string name, Stream stream)
     {
         public string Name = name;
         public Stream Stream = stream;
@@ -30,20 +29,25 @@ internal class AssetBridge
 
     private ConcurrentQueue<TextureAsset> textureAssets;
     private ConcurrentQueue<TextureRegionAsset> textureRegionAssets;
-    private ConcurrentQueue<Asset> assets;
+    private ConcurrentQueue<StreamAsset> assets;
 
-    public void NewTextureAsset(string name, Color[] colors, Vector2 scale)
+    public void RegisterTexture(string name, Color[] colors, Vector2 scale)
     {
         textureAssets.Enqueue(new TextureAsset(name, colors, scale));
     }
 
-    public void NewTextureRegionAsset(string name, string textureName, Vector2 position, Vector2 scale)
+    public void RegisterTextureRegion(string name, string textureName, Vector2 position, Vector2 size)
     {
-        textureRegionAssets.Enqueue(new TextureRegionAsset(name, textureName, position, scale));
+        textureRegionAssets.Enqueue(new TextureRegionAsset(name, textureName, new Rectangle((int)position.X, (int)position.Y, (int)size.X, (int)size.Y)));
     }
 
-    public void NewAsset(string name, Stream stream)
+    public void RegisterTextureRegion(string name, string textureName, Rectangle rectangle)
     {
-        assets.Enqueue(new Asset(name, stream));
+        textureRegionAssets.Enqueue(new TextureRegionAsset(name, textureName, rectangle));
+    }
+
+    public void RegisterStream(string name, Stream stream)
+    {
+        assets.Enqueue(new StreamAsset(name, stream));
     }
 }

@@ -7,30 +7,35 @@ namespace Luminix.Threading.Bridges;
 
 internal class ResourceBridge
 {
-    private BlockingCollection<Resource> resources;
-    private BlockingCollection<Resource> resourcesRemoved;
+    public BlockingCollection<Resource> Appended { get; } = new();
+    public BlockingCollection<Resource> Removed { get; } = new();
 
-    public BlockingCollection<Resource> AppendedResources => resources;
-    public BlockingCollection<Resource> RemovedResources => resourcesRemoved;
-
-    public void Read(Action<Resource, bool> action)
+    public void Consume(Action<Resource> onAppended, Action<Resource> onRemoved)
     {
-        while(resources.TryTake(out Resource resource))
-        {
-            action(resource, true);
-        }
-
-        while(resourcesRemoved.TryTake(out Resource resource))
-        {
-            action(resource, false);
-        }
+        ConsumeAppended(onAppended);
+        ConsumeRemoved(onRemoved);
     }
 
-    public void Write(Resource resource, bool add)
+    public void ConsumeAppended(Action<Resource> action)
     {
-        if(add)
-            resources.Append(resource);
-        else
-            resourcesRemoved.Append(resource);
+        while (Appended.TryTake(out var resource))
+            action(resource);
     }
+    public void ConsumeRemoved(Action<Resource> action)
+    {
+        while (Removed.TryTake(out var resource))
+            action(resource);
+    }
+
+    public Resource TakeAppended()
+    {
+        return Appended.Take();
+    }
+    public Resource TakeRemoved()
+    {
+        return Appended.Take();
+    }
+    
+    public void Publish(Resource resource) => Appended.Add(resource);
+    public void Revoke(Resource resource) => Removed.Add(resource);
 }

@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using Luminix.Threading.Bridges;
 using Luminix.Identifiers;
 using Luminix.Workspaces;
+using System.Diagnostics;
+using System.Threading;
 
 namespace Luminix.Resources;
 
@@ -58,76 +60,11 @@ public sealed class ResourceProvider : Workspace.Service
     {
         while(resourceNames.Count > 0)
         {
-            Resource item = bridge.AppendedResources.Take();
+            Resource item = bridge.TakeAppended();
 
             resources.Add(item.Name, item);
             
             resourceNames.Remove(item.Name);
         }
-    }
-
-    internal void WaitForResources(HashSet<string> resourceNames, ResourceBridge bridge, Action<string, int, int> onReceive)
-    {
-        int resourceEndingCount = resourceNames.Count;
-
-        while(resourceNames.Count > 0)
-        {
-            Resource item = bridge.AppendedResources.Take();
-            
-            resources.Add(item.Name, item);
-            
-            resourceNames.Remove(item.Name);
-
-            onReceive(item.Name, resourceEndingCount - resourceNames.Count, resourceEndingCount);
-        }
-    }
-}
-
-
-public abstract class Resource
-{
-    public readonly string Name;
-    internal readonly ID ID;
-    internal Resource(string name, ID id)
-    {
-        ArgumentNullException.ThrowIfNull(name, nameof(name));
-
-        Name = name;
-        ID = id;
-    }
-}
-
-public class TextureResource : Resource
-{
-    public readonly int Height;
-    public readonly int Width;
-
-    internal TextureResource(string name, ID id, int width, int height) 
-        : base(name, id)
-    {
-        Width = width;
-        Height = height;
-    }
-}
-
-public class FontResource : Resource
-{
-    internal FontResource(string name, ID id)
-        : base(name, id) {}
-}
-
-public class ShaderResource : Resource
-{
-    internal ShaderResource(string name, ID id)
-        : base(name, id) {}
-}
-
-public class AudioResource : Resource
-{
-    public readonly double Duration;
-    internal AudioResource(string name, ID id, double duration) 
-        : base(name, id)
-    {
-        Duration = duration;
     }
 }
