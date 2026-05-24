@@ -77,6 +77,9 @@ public class TickedThread : BaseThread
     {
         return () =>
         {
+            internalStopwatch = new Stopwatch();
+            stopwatch = Stopwatch.StartNew();
+    
             init();
 
             long nextTick = 0;
@@ -86,9 +89,6 @@ public class TickedThread : BaseThread
 
             int currentIndex = 0;
 
-            internalStopwatch = new Stopwatch();
-            stopwatch = Stopwatch.StartNew();
-    
             Workspace.Current?.SetState(Workspace.State.Running);
 
             while (running)
@@ -145,12 +145,12 @@ public class TickedThread : BaseThread
     {
         return () =>
         {
+            internalStopwatch = new Stopwatch();
+            stopwatch = Stopwatch.StartNew();
+
             init();
 
             long nextTick = 0;
-
-            internalStopwatch = new Stopwatch();
-            stopwatch = Stopwatch.StartNew();
 
             nextTick = stopwatch.ElapsedTicks;
     
