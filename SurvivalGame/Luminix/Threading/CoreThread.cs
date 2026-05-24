@@ -7,6 +7,9 @@ using Luminix.IO;
 using Luminix.Resources;
 using Luminix.Resources.AssetHandlers;
 using Luminix.Threading.Bridges;
+using System.IO;
+using Microsoft.Xna.Framework;
+using Luminix.AssetHandlers;
 
 namespace Luminix.Threading;
 
@@ -28,6 +31,8 @@ public sealed class CoreThread : TickedThread
 
     private int workerThreadCount;
 
+    private Logger logger;
+
     private Universe universe;
     private ResourceProvider resources;
     private TypeRegistry typeRegistry;
@@ -38,6 +43,10 @@ public sealed class CoreThread : TickedThread
 
     protected sealed override void Initialize()
     {
+        logger = Logger.Get();
+
+        IsBackground = true;
+
         Workspace.Create();
         typeRegistry = new TypeRegistry();
         resources    = new ResourceProvider();
@@ -46,31 +55,58 @@ public sealed class CoreThread : TickedThread
         workerThreadPool = new WorkerThreadPool(workerThreadCount);
         assetIO          = new AssetIO();
 
-        Workspace.Current.SetSubState("Loading BootAssets");
-        var assetLoader = new AssetLoadingHandler(workerThreadPool, assetIO, CoreToRender.AssetBridge);
-        assetLoader.RunBootLoadingPhase();
-        resources.WaitForResources(assetLoader.GetLoadedBootAssets(), RenderToCore.ResourceBridge);
-
-        //Initialize Boot Renderers
-
-        Workspace.Current.SetSubState("Loading Assets");
-        assetLoader.RunLoadingPhase((string assetPath, int loaded, int toLoad) =>
         {
-            BootRender(assetPath, loaded, toLoad);
-        }); //Lambda - OnLoad
+            var assetLoader = new AssetLoadingHandler(workerThreadPool, assetIO);
+            var atlasHandler = new TextureAssetAtlasHandler(workerThreadPool);
 
-        Workspace.Current.SetSubState("Receiving Assets");
-        resources.WaitForResources(assetLoader.GetLoadedAssets(), RenderToCore.ResourceBridge, (string asset, int received, int toReceive) =>
-        {
-            BootRender(asset, received, toReceive);
-        }); //Lambda - OnReceive
+            //Loading Boot Assets
+            Workspace.Current.SetSubState("Bootstrap");
+            logger.Log(Workspace.Current.FullCurrentState);
+            assetLoader.RunBootLoadingPhase();
+            foreach(var texture in assetLoader.GetLoadedBootTextures())
+            {
+                string name = Path.GetFileNameWithoutExtension(texture.assetFile.RelativePath);
+                CoreToRender.AssetBridge.RegisterTexture(name, texture.colors, texture.size);
+                CoreToRender.AssetBridge.RegisterTextureRegion(name, name, Vector2.Zero, texture.size);
+            }
 
-        Workspace.Current.SetSubState("Initializing Renderers");
-        //Renderers
+            Workspace.Current.SetSubState("Receiving BootAssets");
+            logger.Log(Workspace.Current.FullCurrentState);
+            resources.WaitForResources(assetLoader.GetLoadedBootAssets(), RenderToCore.ResourceBridge);
 
-        Workspace.Current.SetSubState("Creating Types");
-        //Types
+            //Loading Assets
+            Workspace.Current.SetSubState("Loading Assets");
+            logger.Log(Workspace.Current.FullCurrentState);
+            assetLoader.RunLoadingPhase();
 
+            Workspace.Current.SetSubState("Generating Atlases");
+            logger.Log(Workspace.Current.FullCurrentState);
+            var results = atlasHandler.Run(assetLoader.GetLoadedTextures());
+            foreach(var result in results)
+            {
+                CoreToRender.AssetBridge.RegisterTexture(result.atlasName, result.atlasResult.AtlasColors, result.atlasResult.AtlasSize);
+                foreach(var region in result.atlasResult.TextureRegions)
+                    CoreToRender.AssetBridge.RegisterTextureRegion(region.Name, result.atlasName, region.Rectangle);
+
+                assetIO.SaveTexture(result.atlasName, result.atlasResult.AtlasColors, result.atlasResult.AtlasSize);
+            }
+
+            Workspace.Current.SetSubState("Receiving Assets");
+            logger.Log(Workspace.Current.FullCurrentState);
+            resources.WaitForResources(assetLoader.GetLoadedAssets(), RenderToCore.ResourceBridge);
+
+            Workspace.Current.SetSubState("Renderers");
+            logger.Log(Workspace.Current.FullCurrentState);
+            //Renderers
+
+            Workspace.Current.SetSubState("Types");
+            logger.Log(Workspace.Current.FullCurrentState);
+            //Types
+        }
+
+        IsBackground = false;
+
+        GC.Collect();
     }
 
     protected sealed override void OnTick()
@@ -110,11 +146,6 @@ public sealed class CoreThread : TickedThread
     private void Render()
     {
         Optimize(TickIntervalInTicks, CurrentElapsedTicks);
-    }
-
-    private void BootRender(string info, int current, int max)
-    {
-        
     }
 
     private void Optimize(long maxTime, long time)

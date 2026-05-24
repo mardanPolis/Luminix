@@ -1,7 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using Luminix.Collections;
+using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Audio;
+using StbImageSharp;
+using StbImageWriteSharp;
+
 using Luminix.Workspaces;
 
 namespace Luminix.IO;
@@ -9,85 +13,88 @@ namespace Luminix.IO;
 public sealed class AssetIO : Workspace.Service
 {
     public const string ASSET_DIRECTORY = "Assets";
+    public const string ASSET_CACHE_DIRECTORY = "Cache";
+    
+    public const string TEXTURES_DIRECTORY  = "Textures";
+    public const string AUDIO_DIRECTORY     = "Audios";
+    public const string SHADER_DIRECTORY    = "Shaders";
+    public const string FONTS_DIRECTORY     = "Fonts";
+    public const string DATA_DIRECTORY      = "Data";
 
-    private readonly string root;
-
-    private DenseList<string> loadedAssets;
-
-    private IReadOnlyDenseList<string> LoadedAssets => loadedAssets;
-    public AssetIO(string root = "")
+    public struct AssetFile(string assetRoot, string relativePath)
     {
-        if(root != "" && !Directory.Exists(root))
-        {
-            Logger.Get().Wrn($"AssetIO root directory '{root}' does not exist. Creating it.");
-            Directory.CreateDirectory(root);
-        }
-        else if(root == "")
-        {
-            root = AppContext.BaseDirectory;
-        }
-        this.root = root;
+        public readonly string AssetRoot = assetRoot;
+        public readonly string RelativePath = relativePath;
 
-        loadedAssets = new DenseList<string>();
+        public string FullPath => Path.Combine(AssetRoot, RelativePath);
     }
 
-    public IEnumerable<AssetEntry> LoadAssets()
+    public IEnumerable<AssetFile> EnumerateAssets(string rootDirectory = "", bool? boot = null, string directory = "")
     {
-        return LoadAssetsIn("");
-    }
+        string root = Path.Combine(AppContext.BaseDirectory, rootDirectory, ASSET_DIRECTORY);
 
-    public IEnumerable<AssetEntry> LoadAssetsIn(string directory)
-    {
-        ArgumentNullException.ThrowIfNullOrEmpty(directory, nameof(directory));
+        if (!Path.Exists(root))
+            throw new DirectoryNotFoundException($"The specified asset path '{root}' does not exist.");
 
-        if (!Workspace.IsState(Workspace.State.Initialize))
-            throw new InvalidOperationException("Assets can only be loaded during the Initialize phase of the workspace.");
+        var targetPath = Path.Combine(root, directory);
 
-        string assetDir = Path.Combine(root, directory, ASSET_DIRECTORY);
+        if (!targetPath.StartsWith(root))
+            throw new ArgumentException("Invalid directory traversal.");
 
-        if (!Directory.Exists(assetDir)) yield break;
+        if (!Directory.Exists(targetPath)) yield break;
 
-        foreach (var path in Directory.EnumerateFiles(assetDir, "*.*", SearchOption.AllDirectories))
+        foreach (var path in Directory.EnumerateFiles(targetPath, "*.*", SearchOption.AllDirectories))
         {
-            Stream stream;
-            try
-            {
-                stream = File.OpenRead(path);
-            }
-            catch (Exception ex)
-            {
-                Logger.Get().Err($"Failed to load asset at path: {path}, reason: {ex}");
-                continue;
-            }
-
             string relativePath = Path.GetRelativePath(root, path);
-            loadedAssets.Add(relativePath);
-            yield return new AssetEntry(relativePath, stream);
-        }
-    }
+            bool isBoot = relativePath.StartsWith("Boot");
 
-    public IEnumerable<string> GetAssetPathsIn(string directory)
+            if (boot.HasValue && boot.Value != isBoot) continue;
+
+            yield return new AssetFile(root, relativePath);
+        }
+    } 
+
+    public void LoadTexture(AssetFile assetFile, out Color[] colors, out Vector2 size)
     {
-        ArgumentNullException.ThrowIfNullOrEmpty(directory, nameof(directory));
+        using Stream stream = File.OpenRead(assetFile.FullPath);
+        var result = ImageResult.FromStream(stream, StbImageSharp.ColorComponents.RedGreenBlueAlpha);
 
-        if (!Workspace.IsState(Workspace.State.Initialize))
-            throw new InvalidOperationException("Assets can only be loaded during the Initialize phase of the workspace.");
+        int pixelCount = result.Width * result.Height;
+        colors = new Color[pixelCount];
+        var raw = result.Data;
 
-        string assetDir = Path.Combine(root, directory, ASSET_DIRECTORY);
-
-        if (!Directory.Exists(assetDir)) yield break;
-
-        foreach (var path in Directory.EnumerateFiles(assetDir, "*.*", SearchOption.AllDirectories))
+        for (int i = 0; i < pixelCount; i++)
         {
-            string relativePath = Path.GetRelativePath(assetDir, path);
-            yield return relativePath;
+            int b = i * 4;
+            colors[i] = new Color(raw[b], raw[b + 1], raw[b + 2], raw[b + 3]);
         }
-    }
-}
 
-public readonly struct AssetEntry(string path, Stream stream) : IDisposable
-{
-    public string Path { get; } = path;
-    public Stream Stream { get; } = stream;
-    public void Dispose() => Stream.Dispose();
+        size = new Vector2(result.Width, result.Height);
+    }
+
+    public void LoadSound(AssetFile assetFile, out SoundEffect sound)
+    {
+        using Stream stream = File.OpenRead(assetFile.FullPath);
+        sound = SoundEffect.FromStream(stream);
+    }
+
+    // TODO : add a way to load Shaders, SpriteFonts.
+
+    internal void SaveTexture(string name, Color[] colors, Vector2 size)
+    {
+        string path = Path.Combine(AppContext.BaseDirectory, ASSET_CACHE_DIRECTORY, name + ".png");
+
+        byte[] bytes = new byte[colors.Length * 4];
+        for (int i = 0; i < colors.Length; i++)
+        {
+            bytes[i * 4 + 0] = colors[i].R;
+            bytes[i * 4 + 1] = colors[i].G;
+            bytes[i * 4 + 2] = colors[i].B;
+            bytes[i * 4 + 3] = colors[i].A;
+        }
+
+        using FileStream stream = File.OpenWrite(path);
+        ImageWriter writer = new ImageWriter();
+        writer.WritePng(bytes, (int)size.X, (int)size.Y, StbImageWriteSharp.ColorComponents.RedGreenBlueAlpha, stream);
+    }
 }
