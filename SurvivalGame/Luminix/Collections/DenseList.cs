@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Luminix.Collections;
 
@@ -161,5 +162,10 @@ public sealed class DenseList<T> : ICollection<T>, IEnumerable<T>, IList<T>, IRe
         var array = ToArray();
         var result = new List<T>(array);
         return result;
+    }
+
+    public HashSet<T> ToHashSet()
+    {
+        return indexMap.Keys.ToHashSet();
     }
 }
