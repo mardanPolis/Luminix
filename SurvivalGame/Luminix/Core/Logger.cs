@@ -75,13 +75,14 @@ public sealed class Logger
         logDir = Path.Combine(AppContext.BaseDirectory, "logs");
         Directory.CreateDirectory(logDir);
         
-        string path = GetThreadLogPath();
+        path = GetThreadLogPath();
         File.WriteAllText(path, string.Empty);
     }
 
     private readonly string logDir;
     private readonly List<Log> logs;
-    
+    private readonly string path;
+
     public Log[] Logs
     {
         get
@@ -143,7 +144,6 @@ public sealed class Logger
 
     public void Flush()
     {
-        string path = GetThreadLogPath();
         using (StreamWriter writer = new StreamWriter(path, append: true))
         {
             for (int i = 0; i < logs.Count; i++)
