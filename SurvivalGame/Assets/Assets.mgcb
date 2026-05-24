@@ -1,8 +1,8 @@
 
 #----------------------------- Global Properties ----------------------------#
 
-/outputDir:bin/$(Platform)
-/intermediateDir:obj/$(Platform)
+/outputDir:bin/$(Platform)/$(Configuration)/Assets
+/intermediateDir:obj/$(Platform)/Assets
 /platform:DesktopGL
 /config:
 /profile:HiDef
@@ -11,7 +11,7 @@
 #-------------------------------- References --------------------------------#
 
 
-#---------------------------------- Content ---------------------------------#
+#---------------------------------- Assets ---------------------------------#
 
 #begin Effects/TileShader.fx
 /importer:EffectImporter

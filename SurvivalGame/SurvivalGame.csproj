@@ -25,8 +25,11 @@
   <ItemGroup>
     <PackageReference Include="MonoGame.Framework.DesktopGL" Version="3.8.*" />
     <PackageReference Include="MonoGame.Content.Builder.Task" Version="3.8.*" />
+    <PackageReference Include="StbImageSharp" Version="2.30.15" />
+    <PackageReference Include="StbImageWriteSharp" Version="1.16.7" />
+    <PackageReference Include="RectpackSharp" Version="1.1.*" />
   </ItemGroup>
   <ItemGroup>
-    <Folder Include="Luminix/Core/InputHandlers/" />
+    <MonoGameContentReference Include="Assets\Assets.mgcb" />
   </ItemGroup>
 </Project>

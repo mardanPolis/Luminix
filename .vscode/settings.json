@@ -6,7 +6,10 @@
         "Lerp",
         "Luminix",
         "mgstats",
+        "normalised",
         "Rasterizer",
+        "Rectpack",
+        "rects",
         "Renderable",
         "renderables"
     ]
