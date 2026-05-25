@@ -43,6 +43,14 @@ public readonly struct Log
                 return "";
         }
     }
+    private static string GetThreadName()
+    {
+        string name = Thread.CurrentThread.Name;
+        if(string.IsNullOrWhiteSpace(name))
+            return "";
+        
+        return $"[{name}]";
+    }
 
     public static Log New(object message, Log.Type type, bool timestamp)
     {
@@ -56,6 +64,8 @@ public readonly struct Log
             if(timestamp)
                 entry += $"{GetTimestamp()} ";
             
+            entry += $"{GetThreadName()} ";
+
             entry += $"{GetTypeMessage(type)} ";
         }
 
