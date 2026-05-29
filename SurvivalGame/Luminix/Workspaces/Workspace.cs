@@ -13,16 +13,20 @@ public sealed class Workspace
 
         public Service()
         {
-            if(Workspace.Current == null)
-                throw new InvalidOperationException($"Workspace.Service of type '{GetType().Name}' cannot be created: No active Workspace found.");
+            if (Workspace.Current == null)
+                throw new InvalidOperationException(
+                    $"Service '{GetType().Name}' cannot be created: No active Workspace found.");
 
             Workspace = Workspace.Current;
             Workspace.AddService(this);
         }
 
-        public virtual void Initialize() {}
-
-        public virtual void Update() {}
+        // Call this after construction is fully complete
+        public static T Create<T>() where T : Service, new()
+        {
+            var service = new T();
+            return service;
+        }
 
         public override string ToString()
         {
@@ -102,7 +106,6 @@ public sealed class Workspace
             throw new InvalidOperationException($"Cannot add {service.GetType().Name} to this workspace because '{this}' already contains '{service.Workspace}'.");
 
         services[service.GetType()] = service;
-        service.Initialize();
     }
     public bool TryGetService<T>(out T _service) where T : Service 
     {

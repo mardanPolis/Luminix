@@ -15,6 +15,9 @@ try
 catch(Exception ex)
 {
     Logger.Get().Err(ex);
+}
+finally
+{
     foreach(var threads in BaseThread.Threads)
         threads.Stop();
 }

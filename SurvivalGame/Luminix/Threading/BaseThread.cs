@@ -1,8 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Threading;
-using Luminix;
 using Luminix.Identifiers;
+
+namespace Luminix.Threading;
 
 public abstract class BaseThread
 {

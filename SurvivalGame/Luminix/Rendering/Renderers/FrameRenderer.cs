@@ -80,9 +80,9 @@ internal sealed class FrameRenderer
         }
 
         device.Clear(Color.CornflowerBlue);
-        var viewMatrix = renderStack.Camera.GetViewMatrix(partialTick, viewport.Height, viewport.Width);
+        //var viewMatrix = renderStack.Camera.GetViewMatrix(partialTick, viewport.Height, viewport.Width);
         device.RasterizerState = RasterizerState.CullNone;
-        Render(renderStack, viewMatrix * projection);
+        //Render(renderStack, viewMatrix * projection);
     }
 
     private void Render(RenderBuffer renderStack, Matrix matrixTransform)

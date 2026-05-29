@@ -11,7 +11,7 @@ public sealed class WorkerThreadPool : Workspace.Service
 {
     public WorkerThreadPool(int workerThreadCount)
     {
-        this.workerThreadCount = Math.Clamp(workerThreadCount, Settings.MinWorkerThreadCount, Settings.MaxWorkerThreadCount);;
+        this.workerThreadCount = Math.Clamp(workerThreadCount, Settings.MinWorkerThreadCount, Settings.MaxWorkerThreadCount);
         this.globalTasks = new BlockingCollection<Action>();
     }
 
@@ -23,7 +23,7 @@ public sealed class WorkerThreadPool : Workspace.Service
     public int WorkerThreadCount => workerThreadCount;
     public IReadOnlyList<WorkerThread> WorkerThreads => workerThreads;
 
-    public override void Initialize()
+    public void Initialize()
     {
         workerThreads = new List<WorkerThread>(workerThreadCount);
         for (int i = 0; i < workerThreadCount; i++)

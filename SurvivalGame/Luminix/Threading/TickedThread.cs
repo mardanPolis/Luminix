@@ -44,6 +44,7 @@ public class TickedThread : BaseThread
     public float PartialTick => (float)(stopwatch.ElapsedTicks - Volatile.Read(ref lastTickDate)) / tickIntervalInTicks;
 
 
+    private long initAllocated = 0;
     private long allocated = 0;
     private double tickTime = 0;
     private double[] tickTimesBuffer1 = new double[128];
@@ -80,12 +81,20 @@ public class TickedThread : BaseThread
             internalStopwatch = new Stopwatch();
             stopwatch = Stopwatch.StartNew();
     
-            init();
-
-            long nextTick = 0;
-
             long startBytes = 0;
             long endBytes = 0;
+
+            startBytes = GC.GetAllocatedBytesForCurrentThread();
+
+            init();
+
+            endBytes = GC.GetAllocatedBytesForCurrentThread();
+
+            Logger.Get().Log($"CoreThread allocated {allocated} bytes during initialization!");
+
+            initAllocated = endBytes;
+
+            long nextTick = 0;
 
             int currentIndex = 0;
 
@@ -130,9 +139,10 @@ public class TickedThread : BaseThread
 
                 endBytes = GC.GetAllocatedBytesForCurrentThread();
 
+                Interlocked.Exchange(ref allocated, endBytes - startBytes);
+
                 tickTimesBuffer2[currentIndex] = tickTime;
 
-                Interlocked.Exchange(ref allocated, endBytes - startBytes);
                 Interlocked.Exchange(ref tickTime, internalStopwatch.Elapsed.TotalMicroseconds);
 
                 currentIndex = Math.Clamp((int)(tickCount & 127), 0, tickTimesBuffer2.Length);

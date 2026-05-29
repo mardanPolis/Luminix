@@ -27,6 +27,8 @@ public sealed class AssetIO : Workspace.Service
         public readonly string RelativePath = relativePath;
 
         public string FullPath => Path.Combine(AssetRoot, RelativePath);
+
+        public override string ToString() => FullPath;
     }
 
     public IEnumerable<AssetFile> EnumerateAssets(string rootDirectory = "", bool? boot = null, string directory = "")

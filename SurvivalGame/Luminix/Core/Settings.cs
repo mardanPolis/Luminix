@@ -26,7 +26,7 @@ public static class Settings
     private static volatile bool debugGizmos;
     private static volatile int pixelsPerUnit = 32;
     private static volatile int maxWorkerThreadCount = 5;
-    private static volatile int minWorkerThreadCount = 5;
+    private static volatile int minWorkerThreadCount = 2;
 
     public static bool Debug { get => debug; }
     public static bool DebugInfo { get => debugInfo; set => debugInfo = value; }

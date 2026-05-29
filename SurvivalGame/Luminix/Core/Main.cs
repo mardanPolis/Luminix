@@ -12,6 +12,7 @@ using Luminix.Threading;
 using Luminix.Threading.Bridges;
 using Luminix.Workspaces;
 using Luminix.Core.InputHandlers;
+using Luminix.Resources.AssetHandlers;
 
 namespace Luminix;
 public class Main : Microsoft.Xna.Framework.Game
@@ -38,7 +39,6 @@ public class Main : Microsoft.Xna.Framework.Game
     private Logger logger;
 
     private Workspace workspace;
-    private ResourceProvider resources;
     private RenderingSystem renderingSystem;
 
     private ResourceManager resourceManager;
@@ -59,9 +59,10 @@ public class Main : Microsoft.Xna.Framework.Game
         init => base.Content = value;
     }
 
-    public ResourceProvider Resources => resources;
     internal ResourceManager ResourceManager => resourceManager;
     internal GraphicsDeviceManager GraphicsDeviceManager => graphics;
+
+    private AssetRegistrationHandler assetRegistrationHandler;
 
     protected override void Initialize()
     {
@@ -83,13 +84,14 @@ public class Main : Microsoft.Xna.Framework.Game
             //systems
             renderingSystem = new RenderingSystem(this);
 
-            //handlers
-            inputHandler = new InputHandler();
-
             //initialize thread bridges
             CoreToRender.Initialize();
             RenderToCore.Initialize();
 
+            //handlers
+            inputHandler = new InputHandler();
+            assetRegistrationHandler = new AssetRegistrationHandler(CoreToRender.AssetBridge, resourceManager);
+            
             //threads
             coreThread.Priority = ThreadPriority.AboveNormal;
 
@@ -128,6 +130,7 @@ public class Main : Microsoft.Xna.Framework.Game
         startBytes = GC.GetAllocatedBytesForCurrentThread();
 
         inputHandler.Update(IsActive);
+        assetRegistrationHandler.Run();
         RenderToCore.WindowIsActive = IsActive;
 
         base.Update(gameTime);

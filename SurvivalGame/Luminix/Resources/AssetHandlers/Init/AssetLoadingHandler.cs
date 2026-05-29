@@ -16,29 +16,27 @@ internal class AssetLoadingHandler
     private static readonly HashSet<string> TextureExtensions = new(StringComparer.OrdinalIgnoreCase) { ".png", ".jpg", ".jpeg" };
     private static readonly HashSet<string> SoundExtensions = new(StringComparer.OrdinalIgnoreCase) { ".wav" };
 
+    public struct Result
+    {
+        public Result()
+        {
+            Textures = new DenseList<(AssetIO.AssetFile assetFile, Color[] colors, Vector2 size)>();
+        }
+
+        public readonly DenseList<(AssetIO.AssetFile assetFile, Color[] colors, Vector2 size)> Textures { get; }
+    }
+
     private readonly WorkerThreadPool workerThreadPool;
     private readonly AssetIO assetIO;
-
-    private readonly DenseList<string> loadedBootAssets;
-    private readonly DenseList<string> loadedAssets;
-
-    private readonly DenseList<(AssetIO.AssetFile assetFile, Color[] colors, Vector2 size)> loadedBootTextures;
-    private readonly DenseList<(AssetIO.AssetFile assetFile, Color[] colors, Vector2 size)> loadedTextures;
 
     public AssetLoadingHandler(WorkerThreadPool pool, AssetIO io)
     {
         this.workerThreadPool = pool;
         this.assetIO          = io;
-        this.loadedBootAssets = new DenseList<string>();
-        this.loadedAssets     = new DenseList<string>();
-
-        this.loadedBootTextures = new DenseList<(AssetIO.AssetFile assetFile, Color[] colors, Vector2 size)>();
-        this.loadedTextures = new DenseList<(AssetIO.AssetFile assetFile, Color[] colors, Vector2 size)>();
     }
 
-    public void RunBootLoadingPhase()
+    public Result RunBootLoadingPhase()
     {
-        var loaded = new ConcurrentBag<string>();
         var loadedTextures = new ConcurrentBag<(AssetIO.AssetFile assetFile, Color[] colors, Vector2 size)>();
 
         var assetFiles = assetIO.EnumerateAssets(boot: true).ToList();
@@ -48,20 +46,18 @@ internal class AssetLoadingHandler
 
             if(extension == Main.ENGINE_PACKAGE_ASSET_EXTENSION) HandlePackageFileAsset(assetFile);
             else HandleGenericFileAsset(assetFile, extension, loadedTextures);
-
-            loaded.Add(assetFile.FullPath);
         });
 
-        while(loaded.TryTake(out string path))
-            loadedBootAssets.Add(path);
+        var result = new Result();
 
         while(loadedTextures.TryTake(out var loadedTexture))
-            this.loadedBootTextures.Add(loadedTexture);
+            result.Textures.Add(loadedTexture);
+
+        return result;
     }
 
-    public void RunLoadingPhase()
+    public Result RunLoadingPhase()
     {
-        var loaded = new ConcurrentBag<string>();
         var loadedTextures = new ConcurrentBag<(AssetIO.AssetFile assetFile, Color[] colors, Vector2 size)>();
 
         var assetFiles    = assetIO.EnumerateAssets(boot: false).ToList();
@@ -73,29 +69,23 @@ internal class AssetLoadingHandler
 
             if(extension == Main.ENGINE_PACKAGE_ASSET_EXTENSION) HandlePackageFileAsset(assetFile);
             else HandleGenericFileAsset(assetFile, extension, loadedTextures);
-
-            loaded.Add(assetFile.FullPath);
         });
 
-        while(loaded.TryTake(out string path))
-            loadedAssets.Add(path);
+        var result = new Result();
 
         while(loadedTextures.TryTake(out var loadedTexture))
-            this.loadedTextures.Add(loadedTexture);
+            result.Textures.Add(loadedTexture);
+        
+        return result;
     }
     
-    public HashSet<string> GetLoadedBootAssets() => loadedBootAssets.ToHashSet();
-    public HashSet<string> GetLoadedAssets() => loadedAssets.ToHashSet();
-
-    public DenseList<(AssetIO.AssetFile assetFile, Color[] colors, Vector2 size)> GetLoadedBootTextures() => loadedBootTextures;
-    public DenseList<(AssetIO.AssetFile assetFile, Color[] colors, Vector2 size)> GetLoadedTextures() => loadedTextures;
-
     private void HandleGenericFileAsset(AssetIO.AssetFile assetFile, string extension, ConcurrentBag<(AssetIO.AssetFile assetFile, Color[] colors, Vector2 size)> loadedTextures)
     {
         if (TextureExtensions.Contains(extension) && assetFile.RelativePath.StartsWith(AssetIO.TEXTURES_DIRECTORY))
         {
             assetIO.LoadTexture(assetFile, out Color[] colors, out Vector2 size);
             loadedTextures.Add(new (assetFile, colors, size)); // caches the loaded texture.
+
         }
         else if (SoundExtensions.Contains(extension))
         {
