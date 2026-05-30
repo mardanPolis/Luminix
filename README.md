@@ -29,7 +29,7 @@ git clone https://github.com/mardanPolis/Monogame.git
 
 ### Build and Run
 
-> [!WARNING]
+> [!IMPORTANT]
 > Before proceeding, ensure you have created at least one MonoGame project. This initial setup is required to automatically install MonoGame's background tools and dependencies.
 
 Open terminal in the project `root folder`.
