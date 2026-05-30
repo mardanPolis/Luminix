@@ -33,7 +33,7 @@ public static class Settings
     public static bool Debug { get => debug; }
     public static bool DebugInfo { get => debugInfo; set => debugInfo = value; }
     public static bool DebugGizmos { get => debugGizmos; set => debugGizmos = value; }
-    public static bool DebugLoadedAssets { get => debugLoadedAssets; }
+    public static bool DebugAssets { get => debugLoadedAssets; }
     public static int PixelsPerUnit { get => pixelsPerUnit; }
     public static int MaxWorkerThreadCount { get => maxWorkerThreadCount; }
     public static int MinWorkerThreadCount { get => minWorkerThreadCount; }

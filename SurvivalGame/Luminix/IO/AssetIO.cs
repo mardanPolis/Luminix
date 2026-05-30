@@ -7,6 +7,7 @@ using StbImageSharp;
 using StbImageWriteSharp;
 
 using Luminix.Workspaces;
+using System.Threading.Tasks;
 
 namespace Luminix.IO;
 
@@ -111,7 +112,6 @@ public sealed class AssetIO : Workspace.Service
             return;
         }
     }
-
     public void LoadTexture(AssetFile assetFile, out TextureAsset _textureAsset)
     {
         using Stream stream = OpenStream(assetFile);
@@ -131,14 +131,12 @@ public sealed class AssetIO : Workspace.Service
 
         _textureAsset = new TextureAsset(assetFile.Name, colors, size);
     }
-
     public void LoadAudio(AssetFile assetFile, out AudioAsset _audioAsset)
     {
         using Stream stream = OpenStream(assetFile);
         var soundEffect = SoundEffect.FromStream(stream);
         _audioAsset = new AudioAsset(assetFile.Name, soundEffect);
     }
-
     public void LoadStreamAsset(AssetFile assetFile, out StreamAsset _streamAsset)
     {
         using Stream fileStream = OpenStream(assetFile);
@@ -149,15 +147,78 @@ public sealed class AssetIO : Workspace.Service
         StreamAsset.AssetType assetType = DetectAssetType(memStream);
         _streamAsset = new StreamAsset(assetFile.Name, memStream, assetType);
     }
-
     public void LoadPackageAsset(AssetFile assetFile, out PackageAsset _assets)
     {
         throw new NotImplementedException(nameof(LoadPackageAsset));
     }
+    
+    public async Task<Asset> LoadAssetAsync(AssetFile assetFile)
+    {
+        string extension = Path.GetExtension(assetFile.FullPath);
+
+        if (PackageExtensions.Contains(extension))
+            return await LoadPackageAssetAsync(assetFile);
+
+        if (TextureExtensions.Contains(extension))
+            return await LoadTextureAsync(assetFile);
+
+        // TODO: create song asset handling
+        if (AudioExtensions.Contains(extension))
+            return await LoadAudioAsync(assetFile);
+
+        if (MonoExtensions.Contains(extension))
+            return await LoadStreamAssetAsync(assetFile);
+
+        return null;
+    }
+    public async Task<TextureAsset> LoadTextureAsync(AssetFile assetFile)
+    {
+        await using Stream stream = OpenStream(assetFile);
+        var result = ImageResult.FromStream(stream, StbImageSharp.ColorComponents.RedGreenBlueAlpha);
+
+        int pixelCount = result.Width * result.Height;
+        var colors = new Color[pixelCount];
+        var raw = result.Data;
+
+        for (int i = 0; i < pixelCount; i++)
+        {
+            int b = i * 4;
+            colors[i] = new Color(raw[b], raw[b + 1], raw[b + 2], raw[b + 3]);
+        }
+
+        var size = new Vector2(result.Width, result.Height);
+
+        return new TextureAsset(assetFile.Name, colors, size);
+    }
+    public async Task<AudioAsset> LoadAudioAsync(AssetFile assetFile)
+    {
+        await using Stream stream = OpenStream(assetFile);
+        var soundEffect = SoundEffect.FromStream(stream);
+        return new AudioAsset(assetFile.Name, soundEffect);
+    }
+    public async Task<StreamAsset> LoadStreamAssetAsync(AssetFile assetFile)
+    {
+        await using Stream fileStream = OpenStream(assetFile);
+        var memStream = new MemoryStream();
+        await fileStream.CopyToAsync(memStream);
+        memStream.Position = 0;
+
+        StreamAsset.AssetType assetType = DetectAssetType(memStream);
+        return new StreamAsset(assetFile.Name, memStream, assetType);
+    }
+    public async Task<PackageAsset> LoadPackageAssetAsync(AssetFile assetFile)
+    {
+        throw new NotImplementedException(nameof(LoadPackageAssetAsync));
+    }
 
     public FileStream OpenStream(AssetFile assetFile)
     {
-        return File.OpenRead(assetFile.FullPath);
+        return new FileStream(assetFile.FullPath, 
+        FileMode.Open,
+        FileAccess.Read,
+        FileShare.Read,
+        bufferSize: 4096,
+        useAsync: true);
     }
 
 
@@ -203,7 +264,11 @@ public sealed class AssetIO : Workspace.Service
 
     internal void SaveTexture(string name, Color[] colors, Vector2 size)
     {
-        string path = Path.Combine(AppContext.BaseDirectory, ASSET_CACHE_DIRECTORY, name + ".png");
+        string directoryPath = Path.Combine(AppContext.BaseDirectory, ASSET_CACHE_DIRECTORY);
+        string path = Path.Combine(directoryPath, name + ".png");
+
+        if (!Directory.Exists(directoryPath))
+            Directory.CreateDirectory(directoryPath);
 
         byte[] bytes = new byte[colors.Length * 4];
         for (int i = 0; i < colors.Length; i++)
@@ -217,5 +282,8 @@ public sealed class AssetIO : Workspace.Service
         using FileStream stream = File.OpenWrite(path);
         ImageWriter writer = new ImageWriter();
         writer.WritePng(bytes, (int)size.X, (int)size.Y, StbImageWriteSharp.ColorComponents.RedGreenBlueAlpha, stream);
+
+        if(Settings.DebugAssets)
+            Logger.Get().Log($"Texture '{name}', saved to: '{path}'");
     }
 }

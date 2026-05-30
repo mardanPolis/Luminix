@@ -7,13 +7,8 @@ using Luminix.IO;
 using Luminix.Resources;
 using Luminix.Resources.AssetHandlers;
 using Luminix.Threading.Bridges;
-using System.IO;
-using Microsoft.Xna.Framework;
 using Luminix.AssetHandlers;
-using Luminix.Resources.BuiltIn;
-using System.Threading.Tasks;
 using System.Collections.Generic;
-using Luminix.Collections;
 
 namespace Luminix.Threading;
 
@@ -149,7 +144,9 @@ public sealed class CoreThread : TickedThread
         foreach (AtlasAsset atlas in atlasHandler.Run(textureAssets))
         {
             assets.Add(atlas);
-            assetIO.SaveTexture(atlas.Name, atlas.Colors, atlas.Size);
+            
+            // if(Settings.DebugAssets)
+            //     assetIO.SaveTexture(atlas.Name, atlas.Colors, atlas.Size);
         }
 
         var task = CoreToRender.AssetBridge.RegisterAsync(assets);
