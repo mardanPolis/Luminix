@@ -8,24 +8,12 @@ using System.IO;
 using System.Collections.Concurrent;
 using Microsoft.Xna.Framework.Audio;
 using Microsoft.Xna.Framework;
+using Luminix.Resources.BuiltIn;
 
 namespace Luminix.Resources.AssetHandlers;
 
 internal class AssetLoadingHandler
 {
-    private static readonly HashSet<string> TextureExtensions = new(StringComparer.OrdinalIgnoreCase) { ".png", ".jpg", ".jpeg" };
-    private static readonly HashSet<string> SoundExtensions = new(StringComparer.OrdinalIgnoreCase) { ".wav" };
-
-    public struct Result
-    {
-        public Result()
-        {
-            Textures = new DenseList<(AssetIO.AssetFile assetFile, Color[] colors, Vector2 size)>();
-        }
-
-        public readonly DenseList<(AssetIO.AssetFile assetFile, Color[] colors, Vector2 size)> Textures { get; }
-    }
-
     private readonly WorkerThreadPool workerThreadPool;
     private readonly AssetIO assetIO;
 
@@ -35,67 +23,40 @@ internal class AssetLoadingHandler
         this.assetIO          = io;
     }
 
-    public Result RunBootLoadingPhase()
+    public DenseList<Asset> RunBootLoadingPhase()
     {
-        var loadedTextures = new ConcurrentBag<(AssetIO.AssetFile assetFile, Color[] colors, Vector2 size)>();
+        TextureAsset nullTextureAsset = new ("null", BuiltInResources.NullTextureColor, new Vector2(32, 32));
 
         var assetFiles = assetIO.EnumerateAssets(boot: true).ToList();
-        workerThreadPool.ParallelFor(assetFiles, assetFile =>
-        {
-            var extension = Path.GetExtension(assetFile.RelativePath);
-
-            if(extension == Main.ENGINE_PACKAGE_ASSET_EXTENSION) HandlePackageFileAsset(assetFile);
-            else HandleGenericFileAsset(assetFile, extension, loadedTextures);
-        });
-
-        var result = new Result();
-
-        while(loadedTextures.TryTake(out var loadedTexture))
-            result.Textures.Add(loadedTexture);
-
-        return result;
+        var assets = Load(assetFiles);
+        assets.Add(nullTextureAsset);
+        return assets;
     }
 
-    public Result RunLoadingPhase()
+    public DenseList<Asset> RunLoadingPhase()
     {
-        var loadedTextures = new ConcurrentBag<(AssetIO.AssetFile assetFile, Color[] colors, Vector2 size)>();
+        var assetFiles = assetIO.EnumerateAssets(boot: false).ToList();
+        return Load(assetFiles);
+    }
 
-        var assetFiles    = assetIO.EnumerateAssets(boot: false).ToList();
-        var totalAssets   = assetFiles.Count;
+    private DenseList<Asset> Load(List<AssetIO.AssetFile> assetFiles)
+    {
+        ConcurrentBag<Asset> loadedAssets = [];
 
         workerThreadPool.ParallelFor(assetFiles, assetFile =>
         {
-            var extension = Path.GetExtension(assetFile.RelativePath);
+            if(Settings.DebugLoadedAssets)
+                Logger.Get().Log("Loading: " + assetFile.RelativePath);
 
-            if(extension == Main.ENGINE_PACKAGE_ASSET_EXTENSION) HandlePackageFileAsset(assetFile);
-            else HandleGenericFileAsset(assetFile, extension, loadedTextures);
+            assetIO.LoadAsset(assetFile, out Asset asset);
+            loadedAssets.Add(asset);
         });
 
-        var result = new Result();
+        var result = new DenseList<Asset>();
 
-        while(loadedTextures.TryTake(out var loadedTexture))
-            result.Textures.Add(loadedTexture);
-        
+        while(loadedAssets.TryTake(out var item))
+            result.Add(item);
+
         return result;
-    }
-    
-    private void HandleGenericFileAsset(AssetIO.AssetFile assetFile, string extension, ConcurrentBag<(AssetIO.AssetFile assetFile, Color[] colors, Vector2 size)> loadedTextures)
-    {
-        if (TextureExtensions.Contains(extension) && assetFile.RelativePath.StartsWith(AssetIO.TEXTURES_DIRECTORY))
-        {
-            assetIO.LoadTexture(assetFile, out Color[] colors, out Vector2 size);
-            loadedTextures.Add(new (assetFile, colors, size)); // caches the loaded texture.
-
-        }
-        else if (SoundExtensions.Contains(extension))
-        {
-            assetIO.LoadSound(assetFile, out SoundEffect sound);
-            // TODO : registration of Sound
-        }
-    }
-
-    private void HandlePackageFileAsset(AssetIO.AssetFile assetFile)
-    {
-        throw new NotImplementedException(nameof(HandlePackageFileAsset));
     }
 }

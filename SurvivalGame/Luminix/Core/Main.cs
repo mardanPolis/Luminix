@@ -72,6 +72,10 @@ public class Main : Microsoft.Xna.Framework.Game
         logger = Logger.Get();
         logger.Log($"Started initialization");
 
+        Settings.Initialize(out Settings.Controller settingsController);
+        settingsController.Debug = true;
+        settingsController.DebugLoadedAssets = true;
+
         try
         {
             //workspace
@@ -119,8 +123,8 @@ public class Main : Microsoft.Xna.Framework.Game
         long endBytes = GC.GetAllocatedBytesForCurrentThread();
         allocated = endBytes - startBytes;
 
-        logger.Log($"Game initialized in {stopwatch.Elapsed.Milliseconds}ms");
-        logger.Log($"Game allocated {allocated} bytes during initialization!");
+        logger.Log($"RenderThread initialized in {stopwatch.Elapsed.Milliseconds}ms");
+        logger.Log($"RenderThread allocated {allocated} bytes during initialization!");
 
         workspace.SetState(Workspace.State.Running);
     }
@@ -131,6 +135,7 @@ public class Main : Microsoft.Xna.Framework.Game
 
         inputHandler.Update(IsActive);
         assetRegistrationHandler.Run();
+
         RenderToCore.WindowIsActive = IsActive;
 
         base.Update(gameTime);

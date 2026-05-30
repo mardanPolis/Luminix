@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Luminix.IO;
 using Microsoft.Xna.Framework;
 using RectpackSharp;
 
@@ -8,32 +9,25 @@ namespace Luminix.Resources;
 
 public sealed class AtlasMaker
 {
-    private readonly record struct Entry(string Name, Color[] Colors, int Width, int Height);
+    private readonly record struct Entry(string Name, Color[] Colors, Vector2 Size);
     private readonly List<Entry> entries = new();
 
-    public readonly record struct AtlasResult(
-        Color[]     AtlasColors,
-        Vector2     AtlasSize,
-        AtlasResult.TextureRegion[] TextureRegions
-    )
+    public void Add(TextureAsset asset)
     {
-        public readonly record struct TextureRegion(string Name, Rectangle Rectangle);
+        PadColors(asset.Colors, asset.Size, out Color[] paddedColors, out Vector2 paddedSize);
+        entries.Add(new Entry(asset.Name, paddedColors, paddedSize));
     }
 
-    public void Add(string name, Color[] colors, Vector2 size)
+    public AtlasAsset[] Pack(string atlasName)
     {
-        PadColors(colors, size, out Color[] paddedColors, out Vector2 paddedSize);
-        entries.Add(new Entry(name, paddedColors, (int)paddedSize.X, (int)paddedSize.Y));
-    }
+        if (entries.Count == 0) return Array.Empty<AtlasAsset>();
 
-    public AtlasResult[] Pack()
-    {
-        if (entries.Count == 0) return Array.Empty<AtlasResult>();
-
-        var results = new List<AtlasResult>();
+        var results = new List<AtlasAsset>();
         var remaining = new List<(Entry entry, int originalId)>(
             entries.Select((e, i) => (e, i))
         );
+
+        int atlasCount = 0;
 
         while (remaining.Count > 0)
         {
@@ -63,17 +57,18 @@ public sealed class AtlasMaker
             if (fittingCount == 0)
                 throw new InvalidOperationException(
                     $"AtlasMaker: a single texture is too large to fit in a 4096x4096 atlas: " +
-                    $"'{remaining[0].entry.Name}' ({remaining[0].entry.Width}x{remaining[0].entry.Height})");
+                    $"'{remaining[0].entry.Name}' ({remaining[0].entry.Size.X}x{remaining[0].entry.Size.Y})");
 
-            results.Add(BuildAtlas(fittingRects, fittingBounds, remaining));
+            results.Add(BuildAtlas(atlasName + "_" + atlasCount, fittingRects, fittingBounds, remaining));
             remaining.RemoveRange(0, fittingCount);
+            atlasCount++;
         }
 
         entries.Clear();
         return results.ToArray();
     }
 
-    private static void PadColors(Color[] colors, Vector2 size, out Color[] resultColor, out Vector2 resultSize)
+    private static void PadColors(Color[] colors, Vector2 size, out Color[] _resultColor, out Vector2 _resultSize)
     {
         Vector2 paddedColorsSize = new Vector2(size.X + 2, size.Y + 2);
         Color[] paddedColors = new Color[(int)((size.X + 2) * (size.Y + 2))];
@@ -120,8 +115,8 @@ public sealed class AtlasMaker
             paddedColors[destRight] = colors[srcRight];
         }
 
-        resultColor = paddedColors;
-        resultSize = paddedColorsSize;
+        _resultColor = paddedColors;
+        _resultSize = paddedColorsSize;
     }
 
     private static PackingRectangle[] BuildRects(List<(Entry entry, int originalId)> source, int count)
@@ -129,50 +124,47 @@ public sealed class AtlasMaker
         var rects = new PackingRectangle[count];
         for (int i = 0; i < count; i++)
             rects[i] = new PackingRectangle(0, 0,
-                (uint)source[i].entry.Width,
-                (uint)source[i].entry.Height,
+                (uint)source[i].entry.Size.X,
+                (uint)source[i].entry.Size.Y,
                 i);
         return rects;
     }
 
-    private static int NextPowerOfTwo(int value)
-    {
-        if (value <= 0) return 1;
-        int p = 1;
-        while (p < value) p <<= 1;
-        return p;
-    }
-
-    private static AtlasResult BuildAtlas(
+    private static AtlasAsset BuildAtlas(
+        string name,
         PackingRectangle[] rects,
         PackingRectangle bounds,
         List<(Entry entry, int originalId)> source)
     {
-        int atlasW = NextPowerOfTwo((int)bounds.Width);
-        int atlasH = NextPowerOfTwo((int)bounds.Height);
+
+        int atlasW = (int)System.Numerics.BitOperations.RoundUpToPowerOf2(bounds.Width);
+        int atlasH = (int)System.Numerics.BitOperations.RoundUpToPowerOf2(bounds.Width);
 
         var atlasColors  = new Color[atlasW * atlasH];
-        var textureRegions = new AtlasResult.TextureRegion[rects.Length];
+        var regions = new AtlasAsset.Region[rects.Length];
 
         foreach (var rect in rects)
         {
             int sliceIdx = rect.Id;
             var (entry, _) = source[sliceIdx];
 
-            textureRegions[sliceIdx] = new(
+            int width = (int)entry.Size.X;
+            int height = (int)entry.Size.Y;
+
+            regions[sliceIdx] = new(
                 entry.Name,
                 new Rectangle((int)rect.X + 1, (int)rect.Y + 1,
-                            entry.Width - 2,  entry.Height - 2));
+                            width - 2,  height - 2));
 
-            for (int row = 0; row < entry.Height; row++)
+            for (int row = 0; row < height; row++)
             {
-                int srcOffset  = row * entry.Width;
+                int srcOffset  = row * width;
                 int destOffset = ((int)rect.Y + row) * atlasW + (int)rect.X;
-                entry.Colors.AsSpan(srcOffset, entry.Width)
-                            .CopyTo(atlasColors.AsSpan(destOffset, entry.Width));
+                entry.Colors.AsSpan(srcOffset, width)
+                            .CopyTo(atlasColors.AsSpan(destOffset, width));
             }
         }
 
-        return new AtlasResult(atlasColors, new Vector2(atlasW, atlasH), textureRegions);
+        return new AtlasAsset(name, atlasColors, new Vector2(atlasW, atlasH), regions);
     }
 }

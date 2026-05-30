@@ -13,6 +13,7 @@ using Luminix.AssetHandlers;
 using Luminix.Resources.BuiltIn;
 using System.Threading.Tasks;
 using System.Collections.Generic;
+using Luminix.Collections;
 
 namespace Luminix.Threading;
 
@@ -47,90 +48,29 @@ public sealed class CoreThread : TickedThread
     protected sealed override void Initialize()
     {
         logger = Logger.Get();
-
         IsBackground = true;
 
         Workspace.Create();
-        typeRegistry = new TypeRegistry();
-        resources    = new ResourceProvider();
-        universe     = new Universe(out universeController);
-        input        = new Input();
+        typeRegistry    = new TypeRegistry();
+        resources       = new ResourceProvider();
+        universe        = new Universe(out universeController);
+        input           = new Input();
         workerThreadPool = new WorkerThreadPool(workerThreadCount);
         assetIO          = new AssetIO();
 
         workerThreadPool.Initialize();
 
-        {
-            var assetLoadingHandler = new AssetLoadingHandler(workerThreadPool, assetIO);
-            var textureAtlasHandler = new TextureAssetAtlasHandler(workerThreadPool);
+        var assetLoadingHandler = new AssetLoadingHandler(workerThreadPool, assetIO);
+        var textureAtlasHandler = new TextureAssetAtlasHandler(workerThreadPool);
 
-            {
-                List<Task> tasks = new List<Task>();
+        LoadBootAssets(assetLoadingHandler);
+        LoadAssets(assetLoadingHandler, textureAtlasHandler);
 
-                //Loading Boot Assets
-                Workspace.Current.SetSubState("bootstrap");
+        if (Settings.DebugLoadedAssets)
+            LogResources();
 
-                Task nullTextureTask = CoreToRender.AssetBridge.RegisterTextureWithRegionAsync("null", BuiltInTextures.NullTextureColor, new Vector2(32, 32));
-                tasks.Add(nullTextureTask);
-
-                //TODO : make other asset handling.
-
-                var loadedAssets = assetLoadingHandler.RunBootLoadingPhase();
-                foreach(var texture in loadedAssets.Textures)
-                {
-                    string name = Path.GetFileNameWithoutExtension(texture.assetFile.RelativePath);
-                    Task task = CoreToRender.AssetBridge.RegisterTextureWithRegionAsync(name, texture.colors, texture.size);
-                    tasks.Add(task);
-                }
-
-                Workspace.Current.SetSubState("receiving boot assets");
-                Task.WhenAll(tasks).Wait();
-                resources.Update(RenderToCore.ResourceBridge);
-
-                GC.Collect();
-            }
-            {
-                List<Task> tasks = new List<Task>();
-
-                //Loading Assets
-                Workspace.Current.SetSubState("loading assets");
-
-                var loadedAssets = assetLoadingHandler.RunLoadingPhase();
-
-                Workspace.Current.SetSubState("generating atlases");
-                var results = textureAtlasHandler.Run(loadedAssets.Textures);
-                foreach(var result in results)
-                {
-                    Task textureTask = CoreToRender.AssetBridge.RegisterTextureAsync(result.atlasName, result.atlasResult.AtlasColors, result.atlasResult.AtlasSize);
-                    tasks.Add(textureTask);
-                    foreach(var region in result.atlasResult.TextureRegions)
-                    {
-                        Task regionTask = CoreToRender.AssetBridge.RegisterTextureRegionAsync(region.Name, result.atlasName, region.Rectangle);
-                        tasks.Add(regionTask);
-                    }
-
-                    assetIO.SaveTexture(result.atlasName, result.atlasResult.AtlasColors, result.atlasResult.AtlasSize);
-                }
-
-                Workspace.Current.SetSubState("receiving assets");
-                Task.WhenAll(tasks).Wait();
-                resources.Update(RenderToCore.ResourceBridge);
-
-                GC.Collect();
-            }
-
-            //TODO : Complete the initialization.
-
-            //Renderers
-            Workspace.Current.SetSubState("renderers");
-
-            //Types
-            Workspace.Current.SetSubState("types");
-        }
-
-        IsBackground = false;
-
-        GC.Collect();
+        Workspace.Current.SetSubState("renderers");
+        Workspace.Current.SetSubState("types");
     }
 
     protected sealed override void OnTick()
@@ -160,7 +100,7 @@ public sealed class CoreThread : TickedThread
 
         input.ReadFrom(Bridges.RenderToCore.InputBridge);
  
-        resources.Update(RenderToCore.ResourceBridge);
+        resources.Set(RenderToCore.ResourceBridge.Get());
 
         universeController.TickRate = TickRate;
         universeController.DeltaTime = UnsafeTickDeltaTime;
@@ -177,5 +117,60 @@ public sealed class CoreThread : TickedThread
     private void Optimize(long maxTime, long time)
     {
         //if(maxTime * 0.6 > time) currWriteStack.Optimize();
+    }
+
+    private void LoadBootAssets(AssetLoadingHandler assetLoadingHandler)
+    {
+        Workspace.Current.SetSubState("bootstrap");
+
+        var loadedAssets = assetLoadingHandler.RunBootLoadingPhase();
+
+        var task = CoreToRender.AssetBridge.RegisterAsync(loadedAssets);
+
+        Workspace.Current.SetSubState("receiving boot assets");
+        
+        task.Wait();
+        resources.Set(RenderToCore.ResourceBridge.Get());
+        GC.Collect();
+    }
+
+    private void LoadAssets(AssetLoadingHandler assetLoadingHandler, TextureAssetAtlasHandler atlasHandler)
+    {
+        Workspace.Current.SetSubState("loading assets");
+
+        var loadedAssets = assetLoadingHandler.RunLoadingPhase();
+
+        Workspace.Current.SetSubState("generating atlases");
+        List<Asset> assets = [];
+        List<TextureAsset> textureAssets = [];
+
+        foreach (var asset in loadedAssets)
+        {
+            if(asset is TextureAsset textureAsset)
+                textureAssets.Add(textureAsset);
+            else
+                assets.Add(asset);
+        }
+
+        foreach (AtlasAsset atlas in atlasHandler.Run(textureAssets))
+        {
+            assets.Add(atlas);
+            assetIO.SaveTexture(atlas.Name, atlas.Colors, atlas.Size);
+        }
+
+        var task = CoreToRender.AssetBridge.RegisterAsync(assets);
+
+        Workspace.Current.SetSubState("receiving assets");
+        
+        task.Wait();
+        resources.Set(RenderToCore.ResourceBridge.Get());
+        GC.Collect();
+    }
+
+    private void LogResources()
+    {
+        logger.Log("Resources: " + resources.ResourceCount);
+        foreach (var resource in resources)
+            logger.Log("resource: " + resource.Name);
     }
 }

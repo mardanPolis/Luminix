@@ -42,6 +42,8 @@ public class TextureResource : Resource
     public int SourceHeight => Source.Height;
 
     public bool IsDisposed => Source.IsDisposed;
+
+    public sealed override string ToString() => $"{Name} {Rectangle}";
 }
 
 public sealed class FontResource : Resource
@@ -59,6 +61,8 @@ public sealed class FontResource : Resource
     public ReadOnlyCollection<char> Characters => Source.Characters;
 
     public bool IsDisposed => Source.Texture.IsDisposed;
+
+    public sealed override string ToString() => Name;
 }
 
 public sealed class ShaderResource : Resource

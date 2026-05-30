@@ -22,12 +22,25 @@ public sealed class AssetIO : Workspace.Service
 
     public struct AssetFile
     {
+        public static AssetFile Generated => new AssetFile("Generated");
+
         public AssetFile(string assetRoot, string relativePath)
         {
             AssetRoot = assetRoot;
             RelativePath = relativePath;
             Name = Path.GetFileNameWithoutExtension(Path.Combine(assetRoot, relativePath));
         }
+        private AssetFile(string gen)
+        {
+            AssetRoot = null;
+            RelativePath = null;
+            Name = null;
+
+            IsGenerated = true;
+        }
+
+        public bool IsGenerated { get; }
+
         public string AssetRoot { get; }
         public string RelativePath { get; }
         public string Name { get; }
@@ -101,7 +114,7 @@ public sealed class AssetIO : Workspace.Service
 
     public void LoadTexture(AssetFile assetFile, out TextureAsset _textureAsset)
     {
-        using Stream stream = File.OpenRead(assetFile.FullPath);
+        using Stream stream = OpenStream(assetFile);
         var result = ImageResult.FromStream(stream, StbImageSharp.ColorComponents.RedGreenBlueAlpha);
 
         int pixelCount = result.Width * result.Height;
@@ -116,16 +129,15 @@ public sealed class AssetIO : Workspace.Service
 
         var size = new Vector2(result.Width, result.Height);
 
-        _textureAsset = new TextureAsset(assetFile, colors, size);
+        _textureAsset = new TextureAsset(assetFile.Name, colors, size);
     }
 
     public void LoadAudio(AssetFile assetFile, out AudioAsset _audioAsset)
     {
-        using Stream stream = File.OpenRead(assetFile.FullPath);
+        using Stream stream = OpenStream(assetFile);
         var soundEffect = SoundEffect.FromStream(stream);
-        _audioAsset = new AudioAsset(assetFile, soundEffect);
+        _audioAsset = new AudioAsset(assetFile.Name, soundEffect);
     }
-
 
     public void LoadStreamAsset(AssetFile assetFile, out StreamAsset _streamAsset)
     {
@@ -135,7 +147,7 @@ public sealed class AssetIO : Workspace.Service
         memStream.Position = 0;
 
         StreamAsset.AssetType assetType = DetectAssetType(memStream);
-        _streamAsset = new StreamAsset(assetFile, memStream, assetType);
+        _streamAsset = new StreamAsset(assetFile.Name, memStream, assetType);
     }
 
     public void LoadPackageAsset(AssetFile assetFile, out PackageAsset _assets)

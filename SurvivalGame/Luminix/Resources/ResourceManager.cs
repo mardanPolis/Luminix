@@ -94,6 +94,8 @@ public sealed class ResourceManager : Microsoft.Xna.Framework.Content.ContentMan
 
     public new string RootDirectory => AssetIO.ASSET_DIRECTORY;
 
+    public IReadOnlyDictionary<string, Resource> Resources => resources;
+
     Action<IDisposable> RecordDisposable;
     private Main main;
 
@@ -114,6 +116,7 @@ public sealed class ResourceManager : Microsoft.Xna.Framework.Content.ContentMan
 
         textures.NewSource(name, texture);
         RecordDisposable(texture);
+
     }
 
     public void CreateTextureRegion(string textureName, string name, Rectangle rectangle)
@@ -166,7 +169,7 @@ public sealed class ResourceManager : Microsoft.Xna.Framework.Content.ContentMan
                 throw new NotSupportedException($"Asset type '{typeof(T)}' is not supported by ResourceManager.");
             }
 
-            resources.Add(name, resource);
+            resources = resources.Add(name, resource);
         }
         finally
         {

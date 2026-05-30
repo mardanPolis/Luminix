@@ -1,9 +1,13 @@
 
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Threading.Tasks;
+using Luminix.IO;
 using Luminix.Threading.Bridges;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Audio;
+using Microsoft.Xna.Framework.Graphics;
 
 namespace Luminix.Resources.AssetHandlers;
 
@@ -17,32 +21,21 @@ internal class AssetRegistrationHandler
         this.assetBridge = assetBridge;
         this.resourceManager = resourceManager;
 
-        onTexture = (name, colors, size) =>
+        action = (asset) =>
         {
-            resourceManager.CreateTexture(name, colors, size);
-        };
-
-        onTextureRegion = (textureName, name, rectangle) =>
-        {
-            resourceManager.CreateTextureRegion(textureName, name, rectangle);
-        };
-
-        onStream = (name, stream) =>
-        {
-            
         };
     }
 
-    private AssetBridge assetBridge;
-    private ResourceManager resourceManager;
+    private readonly AssetBridge assetBridge;
+    private readonly Action<Asset> action;
 
-    private Action<string, Color[], Vector2> onTexture;
-    private Action<string, string, Rectangle> onTextureRegion;
-    private Action<string, SoundEffect> onSound;
-    private Action<string, Stream> onStream;
+    private readonly ResourceManager resourceManager;
 
     public void Run()
     {
-        assetBridge.ConsumeAssets(onTexture, onTextureRegion, onSound, onStream);
+        assetBridge.ConsumeAssets(action, out List<TaskCompletionSource> tsks);
+        RenderToCore.ResourceBridge.Set(resourceManager.Resources);
+        for(int i = 0; i < tsks.Count; i++)
+            tsks[i].SetResult();
     }
 }
