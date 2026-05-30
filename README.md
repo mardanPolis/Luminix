@@ -12,13 +12,13 @@ Player constructs his own colony's base, recruits others. Explores the world, fi
 
 ### Setup
 
-Recommended IDE: `VS Code`, see [website](https://code.visualstudio.com/download).
+Recommended IDE: `VS Code`, [see](https://code.visualstudio.com/download).
 
 Please follow the Monogame [Getting Started Guide](https://docs.monogame.net/articles/getting_started/index.html) on how to setup your OS for development.
 
 Ensure that these are installed:
-- `.NET 10.0 SDK and RUNTIME`, see [website](https://dotnet.microsoft.com/en-us/download/dotnet/10.0).
-- `GIT`, see [website](https://git-scm.com/).
+- `.NET 10.0 SDK and RUNTIME`, [see](https://dotnet.microsoft.com/en-us/download/dotnet/10.0).
+- `GIT`, [see](https://git-scm.com/).
 
 Clone the repository:
 ```bash
@@ -29,7 +29,8 @@ git clone https://github.com/mardanPolis/Monogame.git
 
 ### Build and Run
 
-[!WARNING] Before proceeding, ensure you have created at least one MonoGame project. This initial setup is required to automatically install MonoGame's background tools and dependencies.
+> [!WARNING]
+> Before proceeding, ensure you have created at least one MonoGame project. This initial setup is required to automatically install MonoGame's background tools and dependencies.
 
 Open terminal in the project `root folder`.
 
