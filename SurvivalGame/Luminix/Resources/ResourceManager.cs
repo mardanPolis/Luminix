@@ -106,12 +106,12 @@ public sealed class ResourceManager : Microsoft.Xna.Framework.Content.ContentMan
 
     private ImmutableDictionary<string, Resource> resources;
 
-    public void CreateTexture(string name, Color[] colors, Vector2 scale)
+    public void CreateTexture(string name, Color[] colors, Vector2 size)
     {
         ArgumentNullException.ThrowIfNullOrWhiteSpace(name, nameof(name));
         ArgumentNullException.ThrowIfNull(colors, nameof(colors));
         
-        Texture2D texture = new Texture2D(main.GraphicsDevice, (int)scale.X, (int)scale.Y);
+        Texture2D texture = new Texture2D(main.GraphicsDevice, (int)size.X, (int)size.Y);
         texture.SetData(colors);
 
         textures.NewSource(name, texture);
@@ -127,6 +127,17 @@ public sealed class ResourceManager : Microsoft.Xna.Framework.Content.ContentMan
         textures.NewRegion(textureName, name, out Texture2D texture);
         TextureResource resource = new TextureResource(texture, name, rectangle);
         resources = resources.Add(name, resource);
+    }
+
+    public void CreateSound(string name, SoundEffect soundEffect)
+    {
+        ArgumentNullException.ThrowIfNullOrWhiteSpace(name, nameof(name));
+        ArgumentNullException.ThrowIfNull(soundEffect, nameof(soundEffect));
+
+        AudioResource resource = new AudioResource(soundEffect, name);
+        resources = resources.Add(name, resource);
+
+        RecordDisposable(soundEffect);
     }
 
     public void Create<T>(string name, Stream stream)

@@ -23,6 +23,42 @@ internal class AssetRegistrationHandler
 
         action = (asset) =>
         {
+            if(asset is TextureAsset textureAsset)
+            {
+                resourceManager.CreateTexture(textureAsset.Name, textureAsset.Colors, textureAsset.Size);
+                resourceManager.CreateTextureRegion(textureAsset.Name, textureAsset.Name, new Rectangle(0, 0, (int)textureAsset.Size.X, (int)textureAsset.Size.Y));
+            }
+            else if(asset is AtlasAsset atlasAsset)
+            {
+                resourceManager.CreateTexture(atlasAsset.Name, atlasAsset.Colors, atlasAsset.Size);
+                for(int i = 0; i < atlasAsset.Regions.Length; i++)
+                {
+                    var region = atlasAsset.Regions[i];
+                    resourceManager.CreateTextureRegion(atlasAsset.Name, region.Name, region.Rectangle);
+                }
+            }
+            else if(asset is AudioAsset audioAsset)
+            {
+                resourceManager.CreateSound(audioAsset.Name, audioAsset.SoundEffect);
+            }
+            else if(asset is StreamAsset streamAsset)
+            {
+                switch(streamAsset.Type)
+                {
+                    case StreamAsset.AssetType.Texture:
+                        resourceManager.Create<Texture2D>(streamAsset.Name, streamAsset.Stream);
+                    break;
+                    case StreamAsset.AssetType.Font:
+                        resourceManager.Create<SpriteFont>(streamAsset.Name, streamAsset.Stream);
+                    break;
+                    case StreamAsset.AssetType.Audio:
+                        resourceManager.Create<SoundEffect>(streamAsset.Name, streamAsset.Stream);
+                    break;
+                    case StreamAsset.AssetType.Shader:
+                        resourceManager.Create<Effect>(streamAsset.Name, streamAsset.Stream);
+                    break;
+                }
+            }
         };
     }
 
