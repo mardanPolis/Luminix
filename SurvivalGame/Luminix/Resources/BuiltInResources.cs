@@ -2,7 +2,7 @@ using Microsoft.Xna.Framework;
 
 namespace Luminix.Resources.BuiltIn;
 
-internal static class BuiltInTextures
+internal static class BuiltInResources
 {
     public static Color[] NullTextureColor
     {
