@@ -11,32 +11,32 @@
 #-------------------------------- References --------------------------------#
 
 
-#---------------------------------- Assets ---------------------------------#
+#---------------------------------- Content ---------------------------------#
 
-#begin Effects/TileShader.fx
+#begin Boot/Fonts/IBMPlexMono-Bold.spritefont
+/importer:FontDescriptionImporter
+/processor:FontDescriptionProcessor
+/processorParam:PremultiplyAlpha=True
+/processorParam:TextureFormat=Compressed
+/build:Boot/Fonts/IBMPlexMono-Bold.spritefont
+
+#begin Boot/Fonts/IBMPlexMono-Medium.spritefont
+/importer:FontDescriptionImporter
+/processor:FontDescriptionProcessor
+/processorParam:PremultiplyAlpha=True
+/processorParam:TextureFormat=Compressed
+/build:Boot/Fonts/IBMPlexMono-Medium.spritefont
+
+#begin Boot/Fonts/IBMPlexMono-Regular.spritefont
+/importer:FontDescriptionImporter
+/processor:FontDescriptionProcessor
+/processorParam:PremultiplyAlpha=True
+/processorParam:TextureFormat=Compressed
+/build:Boot/Fonts/IBMPlexMono-Regular.spritefont
+
+#begin Boot/Shaders/TileShader.fx
 /importer:EffectImporter
 /processor:EffectProcessor
 /processorParam:DebugMode=Auto
-/build:Effects/TileShader.fx
-
-#begin Fonts/IBMPlexMono-Bold.spritefont
-/importer:FontDescriptionImporter
-/processor:FontDescriptionProcessor
-/processorParam:PremultiplyAlpha=True
-/processorParam:TextureFormat=Compressed
-/build:Fonts/IBMPlexMono-Bold.spritefont
-
-#begin Fonts/IBMPlexMono-Medium.spritefont
-/importer:FontDescriptionImporter
-/processor:FontDescriptionProcessor
-/processorParam:PremultiplyAlpha=True
-/processorParam:TextureFormat=Compressed
-/build:Fonts/IBMPlexMono-Medium.spritefont
-
-#begin Fonts/IBMPlexMono-Regular.spritefont
-/importer:FontDescriptionImporter
-/processor:FontDescriptionProcessor
-/processorParam:PremultiplyAlpha=True
-/processorParam:TextureFormat=Compressed
-/build:Fonts/IBMPlexMono-Regular.spritefont
+/build:Boot/Shaders/TileShader.fx
 
