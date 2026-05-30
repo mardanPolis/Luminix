@@ -25,7 +25,7 @@ internal class AssetBridge
     private ConcurrentQueue<AssetTask> tasks = new ConcurrentQueue<AssetTask>();
     private ConcurrentQueue<AssetGroupTask> groupTasks = new ConcurrentQueue<AssetGroupTask>();
 
-    private List<TaskCompletionSource> taskCompletionSources;
+    private List<TaskCompletionSource> taskCompletionSources = new List<TaskCompletionSource>();
 
     public void Register(Asset asset)
     {
@@ -48,7 +48,7 @@ internal class AssetBridge
     }
     public Task RegisterAsync(IList<Asset> assets)
     {
-        var task = new AssetGroupTask(assets, null);
+        var task = new AssetGroupTask(assets, new TaskCompletionSource());
         groupTasks.Enqueue(task);
         return task.Tcs.Task;
     }
