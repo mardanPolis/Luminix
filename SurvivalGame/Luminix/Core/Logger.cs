@@ -112,6 +112,9 @@ public sealed class Logger
 
     internal static Logger Initialize()
     {
+        if(instance.IsValueCreated)
+            return instance.Value;
+
         var logger = new Logger();
         instance.Value = logger;
         return logger;

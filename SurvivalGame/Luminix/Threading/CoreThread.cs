@@ -35,8 +35,6 @@ public sealed class CoreThread : TickedThread
 
     private int workerThreadCount;
 
-    private Logger logger;
-
     private Universe universe;
     private ResourceProvider resources;
     private TypeRegistry typeRegistry;
@@ -47,7 +45,6 @@ public sealed class CoreThread : TickedThread
 
     protected sealed override void Initialize()
     {
-        logger = Logger.Get();
         IsBackground = true;
 
         Workspace.Create();
@@ -65,9 +62,6 @@ public sealed class CoreThread : TickedThread
 
         LoadBootAssets(assetLoadingHandler);
         LoadAssets(assetLoadingHandler, textureAtlasHandler);
-
-        if (Settings.DebugLoadedAssets)
-            LogResources();
 
         Workspace.Current.SetSubState("renderers");
         Workspace.Current.SetSubState("types");
@@ -165,12 +159,5 @@ public sealed class CoreThread : TickedThread
         task.Wait();
         resources.Set(RenderToCore.ResourceBridge.Get());
         GC.Collect();
-    }
-
-    private void LogResources()
-    {
-        logger.Log("Resources: " + resources.ResourceCount);
-        foreach (var resource in resources)
-            logger.Log("resource: " + resource.Name);
     }
 }
