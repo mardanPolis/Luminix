@@ -14,17 +14,23 @@ public sealed class AssetIO : Workspace.Service
 {
     public const string ASSET_DIRECTORY = "Assets";
     public const string ASSET_CACHE_DIRECTORY = "Cache";
-    
-    public const string TEXTURES_DIRECTORY  = "Textures";
-    public const string AUDIO_DIRECTORY     = "Audios";
-    public const string SHADER_DIRECTORY    = "Shaders";
-    public const string FONTS_DIRECTORY     = "Fonts";
-    public const string DATA_DIRECTORY      = "Data";
 
-    public struct AssetFile(string assetRoot, string relativePath)
+    private static readonly HashSet<string> PackageExtensions = new(StringComparer.OrdinalIgnoreCase) { ".package" };
+    private static readonly HashSet<string> TextureExtensions = new(StringComparer.OrdinalIgnoreCase) { ".png", ".jpg", ".jpeg" };
+    private static readonly HashSet<string> AudioExtensions = new(StringComparer.OrdinalIgnoreCase) { ".wav", ".mp3", ".ogg" };
+    private static readonly HashSet<string> MonoExtensions = new(StringComparer.OrdinalIgnoreCase) { ".xnb" };
+
+    public struct AssetFile
     {
-        public readonly string AssetRoot = assetRoot;
-        public readonly string RelativePath = relativePath;
+        public AssetFile(string assetRoot, string relativePath)
+        {
+            AssetRoot = assetRoot;
+            RelativePath = relativePath;
+            Name = Path.GetFileNameWithoutExtension(Path.Combine(assetRoot, relativePath));
+        }
+        public string AssetRoot { get; }
+        public string RelativePath { get; }
+        public string Name { get; }
 
         public string FullPath => Path.Combine(AssetRoot, RelativePath);
 
@@ -38,7 +44,11 @@ public sealed class AssetIO : Workspace.Service
         if (!Path.Exists(root))
             throw new DirectoryNotFoundException($"The specified asset path '{root}' does not exist.");
 
-        var targetPath = Path.Combine(root, directory);
+        var targetPath = root;
+
+        if(boot.HasValue && boot.Value) targetPath = Path.Combine(targetPath, "Boot");
+
+        targetPath = Path.Combine(targetPath, directory);
 
         if (!targetPath.StartsWith(root))
             throw new ArgumentException("Invalid directory traversal.");
@@ -47,22 +57,55 @@ public sealed class AssetIO : Workspace.Service
 
         foreach (var path in Directory.EnumerateFiles(targetPath, "*.*", SearchOption.AllDirectories))
         {
-            string relativePath = Path.GetRelativePath(root, path);
+            string relativePath = Path.GetRelativePath(targetPath, path);
             bool isBoot = relativePath.StartsWith("Boot");
 
-            if (boot.HasValue && boot.Value != isBoot) continue;
+            if (boot.HasValue && !boot.Value && isBoot) continue;
 
-            yield return new AssetFile(root, relativePath);
+            yield return new AssetFile(targetPath, relativePath);
         }
     } 
 
-    public void LoadTexture(AssetFile assetFile, out Color[] colors, out Vector2 size)
+    public void LoadAsset(AssetFile assetFile, out Asset _asset)
+    {
+        _asset = null;
+        string extension = Path.GetExtension(assetFile.FullPath);
+        if(PackageExtensions.Contains(extension))
+        {
+            LoadPackageAsset(assetFile, out PackageAsset asset);
+            _asset = asset; 
+            return;
+        }
+
+        if(TextureExtensions.Contains(extension))
+        {
+            LoadTexture(assetFile, out TextureAsset asset);
+            _asset = asset; 
+            return;
+        }
+        // TODO : create song asset handling
+        if(AudioExtensions.Contains(extension))
+        {
+            LoadAudio(assetFile, out AudioAsset asset);
+            _asset = asset; 
+            return;
+        }
+
+        if(MonoExtensions.Contains(extension))
+        {
+            LoadStreamAsset(assetFile, out StreamAsset asset);
+            _asset = asset; 
+            return;
+        }
+    }
+
+    public void LoadTexture(AssetFile assetFile, out TextureAsset _textureAsset)
     {
         using Stream stream = File.OpenRead(assetFile.FullPath);
         var result = ImageResult.FromStream(stream, StbImageSharp.ColorComponents.RedGreenBlueAlpha);
 
         int pixelCount = result.Width * result.Height;
-        colors = new Color[pixelCount];
+        var colors = new Color[pixelCount];
         var raw = result.Data;
 
         for (int i = 0; i < pixelCount; i++)
@@ -71,16 +114,80 @@ public sealed class AssetIO : Workspace.Service
             colors[i] = new Color(raw[b], raw[b + 1], raw[b + 2], raw[b + 3]);
         }
 
-        size = new Vector2(result.Width, result.Height);
+        var size = new Vector2(result.Width, result.Height);
+
+        _textureAsset = new TextureAsset(assetFile, colors, size);
     }
 
-    public void LoadSound(AssetFile assetFile, out SoundEffect sound)
+    public void LoadAudio(AssetFile assetFile, out AudioAsset _audioAsset)
     {
         using Stream stream = File.OpenRead(assetFile.FullPath);
-        sound = SoundEffect.FromStream(stream);
+        var soundEffect = SoundEffect.FromStream(stream);
+        _audioAsset = new AudioAsset(assetFile, soundEffect);
     }
 
-    // TODO : add a way to load Shaders, SpriteFonts.
+
+    public void LoadStreamAsset(AssetFile assetFile, out StreamAsset _streamAsset)
+    {
+        using Stream fileStream = OpenStream(assetFile);
+        MemoryStream memStream = new MemoryStream();
+        fileStream.CopyTo(memStream);
+        memStream.Position = 0;
+
+        StreamAsset.AssetType assetType = DetectAssetType(memStream);
+        _streamAsset = new StreamAsset(assetFile, memStream, assetType);
+    }
+
+    public void LoadPackageAsset(AssetFile assetFile, out PackageAsset _assets)
+    {
+        throw new NotImplementedException(nameof(LoadPackageAsset));
+    }
+
+    public FileStream OpenStream(AssetFile assetFile)
+    {
+        return File.OpenRead(assetFile.FullPath);
+    }
+
+
+    private StreamAsset.AssetType DetectAssetType(Stream stream)
+    {
+        try
+        {
+            byte[] header = new byte[512];
+            int bytesRead = stream.Read(header, 0, header.Length);
+            stream.Position = 0;
+
+            int i = 10;
+
+            while (i < bytesRead && (header[i] & 0x80) != 0) i++;
+            i++;
+
+            int strLen = 0, shift = 0;
+            while (i < bytesRead)
+            {
+                byte b = header[i++];
+                strLen |= (b & 0x7F) << shift;
+                if ((b & 0x80) == 0) break;
+                shift += 7;
+            }
+
+            string typeName = System.Text.Encoding.UTF8.GetString(header, i, Math.Min(strLen, bytesRead - i));
+
+            return typeName switch
+            {
+                var t when t.Contains("Texture2DReader")   => StreamAsset.AssetType.Texture,
+                var t when t.Contains("SpriteFontReader")  => StreamAsset.AssetType.Font,
+                var t when t.Contains("SoundEffectReader") => StreamAsset.AssetType.Audio,
+                var t when t.Contains("SongReader")        => StreamAsset.AssetType.Audio,
+                var t when t.Contains("EffectReader")      => StreamAsset.AssetType.Shader,
+                _ => StreamAsset.AssetType.Texture
+            };
+        }
+        catch
+        {
+            return StreamAsset.AssetType.Texture;
+        }
+    }
 
     internal void SaveTexture(string name, Color[] colors, Vector2 size)
     {
