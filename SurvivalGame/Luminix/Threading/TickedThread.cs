@@ -83,7 +83,7 @@ public class TickedThread : BaseThread
     
             long startBytes = 0;
             long endBytes = 0;
-
+            
             startBytes = GC.GetAllocatedBytesForCurrentThread();
 
             init();
@@ -91,7 +91,9 @@ public class TickedThread : BaseThread
             endBytes = GC.GetAllocatedBytesForCurrentThread();
 
             Interlocked.Exchange(ref allocated, endBytes - startBytes);
-            Logger.Get().Log($"{Name} allocated {allocated} bytes during initialization!");
+
+            logger.Log($"{Name} initialized in {stopwatch.Elapsed.Milliseconds}ms");
+            logger.Log($"{Name} allocated {allocated} bytes during initialization!");
 
             initAllocated = endBytes;
 

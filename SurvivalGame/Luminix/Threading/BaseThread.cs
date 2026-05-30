@@ -12,11 +12,13 @@ public abstract class BaseThread
     public static BaseThread CurrentThread => thread.Value;
     public static IList<BaseThread> Threads => thread.Values;
 
+    protected Logger logger;
+
     protected BaseThread()
     {
         systemThread = new Thread(() =>
         {
-            Logger.Initialize();
+            logger = Logger.Initialize();
             
             if(threadAction == null)
                 throw new InvalidOperationException($"Thread action cannot be null, thread: {ThreadID} {Name} ");
