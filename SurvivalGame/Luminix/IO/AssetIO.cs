@@ -59,11 +59,7 @@ public sealed class AssetIO : Workspace.Service
         if (!Path.Exists(root))
             throw new DirectoryNotFoundException($"The specified asset path '{root}' does not exist.");
 
-        var targetPath = root;
-
-        if(boot.HasValue && boot.Value) targetPath = Path.Combine(targetPath, "Boot");
-
-        targetPath = Path.Combine(targetPath, directory);
+        var targetPath = Path.Combine(root, directory);
 
         if (!targetPath.StartsWith(root))
             throw new ArgumentException("Invalid directory traversal.");
@@ -72,12 +68,12 @@ public sealed class AssetIO : Workspace.Service
 
         foreach (var path in Directory.EnumerateFiles(targetPath, "*.*", SearchOption.AllDirectories))
         {
-            string relativePath = Path.GetRelativePath(targetPath, path);
+            string relativePath = Path.GetRelativePath(root, path);
             bool isBoot = relativePath.StartsWith("Boot");
 
-            if (boot.HasValue && !boot.Value && isBoot) continue;
+            if (boot.HasValue && boot.Value != isBoot) continue;
 
-            yield return new AssetFile(targetPath, relativePath);
+            yield return new AssetFile(root, relativePath);
         }
     } 
 
