@@ -10,6 +10,11 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationIcon>Icon.ico</ApplicationIcon>
   </PropertyGroup>
+  <PropertyGroup>
+    <MonoGamePlatform>DesktopGL</MonoGamePlatform>
+    <MonoGameContentBuilderExtraArgs>/outputDir:bin/Assets /intermediateDir:obj/Assets</MonoGameContentBuilderExtraArgs>
+  </PropertyGroup>
+
   <ItemGroup>
     <None Remove="Icon.ico" />
     <None Remove="Icon.bmp" />
@@ -24,12 +29,18 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="MonoGame.Framework.DesktopGL" Version="3.8.*" />
-    <PackageReference Include="MonoGame.Content.Builder.Task" Version="3.8.*" />
     <PackageReference Include="StbImageSharp" Version="2.30.15" />
     <PackageReference Include="StbImageWriteSharp" Version="1.16.7" />
     <PackageReference Include="RectpackSharp" Version="1.1.*" />
   </ItemGroup>
   <ItemGroup>
-    <MonoGameContentReference Include="Assets\Assets.mgcb" />
+    <MonoGameContentReference Include="Assets.mgcb">
+      <ContentFolder>Assets</ContentFolder>
+      <OutputFolder>.</OutputFolder>
+    </MonoGameContentReference>
   </ItemGroup>
+
+  <Target Name="BuildContent" BeforeTargets="Build">
+    <Exec Command="dotnet mgcb /@:&quot;$(MSBuildProjectDirectory)/Assets.mgcb&quot; /platform:DesktopGL /outputDir:&quot;$(MSBuildProjectDirectory)/bin/$(Configuration)/net10.0/Assets&quot; /intermediateDir:&quot;$(MSBuildProjectDirectory)/obj/$(Configuration)/net10.0/Assets&quot; /workingDir:&quot;$(MSBuildProjectDirectory)&quot;" />
+  </Target>
 </Project>

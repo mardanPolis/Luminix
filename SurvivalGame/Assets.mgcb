@@ -1,8 +1,8 @@
 
 #----------------------------- Global Properties ----------------------------#
 
-/outputDir:bin/$(Platform)/$(Configuration)/Assets
-/intermediateDir:obj/$(Platform)/Assets
+/outputDir:bin/Debug/net10.0
+/intermediateDir:obj/Debug/net10.0
 /platform:DesktopGL
 /config:
 /profile:HiDef
@@ -13,30 +13,39 @@
 
 #---------------------------------- Content ---------------------------------#
 
-#begin Boot/Fonts/IBMPlexMono-Bold.spritefont
+#begin Assets/Boot/Fonts/IBMPlexMono-Bold.spritefont
 /importer:FontDescriptionImporter
 /processor:FontDescriptionProcessor
 /processorParam:PremultiplyAlpha=True
 /processorParam:TextureFormat=Compressed
-/build:Boot/Fonts/IBMPlexMono-Bold.spritefont
+/build:Assets/Boot/Fonts/IBMPlexMono-Bold.spritefont
 
-#begin Boot/Fonts/IBMPlexMono-Medium.spritefont
+#begin Assets/Boot/Fonts/IBMPlexMono-Medium.spritefont
 /importer:FontDescriptionImporter
 /processor:FontDescriptionProcessor
 /processorParam:PremultiplyAlpha=True
 /processorParam:TextureFormat=Compressed
-/build:Boot/Fonts/IBMPlexMono-Medium.spritefont
+/build:Assets/Boot/Fonts/IBMPlexMono-Medium.spritefont
 
-#begin Boot/Fonts/IBMPlexMono-Regular.spritefont
+#begin Assets/Boot/Fonts/IBMPlexMono-Regular.spritefont
 /importer:FontDescriptionImporter
 /processor:FontDescriptionProcessor
 /processorParam:PremultiplyAlpha=True
 /processorParam:TextureFormat=Compressed
-/build:Boot/Fonts/IBMPlexMono-Regular.spritefont
+/build:Assets/Boot/Fonts/IBMPlexMono-Regular.spritefont
 
-#begin Boot/Shaders/TileShader.fx
+#begin Assets/Boot/Shaders/TileShader.fx
 /importer:EffectImporter
 /processor:EffectProcessor
 /processorParam:DebugMode=Auto
-/build:Boot/Shaders/TileShader.fx
+/build:Assets/Boot/Shaders/TileShader.fx
+
+#begin Assets/Textures/Diamond.png
+/copy:Assets/Textures/Diamond.png
+
+#begin Assets/Textures/Square.png
+/copy:Assets/Textures/Square.png
+
+#begin Assets/Textures/Triangle.png
+/copy:Assets/Textures/Triangle.png
 
