@@ -34,6 +34,9 @@ public sealed class WorkerThreadPool : Workspace.Service
             workerThreads.Add(worker);
             worker.Start();
         }
+
+        if(Settings.DebugInitialization)
+            Logger.Get().Log($"Initialized {workerThreads.Count} worker threads.");
     }
 
     public void Enqueue(Action work)

@@ -15,7 +15,8 @@ public static class Settings
         }
 
         public bool Debug { set => Settings.debug = value; }
-        public bool DebugLoadedAssets { set => Settings.debugLoadedAssets = value; }
+        public bool DebugInitialization { set => Settings.debugInitialization = value; }
+        public bool DebugAssets { set => Settings.debugAssets = value; }
         public int PixelsPerUnit { set => Settings.pixelsPerUnit = value; }
         public int MaxWorkerThreadCount { set => Settings.maxWorkerThreadCount = value; }
         public int MinWorkerThreadCount { set => Settings.minWorkerThreadCount = value; }
@@ -25,7 +26,8 @@ public static class Settings
     private static volatile bool debug;
     private static volatile bool debugInfo;
     private static volatile bool debugGizmos;
-    private static volatile bool debugLoadedAssets;
+    private static volatile bool debugInitialization;
+    private static volatile bool debugAssets;
     private static volatile int pixelsPerUnit = 32;
     private static volatile int maxWorkerThreadCount = 5;
     private static volatile int minWorkerThreadCount = 2;
@@ -33,7 +35,8 @@ public static class Settings
     public static bool Debug { get => debug; }
     public static bool DebugInfo { get => debugInfo; set => debugInfo = value; }
     public static bool DebugGizmos { get => debugGizmos; set => debugGizmos = value; }
-    public static bool DebugAssets { get => debugLoadedAssets; }
+    public static bool DebugInitialization { get => debugInitialization; }
+    public static bool DebugAssets { get => debugAssets; }
     public static int PixelsPerUnit { get => pixelsPerUnit; }
     public static int MaxWorkerThreadCount { get => maxWorkerThreadCount; }
     public static int MinWorkerThreadCount { get => minWorkerThreadCount; }

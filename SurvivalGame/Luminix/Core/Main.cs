@@ -74,7 +74,8 @@ public class Main : Microsoft.Xna.Framework.Game
 
         Settings.Initialize(out Settings.Controller settingsController);
         settingsController.Debug = true;
-        settingsController.DebugLoadedAssets = true;
+        settingsController.DebugAssets = true;
+        settingsController.DebugInitialization = true;
 
         try
         {
@@ -82,8 +83,8 @@ public class Main : Microsoft.Xna.Framework.Game
             workspace = Workspace.Create();
 
             //threads
-            coreThread = new CoreThread(4);
-            logger.Wrn("Worker threads are fixed");
+            int workerThreadCount = Math.Max(Settings.MinWorkerThreadCount, Environment.ProcessorCount - 2);
+            coreThread = new CoreThread(workerThreadCount);
 
             //systems
             renderingSystem = new RenderingSystem(this);
