@@ -97,7 +97,6 @@ public sealed class AssetIO : Workspace.Service
             _asset = asset; 
             return;
         }
-        // TODO : create song asset handling
         if(AudioExtensions.Contains(extension))
         {
             LoadAudio(assetFile, out AudioAsset asset);
@@ -162,7 +161,6 @@ public sealed class AssetIO : Workspace.Service
         if (TextureExtensions.Contains(extension))
             return await LoadTextureAsync(assetFile);
 
-        // TODO: create song asset handling
         if (AudioExtensions.Contains(extension))
             return await LoadAudioAsync(assetFile);
 

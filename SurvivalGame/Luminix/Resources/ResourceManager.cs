@@ -106,6 +106,46 @@ public sealed class ResourceManager : Microsoft.Xna.Framework.Content.ContentMan
 
     private ImmutableDictionary<string, Resource> resources;
 
+    public void CreateResource(Asset asset)
+    {
+        if(asset is TextureAsset textureAsset)
+        {
+            CreateTexture(textureAsset.Name, textureAsset.Colors, textureAsset.Size);
+            CreateTextureRegion(textureAsset.Name, textureAsset.Name, new Rectangle(0, 0, (int)textureAsset.Size.X, (int)textureAsset.Size.Y));
+        }
+        else if(asset is AtlasAsset atlasAsset)
+        {
+            CreateTexture(atlasAsset.Name, atlasAsset.Colors, atlasAsset.Size);
+            for(int i = 0; i < atlasAsset.Regions.Length; i++)
+            {
+                var region = atlasAsset.Regions[i];
+                CreateTextureRegion(atlasAsset.Name, region.Name, region.Rectangle);
+            }
+        }
+        else if(asset is AudioAsset audioAsset)
+        {
+            CreateAudio(audioAsset.Name, audioAsset.SoundEffect);
+        }
+        else if(asset is StreamAsset streamAsset)
+        {
+            switch(streamAsset.Type)
+            {
+                case StreamAsset.AssetType.Texture:
+                    CreateTexture(streamAsset.Name, streamAsset.Stream);
+                break;
+                case StreamAsset.AssetType.Font:
+                    CreateFont(streamAsset.Name, streamAsset.Stream);
+                break;
+                case StreamAsset.AssetType.Audio:
+                    CreateAudio(streamAsset.Name, streamAsset.Stream);
+                break;
+                case StreamAsset.AssetType.Shader:
+                    CreateShader(streamAsset.Name, streamAsset.Stream);
+                break;
+            }
+        }
+    }
+
     public void CreateTexture(string name, Color[] colors, Vector2 size)
     {
         ArgumentNullException.ThrowIfNullOrWhiteSpace(name, nameof(name));
@@ -118,7 +158,13 @@ public sealed class ResourceManager : Microsoft.Xna.Framework.Content.ContentMan
         RecordDisposable(texture);
 
     }
-
+    public void CreateTexture(string name, Stream stream)
+    {
+        var source = Create<Texture2D>(name, stream);
+        textures.NewSource(name, source);
+        textures.NewRegion(name, name);
+        var resource = new TextureResource(source, name, 0, 0, source.Width, source.Height);
+    }
     public void CreateTextureRegion(string textureName, string name, Rectangle rectangle)
     {
         ArgumentNullException.ThrowIfNullOrWhiteSpace(name, nameof(name));
@@ -128,8 +174,7 @@ public sealed class ResourceManager : Microsoft.Xna.Framework.Content.ContentMan
         TextureResource resource = new TextureResource(texture, name, rectangle);
         resources = resources.Add(name, resource);
     }
-
-    public void CreateSound(string name, SoundEffect soundEffect)
+    public void CreateAudio(string name, SoundEffect soundEffect)
     {
         ArgumentNullException.ThrowIfNullOrWhiteSpace(name, nameof(name));
         ArgumentNullException.ThrowIfNull(soundEffect, nameof(soundEffect));
@@ -139,8 +184,27 @@ public sealed class ResourceManager : Microsoft.Xna.Framework.Content.ContentMan
 
         RecordDisposable(soundEffect);
     }
+    public void CreateAudio(string name, Stream stream)
+    {
+        var source = Create<SoundEffect>(name, stream);
+        var resource = new AudioResource(source, name);
+        resources = resources.Add(name, resource);
+    }
+    public void CreateFont(string name, Stream stream)
+    {
+        var source = Create<SpriteFont>(name, stream);
+        var resource = new FontResource(source, name);
+        resources = resources.Add(name, resource);
+    }
+    public void CreateShader(string name, Stream stream)
+    {
+        var source = Create<Effect>(name, stream);
+        var resource = new ShaderResource(source, name);
+        resources = resources.Add(name, resource);
+    }
 
-    public void Create<T>(string name, Stream stream)
+
+    private T Create<T>(string name, Stream stream)
     {
         ArgumentNullException.ThrowIfNullOrWhiteSpace(name, nameof(name));
         ArgumentNullException.ThrowIfNull(stream, nameof(stream));
@@ -154,39 +218,12 @@ public sealed class ResourceManager : Microsoft.Xna.Framework.Content.ContentMan
         try
         {
             openedStream = stream;
-            T asset = ReadAsset<T>(name, null);
-
-            Resource resource = null;
-            if (asset is Texture2D texture)
-            {
-                textures.NewSource(name, texture);
-                textures.NewRegion(name, name);
-                resource = new TextureResource(texture, name, 0, 0, texture.Width, texture.Height);
-            }
-            else if (asset is Effect effect)
-            {
-                resource = new ShaderResource(effect, name);
-            }
-            else if (asset is SpriteFont font)
-            {
-                resource = new FontResource(font, name);
-            }
-            else if (asset is SoundEffect soundEffect)
-            {
-                resource = new AudioResource(soundEffect, name);
-            }
-            else
-            {
-                throw new NotSupportedException($"Asset type '{typeof(T)}' is not supported by ResourceManager.");
-            }
-
-            resources = resources.Add(name, resource);
+            return ReadAsset<T>(name, null);
         }
         finally
         {
             openedStream = null;
         }
-
     }
 
     protected sealed override Stream OpenStream(string relativePath)
