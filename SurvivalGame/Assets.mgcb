@@ -1,8 +1,8 @@
 
 #----------------------------- Global Properties ----------------------------#
 
-/outputDir:bin/Debug/net10.0
-/intermediateDir:obj/Debug/net10.0
+/outputDir:build/bin/Debug/net10.0
+/intermediateDir:build/obj/Debug/net10.0
 /platform:DesktopGL
 /config:
 /profile:HiDef

@@ -1,7 +1,5 @@
-SurvivalGame/obj/
-SurvivalGame/bin/
+build/
 mods/
-obj/
 
 .cache
 .mgstats

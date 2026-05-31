@@ -14,6 +14,11 @@
     <MonoGamePlatform>DesktopGL</MonoGamePlatform>
     <MonoGameContentBuilderExtraArgs>/outputDir:bin/Assets /intermediateDir:obj/Assets</MonoGameContentBuilderExtraArgs>
   </PropertyGroup>
+  <PropertyGroup>
+    <BaseOutputPath>build/bin</BaseOutputPath>
+    <BaseIntermediateOutputPath>build/obj</BaseIntermediateOutputPath>
+    <RestoreOutputPath>build/obj</RestoreOutputPath>
+  </PropertyGroup>
 
   <ItemGroup>
     <None Remove="Icon.ico" />
@@ -41,6 +46,6 @@
   </ItemGroup>
 
   <Target Name="BuildContent" BeforeTargets="Build">
-    <Exec Command="dotnet mgcb /@:&quot;$(MSBuildProjectDirectory)/Assets.mgcb&quot; /platform:DesktopGL /outputDir:&quot;$(MSBuildProjectDirectory)/bin/$(Configuration)/net10.0/Assets&quot; /intermediateDir:&quot;$(MSBuildProjectDirectory)/obj/$(Configuration)/net10.0/Assets&quot; /workingDir:&quot;$(MSBuildProjectDirectory)&quot;" />
+    <Exec Command="dotnet mgcb /@:&quot;$(MSBuildProjectDirectory)/Assets.mgcb&quot; /platform:DesktopGL /outputDir:&quot;$(MSBuildProjectDirectory)/build/bin/$(Configuration)/net10.0/Assets&quot; /intermediateDir:&quot;$(MSBuildProjectDirectory)/build/obj/$(Configuration)/net10.0/Assets&quot; /workingDir:&quot;$(MSBuildProjectDirectory)&quot;" />
   </Target>
 </Project>
