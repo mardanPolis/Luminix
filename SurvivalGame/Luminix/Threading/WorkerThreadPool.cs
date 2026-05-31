@@ -162,11 +162,41 @@ public sealed class WorkerThreadPool : Workspace.Service
 
         return tcs.Task;
     }
+    
+    public Task ParallelForAsync<T>(IReadOnlyList<T> items, Func<T, Task> work)
+    {
+        if (items.Count == 0) return Task.CompletedTask;
+
+        var exceptions = new ConcurrentBag<Exception>();
+        var countdown  = new CountdownEvent(items.Count);
+        var tcs        = new TaskCompletionSource();
+
+        foreach (var item in items)
+        {
+            var captured = item;
+            Enqueue(() =>
+            {
+                work(captured).ContinueWith(t =>
+                {
+                    if (t.IsFaulted && t.Exception != null)
+                        foreach (var ex in t.Exception.InnerExceptions)
+                            exceptions.Add(ex);
+
+                    if (countdown.Signal() && countdown.IsSet)
+                    {
+                        countdown.Dispose();
+                        if (exceptions.IsEmpty) tcs.SetResult();
+                        else tcs.SetException(new AggregateException(exceptions));
+                    }
+                }, TaskContinuationOptions.ExecuteSynchronously);
+            });
+        }
+
+        return tcs.Task;
+    }
     public void Shutdown()
     {
         foreach (var worker in workerThreads)
             worker.Stop();
     }
-
-
 }

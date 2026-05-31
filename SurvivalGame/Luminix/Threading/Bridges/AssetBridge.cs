@@ -39,6 +39,20 @@ internal class AssetBridge
         groupTasks.Enqueue(task);
     }
 
+    // SYNC
+    public void RegisterSync(Asset asset)
+    {
+        var task = new AssetTask(asset, new TaskCompletionSource());
+        tasks.Enqueue(task);
+        task.Tcs.Task.Wait();
+    }
+
+    public void RegisterSync(IList<Asset> assets)
+    {
+        var task = new AssetGroupTask(assets, new TaskCompletionSource());
+        groupTasks.Enqueue(task);
+        task.Tcs.Task.Wait();
+    }
     // ASYNC
     public Task RegisterAsync(Asset asset)
     {

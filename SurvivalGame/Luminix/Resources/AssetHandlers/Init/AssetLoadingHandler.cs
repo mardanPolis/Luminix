@@ -21,12 +21,14 @@ internal class AssetLoadingHandler
         this.assetIO          = io;
     }
 
+    private Dictionary<string, AssetIO.AssetFile> assets = new Dictionary<string, AssetIO.AssetFile>();
+
     public DenseList<Asset> RunBootLoadingPhase()
     {
         TextureAsset nullTextureAsset = new ("null", BuiltInResources.NullTextureColor, new Vector2(32, 32));
 
         var assetFiles = assetIO.EnumerateAssets(boot: true).ToList();
-        var assets = Load(assetFiles).GetAwaiter().GetResult();
+        var assets = Load(assetFiles);
         assets.Add(nullTextureAsset);
         return assets;
     }
@@ -34,23 +36,36 @@ internal class AssetLoadingHandler
     public DenseList<Asset> RunLoadingPhase()
     {
         var assetFiles = assetIO.EnumerateAssets(boot: false).ToList();
-        return Load(assetFiles).GetAwaiter().GetResult();
+        return Load(assetFiles);
     }
 
-    private async Task<DenseList<Asset>> Load(List<AssetIO.AssetFile> assetFiles)
+    private DenseList<Asset> Load(List<AssetIO.AssetFile> assetFiles)
     {
+        List<AssetIO.AssetFile> validAssetFiles = new List<AssetIO.AssetFile>(assetFiles.Count);
+
+        var logger = Logger.Get();
+        for(int i = assetFiles.Count - 1; i >= 0; i--)
+        {
+            var assetFile = assetFiles[i];
+            if(assets.TryAdd(assetFile.Name, assetFile))
+                validAssetFiles.Add(assetFile);
+            else
+                logger.Wrn($"Duplicate assets with name {assetFile.Name} at locations: {assetFile.RelativePath} {assets[assetFile.Name].RelativePath}");
+        }
+
         ConcurrentBag<Asset> loadedAssets = [];
 
-        var tasks = assetFiles.Select(async assetFile =>
+        workerThreadPool.ParallelFor(validAssetFiles, assetFile =>
         {
-            if (Settings.DebugAssets)
-                Logger.Get().Log("Loading: " + assetFile.RelativePath);
+            if (Settings.DebugAssets && Settings.DebugInitialization)
+                logger.Log("Loading: " + assetFile.RelativePath);
 
-            Asset asset = await assetIO.LoadAssetAsync(assetFile);
+            assetIO.LoadAsset(assetFile, out Asset asset);
             loadedAssets.Add(asset);
-        });
 
-        await Task.WhenAll(tasks);
+            if (Settings.DebugAssets && Settings.DebugInitialization)
+                Logger.Initialize().Log("Loaded: " + assetFile.RelativePath);
+        });
 
         var result = new DenseList<Asset>();
 

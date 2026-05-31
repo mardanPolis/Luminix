@@ -125,6 +125,12 @@ public sealed class ResourceManager : Microsoft.Xna.Framework.Content.ContentMan
             for(int i = 0; i < atlasAsset.Regions.Length; i++)
             {
                 var region = atlasAsset.Regions[i];
+                if (resources.ContainsKey(region.Name))
+                {
+                    Logger.Get().Wrn($"Duplicate resource name '{region.Name}': skipping TextureResource, keeping existing {resources[region.Name].GetType().Name}.");
+                    continue;
+                }
+
                 CreateTextureRegion(atlasAsset.Name, region.Name, region.Rectangle);
             }
         }

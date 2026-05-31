@@ -47,6 +47,7 @@ public sealed class AssetIO : Workspace.Service
         public string Name { get; }
 
         public string FullPath => Path.Combine(AssetRoot, RelativePath);
+        public long FileSize => IsGenerated ? 0 : new FileInfo(FullPath).Length;
 
         public override string ToString() => FullPath;
     }

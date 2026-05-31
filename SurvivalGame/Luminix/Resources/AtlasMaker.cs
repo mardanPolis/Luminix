@@ -138,7 +138,7 @@ public sealed class AtlasMaker
     {
 
         int atlasW = (int)System.Numerics.BitOperations.RoundUpToPowerOf2(bounds.Width);
-        int atlasH = (int)System.Numerics.BitOperations.RoundUpToPowerOf2(bounds.Width);
+        int atlasH = (int)System.Numerics.BitOperations.RoundUpToPowerOf2(bounds.Height);
 
         var atlasColors  = new Color[atlasW * atlasH];
         var regions = new AtlasAsset.Region[rects.Length];
