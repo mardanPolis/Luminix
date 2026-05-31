@@ -108,6 +108,12 @@ public sealed class ResourceManager : Microsoft.Xna.Framework.Content.ContentMan
 
     public void CreateResource(Asset asset)
     {
+        if (resources.ContainsKey(asset.Name))
+        {
+            Logger.Get().Wrn($"Duplicate resource name '{asset.Name}': skipping {asset.GetType().Name}, keeping existing {resources[asset.Name].GetType().Name}.");
+            return;
+        }
+
         if(asset is TextureAsset textureAsset)
         {
             CreateTexture(textureAsset.Name, textureAsset.Colors, textureAsset.Size);
@@ -146,7 +152,7 @@ public sealed class ResourceManager : Microsoft.Xna.Framework.Content.ContentMan
         }
     }
 
-    public void CreateTexture(string name, Color[] colors, Vector2 size)
+    private void CreateTexture(string name, Color[] colors, Vector2 size)
     {
         ArgumentNullException.ThrowIfNullOrWhiteSpace(name, nameof(name));
         ArgumentNullException.ThrowIfNull(colors, nameof(colors));
@@ -158,14 +164,14 @@ public sealed class ResourceManager : Microsoft.Xna.Framework.Content.ContentMan
         RecordDisposable(texture);
 
     }
-    public void CreateTexture(string name, Stream stream)
+    private void CreateTexture(string name, Stream stream)
     {
         var source = Create<Texture2D>(name, stream);
         textures.NewSource(name, source);
         textures.NewRegion(name, name);
         var resource = new TextureResource(source, name, 0, 0, source.Width, source.Height);
     }
-    public void CreateTextureRegion(string textureName, string name, Rectangle rectangle)
+    private void CreateTextureRegion(string textureName, string name, Rectangle rectangle)
     {
         ArgumentNullException.ThrowIfNullOrWhiteSpace(name, nameof(name));
         ArgumentNullException.ThrowIfNullOrWhiteSpace(textureName, nameof(textureName));
@@ -174,7 +180,7 @@ public sealed class ResourceManager : Microsoft.Xna.Framework.Content.ContentMan
         TextureResource resource = new TextureResource(texture, name, rectangle);
         resources = resources.Add(name, resource);
     }
-    public void CreateAudio(string name, SoundEffect soundEffect)
+    private void CreateAudio(string name, SoundEffect soundEffect)
     {
         ArgumentNullException.ThrowIfNullOrWhiteSpace(name, nameof(name));
         ArgumentNullException.ThrowIfNull(soundEffect, nameof(soundEffect));
@@ -184,19 +190,19 @@ public sealed class ResourceManager : Microsoft.Xna.Framework.Content.ContentMan
 
         RecordDisposable(soundEffect);
     }
-    public void CreateAudio(string name, Stream stream)
+    private void CreateAudio(string name, Stream stream)
     {
         var source = Create<SoundEffect>(name, stream);
         var resource = new AudioResource(source, name);
         resources = resources.Add(name, resource);
     }
-    public void CreateFont(string name, Stream stream)
+    private void CreateFont(string name, Stream stream)
     {
         var source = Create<SpriteFont>(name, stream);
         var resource = new FontResource(source, name);
         resources = resources.Add(name, resource);
     }
-    public void CreateShader(string name, Stream stream)
+    private void CreateShader(string name, Stream stream)
     {
         var source = Create<Effect>(name, stream);
         var resource = new ShaderResource(source, name);

@@ -90,7 +90,6 @@ public sealed class AssetIO : Workspace.Service
             _asset = asset; 
             return;
         }
-
         if(TextureExtensions.Contains(extension))
         {
             LoadTexture(assetFile, out TextureAsset asset);
@@ -103,7 +102,6 @@ public sealed class AssetIO : Workspace.Service
             _asset = asset; 
             return;
         }
-
         if(MonoExtensions.Contains(extension))
         {
             LoadStreamAsset(assetFile, out StreamAsset asset);
@@ -218,7 +216,6 @@ public sealed class AssetIO : Workspace.Service
         bufferSize: 4096,
         useAsync: true);
     }
-
 
     private StreamAsset.AssetType DetectAssetType(Stream stream)
     {
