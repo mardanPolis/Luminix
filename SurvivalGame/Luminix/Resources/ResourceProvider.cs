@@ -14,22 +14,21 @@ public sealed class ResourceProvider : Workspace.Service, IEnumerable<Resource>
 
     public T GetResource<T>(string resourceName) where T : Resource
     {
-        if (resources != null && resources.TryGetValue(resourceName, out Resource baseResource))
+        var name = resourceName.ToLower();
+        if (resources != null && resources.TryGetValue(name, out Resource baseResource))
         {
             if (baseResource is T resource)
-            {
                 return resource;
-            }
             
-            throw new InvalidCastException($"Resource named '{resourceName}' is a {baseResource.GetType().Name}, not a {typeof(T).Name}."
-            );
+            throw new InvalidCastException($"Resource named '{name}' is a {baseResource.GetType().Name}, not a {typeof(T).Name}.");
         }
 
-        throw new KeyNotFoundException($"Resource named '{resourceName}' was not found.");
+        Logger.Get().Wrn($"Resource named '{name}' was not found.");
+        return null;
     }
 
     public int ResourceCount => resources != null ? resources.Count : 0;
-
+ 
     internal void Set(IReadOnlyDictionary<string, Resource> resources)
     {
         this.resources = resources;

@@ -5,7 +5,6 @@ using System.Reflection;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Luminix.Collections;
-using Luminix.Identifiers;
 using Luminix.IO;
 using System.Collections.Immutable;
 using Microsoft.Xna.Framework.Audio;
@@ -108,51 +107,53 @@ public sealed class ResourceManager : Microsoft.Xna.Framework.Content.ContentMan
 
     public void CreateResource(Asset asset)
     {
-        if (resources.ContainsKey(asset.Name))
+        var assetName = asset.Name.ToLower();
+        if (resources.ContainsKey(assetName))
         {
-            Logger.Get().Wrn($"Duplicate resource name '{asset.Name}': skipping {asset.GetType().Name}, keeping existing {resources[asset.Name].GetType().Name}.");
+            Logger.Get().Wrn($"Duplicate resource name '{assetName}': skipping {asset.GetType().Name}, keeping existing '{resources[assetName].GetType().Name}'.");
             return;
         }
 
         if(asset is TextureAsset textureAsset)
         {
-            CreateTexture(textureAsset.Name, textureAsset.Colors, textureAsset.Size);
-            CreateTextureRegion(textureAsset.Name, textureAsset.Name, new Rectangle(0, 0, (int)textureAsset.Size.X, (int)textureAsset.Size.Y));
+            CreateTexture(assetName, textureAsset.Colors, textureAsset.Size);
+            CreateTextureRegion(assetName, assetName, new Rectangle(0, 0, (int)textureAsset.Size.X, (int)textureAsset.Size.Y));
         }
         else if(asset is AtlasAsset atlasAsset)
         {
-            CreateTexture(atlasAsset.Name, atlasAsset.Colors, atlasAsset.Size);
+            CreateTexture(assetName, atlasAsset.Colors, atlasAsset.Size);
             for(int i = 0; i < atlasAsset.Regions.Length; i++)
             {
                 var region = atlasAsset.Regions[i];
-                if (resources.ContainsKey(region.Name))
+                var regionName = region.Name.ToLower();
+                if (resources.ContainsKey(regionName))
                 {
-                    Logger.Get().Wrn($"Duplicate resource name '{region.Name}': skipping TextureResource, keeping existing {resources[region.Name].GetType().Name}.");
+                    Logger.Get().Wrn($"Duplicate resource name '{regionName}': skipping TextureResource, keeping existing '{resources[regionName].GetType().Name}'.");
                     continue;
                 }
 
-                CreateTextureRegion(atlasAsset.Name, region.Name, region.Rectangle);
+                CreateTextureRegion(assetName, regionName, region.Rectangle);
             }
         }
         else if(asset is AudioAsset audioAsset)
         {
-            CreateAudio(audioAsset.Name, audioAsset.SoundEffect);
+            CreateAudio(assetName, audioAsset.SoundEffect);
         }
         else if(asset is StreamAsset streamAsset)
         {
             switch(streamAsset.Type)
             {
                 case StreamAsset.AssetType.Texture:
-                    CreateTexture(streamAsset.Name, streamAsset.Stream);
+                    CreateTexture(assetName, streamAsset.Stream);
                 break;
                 case StreamAsset.AssetType.Font:
-                    CreateFont(streamAsset.Name, streamAsset.Stream);
+                    CreateFont(assetName, streamAsset.Stream);
                 break;
                 case StreamAsset.AssetType.Audio:
-                    CreateAudio(streamAsset.Name, streamAsset.Stream);
+                    CreateAudio(assetName, streamAsset.Stream);
                 break;
                 case StreamAsset.AssetType.Shader:
-                    CreateShader(streamAsset.Name, streamAsset.Stream);
+                    CreateShader(assetName, streamAsset.Stream);
                 break;
             }
         }

@@ -8,6 +8,7 @@ using StbImageWriteSharp;
 
 using Luminix.Workspaces;
 using System.Threading.Tasks;
+using System.Linq;
 
 namespace Luminix.IO;
 
@@ -16,10 +17,12 @@ public sealed class AssetIO : Workspace.Service
     public const string ASSET_DIRECTORY = "Assets";
     public const string ASSET_CACHE_DIRECTORY = "Cache";
 
-    private static readonly HashSet<string> PackageExtensions = new(StringComparer.OrdinalIgnoreCase) { ".package" };
-    private static readonly HashSet<string> TextureExtensions = new(StringComparer.OrdinalIgnoreCase) { ".png", ".jpg", ".jpeg" };
-    private static readonly HashSet<string> AudioExtensions = new(StringComparer.OrdinalIgnoreCase) { ".wav", ".mp3", ".ogg" };
-    private static readonly HashSet<string> MonoExtensions = new(StringComparer.OrdinalIgnoreCase) { ".xnb" };
+    private static readonly HashSet<string> packageExtensions = new(StringComparer.OrdinalIgnoreCase) { ".package" };
+    private static readonly HashSet<string> textureExtensions = new(StringComparer.OrdinalIgnoreCase) { ".png", ".jpg", ".jpeg" };
+    private static readonly HashSet<string> audioExtensions = new(StringComparer.OrdinalIgnoreCase) { ".wav", ".mp3", ".ogg" };
+    private static readonly HashSet<string> monoExtensions = new(StringComparer.OrdinalIgnoreCase) { ".xnb" };
+
+    private static readonly HashSet<string> allExtensions = new HashSet<string>(packageExtensions.Union(textureExtensions).Union(audioExtensions).Union(monoExtensions));
 
     public struct AssetFile
     {
@@ -29,7 +32,7 @@ public sealed class AssetIO : Workspace.Service
         {
             AssetRoot = assetRoot;
             RelativePath = relativePath;
-            Name = Path.GetFileNameWithoutExtension(Path.Combine(assetRoot, relativePath));
+            Name = Path.GetFileNameWithoutExtension(Path.Combine(assetRoot, relativePath)).ToLower();
         }
         private AssetFile(string gen)
         {
@@ -73,6 +76,10 @@ public sealed class AssetIO : Workspace.Service
 
             if (boot.HasValue && boot.Value != isBoot) continue;
 
+            string extension = Path.GetExtension(relativePath);
+            
+            if(!allExtensions.Contains(extension)) continue;
+
             yield return new AssetFile(root, relativePath);
         }
     } 
@@ -81,25 +88,25 @@ public sealed class AssetIO : Workspace.Service
     {
         _asset = null;
         string extension = Path.GetExtension(assetFile.FullPath);
-        if(PackageExtensions.Contains(extension))
+        if(packageExtensions.Contains(extension))
         {
             LoadPackageAsset(assetFile, out PackageAsset asset);
             _asset = asset; 
             return;
         }
-        if(TextureExtensions.Contains(extension))
+        if(textureExtensions.Contains(extension))
         {
             LoadTexture(assetFile, out TextureAsset asset);
             _asset = asset; 
             return;
         }
-        if(AudioExtensions.Contains(extension))
+        if(audioExtensions.Contains(extension))
         {
             LoadAudio(assetFile, out AudioAsset asset);
             _asset = asset; 
             return;
         }
-        if(MonoExtensions.Contains(extension))
+        if(monoExtensions.Contains(extension))
         {
             LoadStreamAsset(assetFile, out StreamAsset asset);
             _asset = asset; 
@@ -150,16 +157,16 @@ public sealed class AssetIO : Workspace.Service
     {
         string extension = Path.GetExtension(assetFile.FullPath);
 
-        if (PackageExtensions.Contains(extension))
+        if (packageExtensions.Contains(extension))
             return await LoadPackageAssetAsync(assetFile);
 
-        if (TextureExtensions.Contains(extension))
+        if (textureExtensions.Contains(extension))
             return await LoadTextureAsync(assetFile);
 
-        if (AudioExtensions.Contains(extension))
+        if (audioExtensions.Contains(extension))
             return await LoadAudioAsync(assetFile);
 
-        if (MonoExtensions.Contains(extension))
+        if (monoExtensions.Contains(extension))
             return await LoadStreamAssetAsync(assetFile);
 
         return null;

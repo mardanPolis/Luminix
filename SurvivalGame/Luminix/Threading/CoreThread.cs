@@ -61,6 +61,9 @@ public sealed class CoreThread : TickedThread
         Workspace.Current.SetSubState("renderers");
         
         Workspace.Current.SetSubState("types");
+
+        var process = Process.GetCurrentProcess();
+        logger.Log("Total threads at initialization: " + process.Threads.Count);
     }
 
     protected sealed override void OnTick()
@@ -123,7 +126,14 @@ public sealed class CoreThread : TickedThread
         
         task.Wait();
         resources.Set(RenderToCore.ResourceBridge.Get());
+        
+        long before = GC.GetTotalMemory(false);
         GC.Collect();
+        long after = GC.GetTotalMemory(true);
+
+        long cleared = before - after;
+        if(Settings.DebugInitialization)
+            logger.Log($"GC cleared: {cleared / 1024.0:F2} KB ({cleared:N0}) bytes)");
     }
 
     private void LoadAssets(AssetLoadingHandler assetLoadingHandler, TextureAssetAtlasHandler atlasHandler)
@@ -151,8 +161,8 @@ public sealed class CoreThread : TickedThread
         {
             assets.Add(atlas);
             
-            // if(Settings.DebugAssets)
-            //     assetIO.SaveTexture(atlas.Name, atlas.Colors, atlas.Size);
+            if(Settings.DebugAssets && Settings.DebugInitialization)
+                assetIO.SaveTexture(atlas.Name, atlas.Colors, atlas.Size);
         }
 
         var task = CoreToRender.AssetBridge.RegisterAsync(assets);
@@ -162,6 +172,13 @@ public sealed class CoreThread : TickedThread
         
         task.Wait();
         resources.Set(RenderToCore.ResourceBridge.Get());
+
+        long before = GC.GetTotalMemory(false);
         GC.Collect();
+        long after = GC.GetTotalMemory(true);
+
+        long cleared = before - after;
+        if(Settings.DebugInitialization)
+            logger.Log($"GC cleared: {cleared / 1024.0:F2} KB ({cleared:N0} bytes)");
     }
 }

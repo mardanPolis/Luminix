@@ -1,5 +1,5 @@
 {
-    "dotnet.defaultSolution": "Monogame.sln",
+    "dotnet.defaultSolution": "SurvivalGame.slnx",
     "cSpell.words": [
         "indegree",
         "Interp",

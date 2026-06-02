@@ -18,8 +18,9 @@ catch(Exception ex)
 }
 finally
 {
-    foreach(var threads in BaseThread.Threads)
-        threads.Stop();
+    if (BaseThread.Threads != null)
+        foreach (var thread in BaseThread.Threads)
+            thread?.Stop();
 }
 
 Luminix.Logger[] loggers = Logger.GetAll();

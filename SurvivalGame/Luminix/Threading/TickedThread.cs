@@ -93,7 +93,7 @@ public class TickedThread : BaseThread
             Interlocked.Exchange(ref allocated, endBytes - startBytes);
 
             logger.Log($"{Name} initialized in {stopwatch.Elapsed.Milliseconds}ms");
-            logger.Log($"{Name} allocated {allocated} bytes during initialization!");
+            logger.Log($"{Name} allocated {allocated / 1024.0:F2} KB ({allocated:N0} bytes during initialization!");
 
             initAllocated = endBytes;
 

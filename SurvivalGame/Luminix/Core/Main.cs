@@ -77,6 +77,9 @@ public class Main : Microsoft.Xna.Framework.Game
         settingsController.DebugAssets = true;
         settingsController.DebugInitialization = true;
 
+        settingsController.MinWorkerThreadCount = 2;
+        settingsController.MaxWorkerThreadCount = 5;
+
         try
         {
             //workspace
@@ -125,7 +128,7 @@ public class Main : Microsoft.Xna.Framework.Game
         allocated = endBytes - startBytes;
 
         logger.Log($"RenderThread initialized in {stopwatch.Elapsed.Milliseconds}ms");
-        logger.Log($"RenderThread allocated {allocated} bytes during initialization!");
+        logger.Log($"RenderThread allocated {allocated / 1024.0:F2} KB ({allocated:N0}) bytes during initialization!");
 
         workspace.SetState(Workspace.State.Running);
     }

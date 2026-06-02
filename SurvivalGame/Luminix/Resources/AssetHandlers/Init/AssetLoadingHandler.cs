@@ -50,7 +50,7 @@ internal class AssetLoadingHandler
             if(assets.TryAdd(assetFile.Name, assetFile))
                 validAssetFiles.Add(assetFile);
             else
-                logger.Wrn($"Duplicate assets with name {assetFile.Name} at locations: {assetFile.RelativePath} {assets[assetFile.Name].RelativePath}");
+                logger.Wrn($"Duplicate assets with name '{assetFile.Name}' at locations: '{assetFile.RelativePath}' '{assets[assetFile.Name].RelativePath}'");
         }
 
         ConcurrentBag<Asset> loadedAssets = [];
