@@ -6,7 +6,7 @@ using Luminix.Threading;
 Thread.CurrentThread.Priority = ThreadPriority.AboveNormal;
 Thread.CurrentThread.Name = "RenderThread";
 
-Logger.Initialize();
+var logger = Logger.Initialize();
 using var engine = new Luminix.Main();
 try
 {
@@ -14,15 +14,12 @@ try
 }
 catch(Exception ex)
 {
-    Logger.Get().Err(ex);
+    logger.Err(ex);
 }
 finally
 {
     if (BaseThread.Threads != null)
         foreach (var thread in BaseThread.Threads)
             thread?.Stop();
-}
-
-Luminix.Logger[] loggers = Logger.GetAll();
-foreach(var logger in loggers)
     logger.Flush();
+}

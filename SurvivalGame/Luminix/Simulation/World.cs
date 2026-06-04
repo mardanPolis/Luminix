@@ -7,7 +7,7 @@ public sealed class World
         this.Name = name;
 
         this.logger = Logger.Get();
-        
+
         this.worldComponents = worldComponents;
     }
 
@@ -19,6 +19,9 @@ public sealed class World
 
     public void Tick()
     {
-        
+        for(int i = 0; i < worldComponents.Length; i++)
+        {
+            worldComponents[i].Tick();
+        }
     }
 }

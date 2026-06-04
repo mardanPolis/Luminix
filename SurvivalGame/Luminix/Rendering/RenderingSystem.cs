@@ -37,15 +37,9 @@ internal sealed class RenderingSystem
 
     public void Initialize()
     {
-        graphics.PreferredBackBufferWidth = 1920;
-        graphics.PreferredBackBufferHeight = 1080;
-        graphics.IsFullScreen = false;
-        ToggleVSync(false);
-        ApplyChanges();
-
         readStack = CoreToRender.RenderBridge.Read();
 
-        var spriteBatch = new SpriteBatch(graphics.GraphicsDevice, 10000);
+        var spriteBatch = new SpriteBatch(graphics.GraphicsDevice, 1024);
         frameRenderer = new FrameRenderer(spriteBatch, main);
 
         if (Settings.Debug)
@@ -76,7 +70,6 @@ internal sealed class RenderingSystem
         if (graphics == null) return;
 
         graphics.SynchronizeWithVerticalRetrace = state ?? !graphics.SynchronizeWithVerticalRetrace;
-        graphics.ApplyChanges();
     }
 
     public void ApplyChanges()

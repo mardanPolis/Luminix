@@ -161,7 +161,19 @@ public class TickedThread : BaseThread
             internalStopwatch = new Stopwatch();
             stopwatch = Stopwatch.StartNew();
 
+            long startBytes = 0;
+            long endBytes = 0;
+            
+            startBytes = GC.GetAllocatedBytesForCurrentThread();
+
             init();
+
+            endBytes = GC.GetAllocatedBytesForCurrentThread();
+
+            Interlocked.Exchange(ref allocated, endBytes - startBytes);
+
+            logger.Log($"{Name} initialized in {stopwatch.Elapsed.Milliseconds}ms");
+            logger.Log($"{Name} allocated {allocated / 1024.0:F2} KB ({allocated:N0} bytes during initialization!");
 
             long nextTick = 0;
 

@@ -10,18 +10,52 @@ using Luminix.Threading.Bridges;
 using Luminix.Workspaces;
 using Luminix.Core.InputHandlers;
 using Luminix.Resources.AssetHandlers;
+using System.IO;
+using System.Reflection;
+using Luminix.IO;
 
 namespace Luminix;
 public class Main : Microsoft.Xna.Framework.Game
 {
-    public const string VERSION = "1.0v";
-    public const string ENGINE_PACKAGE_ASSET_EXTENSION = ".lxpkg";
-
+    public const string VERSION = "v1.0";
     public Main()
     {
+        //workspace
+        workspace = Workspace.Create();
+        embeddedIO = new EmbeddedIO();
+
+        logger = Logger.Get();
+        logger.Log($"Started initialization");
+
+        Settings.Initialize(out Settings.Controller settingsController);
+        settingsController.Debug = true;
+        settingsController.DebugAssets = true;
+        settingsController.DebugInitialization = true;
+
+        settingsController.MinWorkerThreadCount = 2;
+        settingsController.MaxWorkerThreadCount = 5;
+
+        stopwatch = Stopwatch.StartNew();
         graphics = new GraphicsDeviceManager(this);
+        graphics.SynchronizeWithVerticalRetrace = false;
+        graphics.PreferredBackBufferWidth = 1920;
+        graphics.PreferredBackBufferHeight = 1080;
+        graphics.IsFullScreen = false;
+
         resourceManager = new ResourceManager(this);
         IsMouseVisible = true;
+
+        //initialize thread bridges
+        CoreToRender.Initialize();
+        RenderToCore.Initialize();
+
+        //threads
+        int workerThreadCount = Math.Max(Settings.MinWorkerThreadCount, Environment.ProcessorCount - 2);
+        coreThread = new CoreThread(workerThreadCount);
+
+        //starting threads
+        coreThread.Start();
+
     }
 
     private Thread mainThread = Thread.CurrentThread;
@@ -36,6 +70,7 @@ public class Main : Microsoft.Xna.Framework.Game
     private Logger logger;
 
     private Workspace workspace;
+    private EmbeddedIO embeddedIO;
     private RenderingSystem renderingSystem;
 
     private ResourceManager resourceManager;
@@ -63,37 +98,15 @@ public class Main : Microsoft.Xna.Framework.Game
 
     protected override void Initialize()
     {
-        stopwatch = Stopwatch.StartNew();
         startBytes = GC.GetAllocatedBytesForCurrentThread();
         
-        logger = Logger.Get();
-        logger.Log($"Started initialization");
-
-        Settings.Initialize(out Settings.Controller settingsController);
-        settingsController.Debug = true;
-        settingsController.DebugAssets = true;
-        settingsController.DebugInitialization = true;
-
-        settingsController.MinWorkerThreadCount = 2;
-        settingsController.MaxWorkerThreadCount = 5;
-
         ThreadPool.SetMaxThreads(3, 1);
 
         try
         {
-            //workspace
-            workspace = Workspace.Create();
-
-            //threads
-            int workerThreadCount = Math.Max(Settings.MinWorkerThreadCount, Environment.ProcessorCount - 2);
-            coreThread = new CoreThread(workerThreadCount);
 
             //systems
             renderingSystem = new RenderingSystem(this);
-
-            //initialize thread bridges
-            CoreToRender.Initialize();
-            RenderToCore.Initialize();
 
             //handlers
             inputHandler = new InputHandler();
@@ -105,14 +118,26 @@ public class Main : Microsoft.Xna.Framework.Game
             //base initialization
             base.Initialize();
 
+            //Loading Embedded assets
+            foreach(var asset in embeddedIO.EnumerateAssets(Assembly.GetExecutingAssembly(), silent:true))
+            {
+                try
+                {
+                    logger.Log($"Loading embedded asset: {asset.Name}");
+                    resourceManager.CreateResource(asset);
+                }
+                catch(Exception ex)
+                {
+                    logger.Err($"Failed to load embedded asset '{asset.Name}', reason: {ex}");
+                }
+            }
+        
             //Renderer initialization   
             renderingSystem.Initialize();
 
             TargetElapsedTime = TimeSpan.FromSeconds(1d / 30d);
             IsFixedTimeStep = true;
 
-            //starting threads
-            coreThread.Start();
 
         }
         catch
@@ -121,12 +146,11 @@ public class Main : Microsoft.Xna.Framework.Game
             throw;
         }
 
-        logger.Log($"Successful initialization");
-        
+        logger.Log($"RenderThread initialized in {stopwatch.Elapsed.Milliseconds}ms");
+
         long endBytes = GC.GetAllocatedBytesForCurrentThread();
         allocated = endBytes - startBytes;
 
-        logger.Log($"RenderThread initialized in {stopwatch.Elapsed.Milliseconds}ms");
         logger.Log($"RenderThread allocated {allocated / 1024.0:F2} KB ({allocated:N0}) bytes during initialization!");
 
         workspace.SetState(Workspace.State.Running);

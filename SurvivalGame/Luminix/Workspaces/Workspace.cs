@@ -21,13 +21,6 @@ public sealed class Workspace
             Workspace.AddService(this);
         }
 
-        // Call this after construction is fully complete
-        public static T Create<T>() where T : Service, new()
-        {
-            var service = new T();
-            return service;
-        }
-
         public override string ToString()
         {
             return $"Service {this.GetType().Name}";

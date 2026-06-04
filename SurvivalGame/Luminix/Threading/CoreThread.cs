@@ -42,7 +42,9 @@ public sealed class CoreThread : TickedThread
     {
         IsBackground = true;
 
-        Workspace.Create();
+        logger.Log($"Started initialization");
+
+        Workspace.Create().SetSubState("bootstrap");
         typeRegistry    = new TypeRegistry();
         resources       = new ResourceProvider();
         universe        = new Universe(out universeController);
@@ -55,8 +57,11 @@ public sealed class CoreThread : TickedThread
         var assetLoadingHandler = new AssetLoadingHandler(workerThreadPool, assetIO);
         var textureAtlasHandler = new TextureAssetAtlasHandler(workerThreadPool);
 
+        var stopwatch = Stopwatch.StartNew();
         LoadBootAssets(assetLoadingHandler);
         LoadAssets(assetLoadingHandler, textureAtlasHandler);
+
+        logger.Log($"{Name} loaded assets in {stopwatch.Elapsed.Milliseconds}ms");
 
         Workspace.Current.SetSubState("renderers");
         
@@ -114,15 +119,11 @@ public sealed class CoreThread : TickedThread
 
     private void LoadBootAssets(AssetLoadingHandler assetLoadingHandler)
     {
-        Workspace.Current.SetSubState("bootstrap");
-        logger.Log(Workspace.Current.FullCurrentState);
-
         var loadedAssets = assetLoadingHandler.RunBootLoadingPhase();
 
         var task = CoreToRender.AssetBridge.RegisterAsync(loadedAssets);
 
         Workspace.Current.SetSubState("receiving boot assets");
-        logger.Log(Workspace.Current.FullCurrentState);
         
         task.Wait();
         resources.Set(RenderToCore.ResourceBridge.Get());
@@ -131,12 +132,10 @@ public sealed class CoreThread : TickedThread
     private void LoadAssets(AssetLoadingHandler assetLoadingHandler, TextureAssetAtlasHandler atlasHandler)
     {
         Workspace.Current.SetSubState("loading assets");
-        logger.Log(Workspace.Current.FullCurrentState);
 
         var loadedAssets = assetLoadingHandler.RunLoadingPhase();
 
         Workspace.Current.SetSubState("generating atlases");
-        logger.Log(Workspace.Current.FullCurrentState);
 
         List<Asset> assets = [];
         List<TextureAsset> textureAssets = [];
@@ -160,7 +159,6 @@ public sealed class CoreThread : TickedThread
         var task = CoreToRender.AssetBridge.RegisterAsync(assets);
 
         Workspace.Current.SetSubState("receiving assets");
-        logger.Log(Workspace.Current.FullCurrentState);
         
         task.Wait();
         resources.Set(RenderToCore.ResourceBridge.Get());

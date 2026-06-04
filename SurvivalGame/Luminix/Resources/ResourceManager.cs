@@ -95,7 +95,7 @@ public sealed class ResourceManager : Microsoft.Xna.Framework.Content.ContentMan
 
     public IReadOnlyDictionary<string, Resource> Resources => resources;
 
-    Action<IDisposable> RecordDisposable;
+    private Action<IDisposable> RecordDisposable;
     private Main main;
 
     private Stream openedStream = null; 
@@ -246,7 +246,7 @@ public sealed class ResourceManager : Microsoft.Xna.Framework.Content.ContentMan
 
         return base.OpenStream(relativePath);
     }
-
+    
     public sealed override void UnloadAsset(string name)
     {
         if (string.IsNullOrEmpty(name))

@@ -5,11 +5,10 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Audio;
 using StbImageSharp;
 using StbImageWriteSharp;
-
-using Luminix.Workspaces;
 using System.Threading.Tasks;
 using System.Linq;
 using System.Text.Json;
+using Luminix.Workspaces;
 
 namespace Luminix.IO;
 
@@ -214,13 +213,17 @@ public sealed class AssetIO : Workspace.Service
     }
     public void LoadStreamAsset(AssetFile assetFile, out StreamAsset _streamAsset)
     {
+        _streamAsset = null;
+
         using Stream fileStream = OpenStream(assetFile);
         MemoryStream memStream = new MemoryStream();
         fileStream.CopyTo(memStream);
         memStream.Position = 0;
 
-        StreamAsset.AssetType assetType = DetectAssetType(memStream);
-        _streamAsset = new StreamAsset(assetFile.Name, memStream, assetType);
+        if(InputOutputUtils.DetectXMBAssetType(memStream, out var assetType))
+            _streamAsset = new StreamAsset(assetFile.Name, memStream, assetType);
+        else
+            Logger.Get()?.Err($"File '{assetFile.FullPath}' is not a valid XNB file or has an unrecognized format.");
     }
     public void LoadPackageAsset(AssetFile assetFile, out PackageAsset _assets)
     {
@@ -317,15 +320,19 @@ public sealed class AssetIO : Workspace.Service
         await fileStream.CopyToAsync(memStream);
         memStream.Position = 0;
 
-        StreamAsset.AssetType assetType = DetectAssetType(memStream);
-        return new StreamAsset(assetFile.Name, memStream, assetType);
+        if(InputOutputUtils.DetectXMBAssetType(memStream, out var assetType))
+            return new StreamAsset(assetFile.Name, memStream, assetType);
+        else
+            Logger.Get()?.Err($"File '{assetFile.FullPath}' is not a valid XNB file or has an unrecognized format.");
+        
+        return null;
     }
     public async Task<PackageAsset> LoadPackageAssetAsync(AssetFile assetFile)
     {
         throw new NotImplementedException(nameof(LoadPackageAssetAsync));
     }
 
-    public FileStream OpenStream(AssetFile assetFile)
+    public Stream OpenStream(AssetFile assetFile)
     {
         return new FileStream(assetFile.FullPath, 
         FileMode.Open,
@@ -333,46 +340,6 @@ public sealed class AssetIO : Workspace.Service
         FileShare.Read,
         bufferSize: 4096,
         useAsync: true);
-    }
-
-    private StreamAsset.AssetType DetectAssetType(Stream stream)
-    {
-        try
-        {
-            byte[] header = new byte[512];
-            int bytesRead = stream.Read(header, 0, header.Length);
-            stream.Position = 0;
-
-            int i = 10;
-
-            while (i < bytesRead && (header[i] & 0x80) != 0) i++;
-            i++;
-
-            int strLen = 0, shift = 0;
-            while (i < bytesRead)
-            {
-                byte b = header[i++];
-                strLen |= (b & 0x7F) << shift;
-                if ((b & 0x80) == 0) break;
-                shift += 7;
-            }
-
-            string typeName = System.Text.Encoding.UTF8.GetString(header, i, Math.Min(strLen, bytesRead - i));
-
-            return typeName switch
-            {
-                var t when t.Contains("Texture2DReader")   => StreamAsset.AssetType.Texture,
-                var t when t.Contains("SpriteFontReader")  => StreamAsset.AssetType.Font,
-                var t when t.Contains("SoundEffectReader") => StreamAsset.AssetType.Audio,
-                var t when t.Contains("SongReader")        => StreamAsset.AssetType.Audio,
-                var t when t.Contains("EffectReader")      => StreamAsset.AssetType.Shader,
-                _ => StreamAsset.AssetType.Texture
-            };
-        }
-        catch
-        {
-            return StreamAsset.AssetType.Texture;
-        }
     }
 
     internal void SaveTexture(string name, Color[] colors, Vector2 size)
@@ -399,4 +366,5 @@ public sealed class AssetIO : Workspace.Service
         if(Settings.DebugAssets)
             Logger.Get().Log($"Texture '{name}', saved to: '{path}'");
     }
+
 }
