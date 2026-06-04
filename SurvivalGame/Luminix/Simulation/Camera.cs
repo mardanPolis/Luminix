@@ -1,8 +1,7 @@
 using System;
 using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Graphics;
-using Luminix.Rendering;
 using Luminix.Workspaces;
+using Luminix.Collections;
 
 namespace Luminix.Simulation;
 
@@ -13,6 +12,8 @@ public class Camera
     {
         universe = Workspace.Current.GetService<Universe>();
     }
+
+    private DenseList<CameraComponent> cameraComponents = [];
 
     private Vector2 position0 = Vector2.Zero;
     private Vector2 position = Vector2.Zero;
@@ -58,7 +59,7 @@ public class Camera
 
     public void Translate(Vector2 delta)
     {
-        position0 += delta;
+        position += delta;
     }
 
     public void MoveTo(Vector2 to)
@@ -74,5 +75,11 @@ public class Camera
     {
         position0 = position;
         orthoSize0 = orthoSize;
+    }
+
+    internal void AttachComponent(CameraComponent cameraComponent)
+    {
+        cameraComponents.Add(cameraComponent);
+        
     }
 } 

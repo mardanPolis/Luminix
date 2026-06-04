@@ -45,7 +45,7 @@ public sealed class Universe : Workspace.Service
     public long TickCount { get; private set; }
     public double DeltaTime { get; private set; }
 
-    public Viewport Viewport { get; private set; } // TO DO: create a way to get the viewport over the bridge
+    public Viewport Viewport { get; private set; } // TODO: create a way to get the viewport over the bridge
 
     //Renderers
 
@@ -54,7 +54,7 @@ public sealed class Universe : Workspace.Service
     private World world;
     public World World => world;
 
-    public void NewBlankWorld(string name, int mapWidth, int mapHeight, bool debug)
+    public void NewBlankWorld(string name)
     {
         if(world != null)
         {
@@ -63,8 +63,7 @@ public sealed class Universe : Workspace.Service
         }
 
         WorldComponent[] worldComponents = [];
-        world = new World(name, mapWidth, mapHeight, worldComponents, debug);
-        world.GenerateBlankMap();
+        world = new World(name, worldComponents);
     }
 
     public void LoadWorld(string worldName)

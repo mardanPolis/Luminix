@@ -2,21 +2,21 @@ using System;
 using Microsoft.Xna.Framework.Input;
 using Luminix;
 using Luminix.Simulation;
+using Luminix.Workspaces;
 
 namespace Game.Simulation;
 
-public class CameraMover : WorldComponent
+public class CameraMover : CameraComponent
 {
     private Input input;
 
-    public override void Initialize()
+    public CameraMover(Camera camera) : base(camera)
     {
-        Workspace.TryGetService(out input);
+        Workspace.Current.TryGetService(out input);
     }
 
-    public override void Tick(Map currentMap)
+    public override void Tick()
     {
-        Camera camera = currentMap.Camera;
         float speed = (float)(5f * Universe.DeltaTime);
 
         var cameraPos = camera.Position;

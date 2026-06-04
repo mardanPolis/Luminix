@@ -13,6 +13,5 @@ public abstract class WorldComponent
     }
 
     public virtual void Initialize() { }
-    public virtual void OnMapChange(Map oldMap, Map newMap) {}
-    public abstract void Tick(Map currentMap);
+    public virtual void Tick() { }
 }
