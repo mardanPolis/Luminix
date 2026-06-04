@@ -57,14 +57,8 @@ internal class AssetLoadingHandler
 
         workerThreadPool.ParallelFor(validAssetFiles, assetFile =>
         {
-            if (Settings.DebugAssets && Settings.DebugInitialization)
-                logger.Log("Loading: " + assetFile.RelativePath);
-
             assetIO.LoadAsset(assetFile, out Asset asset);
             loadedAssets.Add(asset);
-
-            if (Settings.DebugAssets && Settings.DebugInitialization)
-                Logger.Initialize().Log("Loaded: " + assetFile.RelativePath);
         });
 
         var result = new DenseList<Asset>();

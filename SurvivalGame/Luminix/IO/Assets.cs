@@ -107,3 +107,10 @@ public sealed class PackageAsset : Asset
         throw new NotImplementedException(nameof(PackageAsset));
     }
 }
+
+public abstract class DataAsset : Asset
+{
+    public DataAsset(string name, AssetIO.AssetFile? assetFile) : base(name, assetFile)
+    {
+    }
+}

@@ -126,14 +126,6 @@ public sealed class CoreThread : TickedThread
         
         task.Wait();
         resources.Set(RenderToCore.ResourceBridge.Get());
-        
-        long before = GC.GetTotalMemory(false);
-        GC.Collect();
-        long after = GC.GetTotalMemory(true);
-
-        long cleared = before - after;
-        if(Settings.DebugInitialization)
-            logger.Log($"GC cleared: {cleared / 1024.0:F2} KB ({cleared:N0}) bytes)");
     }
 
     private void LoadAssets(AssetLoadingHandler assetLoadingHandler, TextureAssetAtlasHandler atlasHandler)

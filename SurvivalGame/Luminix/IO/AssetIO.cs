@@ -9,6 +9,7 @@ using StbImageWriteSharp;
 using Luminix.Workspaces;
 using System.Threading.Tasks;
 using System.Linq;
+using System.Text.Json;
 
 namespace Luminix.IO;
 
@@ -17,18 +18,22 @@ public sealed class AssetIO : Workspace.Service
     public const string ASSET_DIRECTORY = "Assets";
     public const string ASSET_CACHE_DIRECTORY = "Cache";
 
+    private static Dictionary<(string, string), Type> dataAssetTypes = null;
+
     private static readonly HashSet<string> packageExtensions = new(StringComparer.OrdinalIgnoreCase) { ".package" };
     private static readonly HashSet<string> textureExtensions = new(StringComparer.OrdinalIgnoreCase) { ".png", ".jpg", ".jpeg" };
     private static readonly HashSet<string> audioExtensions = new(StringComparer.OrdinalIgnoreCase) { ".wav", ".mp3", ".ogg" };
+    private static readonly HashSet<string> dataExtensions = new(StringComparer.OrdinalIgnoreCase) { ".json" };
     private static readonly HashSet<string> monoExtensions = new(StringComparer.OrdinalIgnoreCase) { ".xnb" };
 
-    private static readonly HashSet<string> allExtensions = new HashSet<string>(packageExtensions.Union(textureExtensions).Union(audioExtensions).Union(monoExtensions));
+    private static readonly HashSet<string> allExtensions = new HashSet<string>(packageExtensions.Union(textureExtensions).Union(audioExtensions).Union(monoExtensions).Union(dataExtensions));
+    private static readonly List<string> extensions = allExtensions.ToList();
 
     public struct AssetFile
     {
         public static AssetFile Generated => new AssetFile("Generated");
 
-        public AssetFile(string assetRoot, string relativePath)
+        internal AssetFile(string assetRoot, string relativePath)
         {
             AssetRoot = assetRoot;
             RelativePath = relativePath;
@@ -55,7 +60,7 @@ public sealed class AssetIO : Workspace.Service
         public override string ToString() => FullPath;
     }
 
-    public IEnumerable<AssetFile> EnumerateAssets(string rootDirectory = "", bool? boot = null, string directory = "")
+    public IEnumerable<AssetFile> EnumerateAssets(string rootDirectory = "", bool? boot = null, string directory = "", bool includeDataAssets = false)
     {
         string root = Path.Combine(AppContext.BaseDirectory, rootDirectory, ASSET_DIRECTORY);
 
@@ -78,11 +83,71 @@ public sealed class AssetIO : Workspace.Service
 
             string extension = Path.GetExtension(relativePath);
             
-            if(!allExtensions.Contains(extension)) continue;
+            if(!allExtensions.Contains(extension))
+            {
+                Logger.Get()?.Log($"Unsupported extension '{extension}' at location: '{path}'!");
+                continue;
+            }
+
+            if(includeDataAssets && dataExtensions.Contains(extension))
+                continue;
 
             yield return new AssetFile(root, relativePath);
         }
     } 
+
+    public bool Access(string rootDirectory, string directory, out AssetFile _assetFile)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(rootDirectory, nameof(rootDirectory));
+        ArgumentException.ThrowIfNullOrWhiteSpace(directory, nameof(directory));
+
+        _assetFile = new AssetFile();
+
+        if (Path.IsPathFullyQualified(directory))
+        {
+            Logger.Get()?.Log("Not supported!");
+            return false;
+        }
+
+        string root = Path.Combine(AppContext.BaseDirectory, rootDirectory, ASSET_DIRECTORY);
+        if (!Path.Exists(root))
+            throw new DirectoryNotFoundException($"The specified asset path '{root}' does not exist.");
+
+        string fullPath = Path.Combine(root, directory);
+        if (!fullPath.StartsWith(root))
+            throw new ArgumentException("Invalid directory traversal.");
+
+        if (Path.HasExtension(fullPath))
+        {
+            string extension = Path.GetExtension(fullPath);
+            if (!allExtensions.Contains(extension))
+                throw new NotSupportedException($"Unsupported extension '{extension}' at location: '{fullPath}'!");
+
+            if (!File.Exists(fullPath))
+                throw new FileNotFoundException($"The specified asset path '{fullPath}' does not exist.");
+
+            _assetFile = new AssetFile(root, directory);
+        }
+        else
+        {
+            string extension = null;
+            for (int i = 0; i < extensions.Count; i++)
+            {
+                if (File.Exists(fullPath + extensions[i]))
+                {
+                    extension = extensions[i];
+                    break;
+                }
+            }
+
+            if (extension == null)
+                throw new FileNotFoundException($"The specified asset path '{directory}' does not exist.");
+
+            _assetFile = new AssetFile(root, directory + extension);
+        }
+
+        return true;
+    }
 
     public void LoadAsset(AssetFile assetFile, out Asset _asset)
     {
@@ -112,6 +177,15 @@ public sealed class AssetIO : Workspace.Service
             _asset = asset; 
             return;
         }
+        if (dataExtensions.Contains(extension))
+        {
+            if(LoadDataAsset(assetFile, out DataAsset asset))
+                _asset = asset; 
+
+            return;
+        }
+
+        throw new ArgumentException($"Unsupported file extension: '{extension}'");
     }
     public void LoadTexture(AssetFile assetFile, out TextureAsset _textureAsset)
     {
@@ -152,7 +226,47 @@ public sealed class AssetIO : Workspace.Service
     {
         throw new NotImplementedException(nameof(LoadPackageAsset));
     }
-    
+    public bool LoadDataAsset(AssetFile assetFile, out DataAsset _dataAsset)
+    {
+        _dataAsset = null;
+        if (dataAssetTypes == null || dataAssetTypes.Count == 0)
+        {
+            Logger.Get().Log("No DataAsset types found!");
+            return false;
+        }
+
+        var json = File.ReadAllText(assetFile.FullPath);
+        JsonDocument doc;
+        try
+        {
+            doc = JsonDocument.Parse(json);
+        }
+        catch (JsonException ex)
+        {
+            Logger.Get().Log($"Failed to parse JSON at line {ex.LineNumber}: {ex.Message}");
+            return false;
+        }
+
+        var property = doc.RootElement.GetProperty("dataAsset");
+        string[] typeName = property.GetString().Split(".");
+        if (typeName.Length != 2)
+        {
+            Logger.Get().Log($"Incorrect formatting! Expected 'ModID.ClassName' but got '{property.GetString()}'");
+            return false;
+        }
+
+        if (!dataAssetTypes.TryGetValue((typeName[0], typeName[1]), out Type type))
+        {
+            Logger.Get().Log($"DataAsset (modID '{typeName[0]}', type '{typeName[1]}') not found in registry!");
+            return false;
+        }
+
+        var dataElement = doc.RootElement.GetProperty("data").GetRawText();
+        object result = JsonSerializer.Deserialize(dataElement, type);
+        _dataAsset = (DataAsset)result;
+        return true;
+    }
+
     public async Task<Asset> LoadAssetAsync(AssetFile assetFile)
     {
         string extension = Path.GetExtension(assetFile.FullPath);

@@ -2,10 +2,7 @@ using System;
 using System.Diagnostics;
 using System.Threading;
 using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Input;
 using Microsoft.Xna.Framework.Content;
-using Game;
-using Luminix.Collections;
 using Luminix.Rendering;
 using Luminix.Resources;
 using Luminix.Threading;
@@ -79,6 +76,8 @@ public class Main : Microsoft.Xna.Framework.Game
 
         settingsController.MinWorkerThreadCount = 2;
         settingsController.MaxWorkerThreadCount = 5;
+
+        ThreadPool.SetMaxThreads(3, 1);
 
         try
         {

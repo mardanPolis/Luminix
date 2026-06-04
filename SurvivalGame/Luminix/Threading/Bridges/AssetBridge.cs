@@ -2,11 +2,8 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.IO;
 using System.Threading.Tasks;
 using Luminix.IO;
-using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Audio;
 
 namespace Luminix.Threading.Bridges;
 
@@ -32,7 +29,6 @@ internal class AssetBridge
         var task = new AssetTask(asset, null);
         tasks.Enqueue(task);
     }
-
     public void Register(IList<Asset> assets)
     {
         var task = new AssetGroupTask(assets, null);
@@ -46,13 +42,13 @@ internal class AssetBridge
         tasks.Enqueue(task);
         task.Tcs.Task.Wait();
     }
-
     public void RegisterSync(IList<Asset> assets)
     {
         var task = new AssetGroupTask(assets, new TaskCompletionSource());
         groupTasks.Enqueue(task);
         task.Tcs.Task.Wait();
     }
+    
     // ASYNC
     public Task RegisterAsync(Asset asset)
     {

@@ -170,25 +170,24 @@ public sealed class WorkerThreadPool : Workspace.Service
         var exceptions = new ConcurrentBag<Exception>();
         var countdown  = new CountdownEvent(items.Count);
         var tcs        = new TaskCompletionSource();
+        var scheduler  = new WorkerThreadScheduler(this);
 
         foreach (var item in items)
         {
             var captured = item;
             Enqueue(() =>
             {
-                work(captured).ContinueWith(t =>
+                var t = work(captured).ContinueWith(_ => { }, scheduler);
+                t.ContinueWith(prev =>
                 {
-                    if (t.IsFaulted && t.Exception != null)
-                        foreach (var ex in t.Exception.InnerExceptions)
-                            exceptions.Add(ex);
-
+                    if (prev.IsFaulted) exceptions.Add(prev.Exception!);
                     if (countdown.Signal() && countdown.IsSet)
                     {
                         countdown.Dispose();
                         if (exceptions.IsEmpty) tcs.SetResult();
                         else tcs.SetException(new AggregateException(exceptions));
                     }
-                }, TaskContinuationOptions.ExecuteSynchronously);
+                }, scheduler);
             });
         }
 
