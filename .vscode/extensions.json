@@ -1,0 +1,8 @@
+{
+    "recommendations": [
+        "gruntfuggly.todo-tree",
+        "ms-dotnettools.csdevkit",
+        "ms-dotnettools.csharp",
+        "ms-dotnettools.vscode-dotnet-runtime"
+    ]
+}
