@@ -60,7 +60,6 @@ public sealed class CoreThread : TickedThread
         var stopwatch = Stopwatch.StartNew();
         LoadBootAssets(assetLoadingHandler);
         LoadAssets(assetLoadingHandler, textureAtlasHandler);
-
         logger.Log($"{Name} loaded assets in {stopwatch.Elapsed.Milliseconds}ms");
 
         Workspace.Current.SetSubState("renderers");
@@ -119,7 +118,7 @@ public sealed class CoreThread : TickedThread
 
     private void LoadBootAssets(AssetLoadingHandler assetLoadingHandler)
     {
-        var loadedAssets = assetLoadingHandler.RunBootLoadingPhase();
+        var loadedAssets = assetLoadingHandler.Run(true);
 
         var task = CoreToRender.AssetBridge.RegisterAsync(loadedAssets);
 
@@ -133,7 +132,7 @@ public sealed class CoreThread : TickedThread
     {
         Workspace.Current.SetSubState("loading assets");
 
-        var loadedAssets = assetLoadingHandler.RunLoadingPhase();
+        var loadedAssets = assetLoadingHandler.Run(false);
 
         Workspace.Current.SetSubState("generating atlases");
 
@@ -156,6 +155,22 @@ public sealed class CoreThread : TickedThread
                 assetIO.SaveTexture(atlas.Name, atlas.Colors, atlas.Size);
         }
 
+        if(Settings.DebugInitialization && Settings.DebugAssets)
+        {
+            logger.Log($"Loaded Asset count: {assets.Count}");
+            foreach(var asset in assets)
+            {
+                logger.Log($" - asset: {asset}");
+                if(asset is AtlasAsset atlasAsset)
+                {
+                    foreach(var texture in atlasAsset.Regions)
+                    {
+                        logger.Log($" - - asset: {texture}");
+                    }
+                }
+            }
+        }
+        
         var task = CoreToRender.AssetBridge.RegisterAsync(assets);
 
         Workspace.Current.SetSubState("receiving assets");

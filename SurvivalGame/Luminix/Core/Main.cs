@@ -13,6 +13,7 @@ using Luminix.Resources.AssetHandlers;
 using System.IO;
 using System.Reflection;
 using Luminix.IO;
+using Luminix.Resources.BuiltIn;
 
 namespace Luminix;
 public class Main : Microsoft.Xna.Framework.Game
@@ -55,7 +56,6 @@ public class Main : Microsoft.Xna.Framework.Game
 
         //starting threads
         coreThread.Start();
-
     }
 
     private Thread mainThread = Thread.CurrentThread;
@@ -98,12 +98,11 @@ public class Main : Microsoft.Xna.Framework.Game
 
     protected override void Initialize()
     {
-        startBytes = GC.GetAllocatedBytesForCurrentThread();
-        
-        ThreadPool.SetMaxThreads(3, 1);
-
         try
         {
+            startBytes = GC.GetAllocatedBytesForCurrentThread();
+            
+            ThreadPool.SetMaxThreads(3, 1);
 
             //systems
             renderingSystem = new RenderingSystem(this);
@@ -118,12 +117,16 @@ public class Main : Microsoft.Xna.Framework.Game
             //base initialization
             base.Initialize();
 
+            TextureAsset nullTextureAsset = new ("null", BuiltInResources.NullTextureColor, new Vector2(32, 32));
+            resourceManager.CreateResource(nullTextureAsset);
+
             //Loading Embedded assets
             foreach(var asset in embeddedIO.EnumerateAssets(Assembly.GetExecutingAssembly(), silent:true))
             {
                 try
                 {
-                    logger.Log($"Loading embedded asset: {asset.Name}");
+                    if(Settings.DebugInitialization && Settings.DebugAssets)
+                        logger.Log($"Loading embedded asset: {asset.Name}");
                     resourceManager.CreateResource(asset);
                 }
                 catch(Exception ex)
@@ -145,6 +148,7 @@ public class Main : Microsoft.Xna.Framework.Game
             Logger.Get().Err($"Exception happened during initialization");
             throw;
         }
+        workspace.SetState(Workspace.State.Running);
 
         logger.Log($"RenderThread initialized in {stopwatch.Elapsed.Milliseconds}ms");
 
@@ -152,8 +156,6 @@ public class Main : Microsoft.Xna.Framework.Game
         allocated = endBytes - startBytes;
 
         logger.Log($"RenderThread allocated {allocated / 1024.0:F2} KB ({allocated:N0}) bytes during initialization!");
-
-        workspace.SetState(Workspace.State.Running);
     }
     protected override void Update(GameTime gameTime)
     {

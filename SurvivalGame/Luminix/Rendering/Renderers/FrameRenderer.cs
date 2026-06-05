@@ -1,5 +1,3 @@
-using System;
-using System.Runtime.CompilerServices;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 
@@ -40,8 +38,8 @@ internal sealed class FrameRenderer
         indexBuffer = new IndexBuffer(device, IndexElementSize.SixteenBits, 6, BufferUsage.WriteOnly);
         indexBuffer.SetData(indices);
         
-        instanceDataArray = new InstanceData[50000];
-        instanceBuffer = new DynamicVertexBuffer(device, typeof(InstanceData), 50000, BufferUsage.WriteOnly);
+        instanceDataArray = new InstanceData[8192];
+        instanceBuffer = new DynamicVertexBuffer(device, typeof(InstanceData), 8192, BufferUsage.WriteOnly);
 
         bindings =
         [
@@ -145,7 +143,7 @@ internal sealed class FrameRenderer
         }
         catch
         {
-            Logger.Get().Err($"Exception happened during batch rendering: RenderStack[{renderStack.stackID}] -> (Index/Count/Length : {i}/{count}/{dataSetLength})");
+            Logger.Get().Err($"Exception happened during batch rendering: RenderStack[{renderStack.BufferID}] -> (Index/Count/Length : {i}/{count}/{dataSetLength})");
             throw;
         }
     }

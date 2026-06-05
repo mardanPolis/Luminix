@@ -13,6 +13,9 @@
 
 #---------------------------------- Content ---------------------------------#
 
+#begin Assets/Textures/Circle.png
+/copy:Assets/Textures/Circle.png
+
 #begin Assets/Textures/Diamond.png
 /copy:Assets/Textures/Diamond.png
 

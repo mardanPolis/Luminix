@@ -37,7 +37,13 @@ public sealed class TextureAsset : Asset
 
 public sealed class AtlasAsset : Asset
 {
-    public readonly record struct Region(string Name, Rectangle Rectangle);
+    public readonly record struct Region(string Name, Rectangle Rectangle)
+    {
+        public override string ToString()
+        {
+            return $"Region [ Name: {Name}; Rectangle: {Rectangle} ]";
+        }
+    };
 
     internal AtlasAsset(string name, Color[] colors, Vector2 size, Region[] regions) : this(name, null, colors, size, regions) {}
     internal AtlasAsset(string name, AssetIO.AssetFile? assetFile, Color[] colors, Vector2 size, Region[] regions) : base(name, assetFile)
@@ -53,6 +59,11 @@ public sealed class AtlasAsset : Asset
     public Color[] Colors { get; }
     public Vector2 Size { get; }
     public Region[] Regions { get; }
+
+    public override string ToString()
+    {
+        return $"Atlas [ Size: {Size}; Regions: {Regions.Length} ]";
+    }
 }
 
 public sealed class AudioAsset : Asset

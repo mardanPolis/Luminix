@@ -43,4 +43,6 @@ public sealed class ResourceProvider : Workspace.Service, IEnumerable<Resource>
     {
         return GetEnumerator();
     }
+
+    public int Count => resources.Count;
 }

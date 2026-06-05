@@ -4,7 +4,6 @@ using System.Threading;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Luminix.Threading.Bridges;
-using Luminix.Workspaces;
 
 namespace Luminix.Rendering;
 
@@ -51,7 +50,10 @@ internal sealed class RenderingSystem
     public void DrawFrame(float partialTick)
     {
         if (CoreToRender.RenderBridge.PendingStack)
+        {
             readStack = CoreToRender.RenderBridge.Read();
+            readStack.Sort();
+        }
 
         partialTick = Math.Clamp(partialTick, 0f, 1f);
 

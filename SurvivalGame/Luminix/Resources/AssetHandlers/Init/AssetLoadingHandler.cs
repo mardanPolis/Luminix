@@ -7,6 +7,7 @@ using System.Collections.Concurrent;
 using Microsoft.Xna.Framework;
 using Luminix.Resources.BuiltIn;
 using System.Threading.Tasks;
+using System;
 
 namespace Luminix.Resources.AssetHandlers;
 
@@ -23,22 +24,11 @@ internal class AssetLoadingHandler
 
     private Dictionary<string, AssetIO.AssetFile> assets = new Dictionary<string, AssetIO.AssetFile>();
 
-    public DenseList<Asset> RunBootLoadingPhase()
+    public DenseList<Asset> Run(bool boot)
     {
-        TextureAsset nullTextureAsset = new ("null", BuiltInResources.NullTextureColor, new Vector2(32, 32));
-
-        var assetFiles = assetIO.EnumerateAssets(boot: true).ToList();
-        var assets = Load(assetFiles);
-        assets.Add(nullTextureAsset);
-        return assets;
-    }
-
-    public DenseList<Asset> RunLoadingPhase()
-    {
-        var assetFiles = assetIO.EnumerateAssets(boot: false).ToList();
+        var assetFiles = assetIO.EnumerateAssets(boot: boot).ToList();
         return Load(assetFiles);
     }
-
     private DenseList<Asset> Load(List<AssetIO.AssetFile> assetFiles)
     {
         List<AssetIO.AssetFile> validAssetFiles = new List<AssetIO.AssetFile>(assetFiles.Count);
@@ -53,6 +43,8 @@ internal class AssetLoadingHandler
                 logger.Wrn($"Duplicate assets with name '{assetFile.Name}' at locations: '{assetFile.RelativePath}' '{assets[assetFile.Name].RelativePath}'");
         }
 
+        logger.Log("Loading");
+
         ConcurrentBag<Asset> loadedAssets = [];
 
         workerThreadPool.ParallelFor(validAssetFiles, assetFile =>
@@ -60,8 +52,15 @@ internal class AssetLoadingHandler
             if(Settings.DebugInitialization && Settings.DebugAssets)
                 Logger.Get().Log($"Loading asset at path: {assetFile.FullPath}");
 
-            assetIO.LoadAsset(assetFile, out Asset asset);
-            loadedAssets.Add(asset);
+            try
+            {
+                assetIO.LoadAsset(assetFile, out Asset asset);
+                loadedAssets.Add(asset);
+            }
+            catch(Exception ex)
+            {
+                Logger.Get().Log($"Failed to load asset '{assetFile.FullPath}', reason: {ex}");
+            }
         });
 
         var result = new DenseList<Asset>();

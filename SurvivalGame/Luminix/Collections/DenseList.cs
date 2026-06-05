@@ -61,6 +61,34 @@ public sealed class DenseList<T> : ICollection<T>, IEnumerable<T>, IList<T>, IRe
         indexMap[item] = count;
         count++;
     }
+    public bool TryAdd(T item)
+    {
+        if (indexMap.ContainsKey(item))
+            return false;
+
+        if (count >= items.Length)
+            Array.Resize(ref items, items.Length * 2);
+
+        items[count] = item;
+        indexMap[item] = count;
+        count++;
+        return true;
+    }
+
+    public bool TryAdd(T item, out int index)
+    {
+        if (indexMap.TryGetValue(item, out index))
+            return false;
+
+        if (count >= items.Length)
+            Array.Resize(ref items, items.Length * 2);
+
+        items[count] = item;
+        indexMap[item] = count;
+        count++;
+        index = count;
+        return true;
+    }
 
     /// <remarks>
     /// <b>Complexity: O(2n)</b>. <br/>
