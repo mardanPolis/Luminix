@@ -46,6 +46,8 @@ public class Main : Microsoft.Xna.Framework.Game
         resourceManager = new ResourceManager(this);
         IsMouseVisible = true;
 
+        ImmediateRenderer.ResourceManager = resourceManager;
+
         //initialize thread bridges
         CoreToRender.Initialize();
         RenderToCore.Initialize();
@@ -157,6 +159,7 @@ public class Main : Microsoft.Xna.Framework.Game
 
         logger.Log($"RenderThread allocated {allocated / 1024.0:F2} KB ({allocated:N0}) bytes during initialization!");
     }
+
     protected override void Update(GameTime gameTime)
     {
         stopwatch.Restart();
@@ -178,11 +181,5 @@ public class Main : Microsoft.Xna.Framework.Game
         time = gameTime;
         long endBytes = GC.GetAllocatedBytesForCurrentThread();
         allocated = endBytes - startBytes;
-    }
-
-    protected override void OnExiting(object sender, ExitingEventArgs args)
-    {
-        coreThread.Stop();
-        //save current world
     }
 }

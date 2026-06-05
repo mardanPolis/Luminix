@@ -3,7 +3,7 @@ using Microsoft.Xna.Framework.Graphics;
 
 namespace Luminix.Rendering;
 
-internal sealed class FrameRenderer
+internal sealed class FrameRenderer : ImmediateRenderer
 {
     private struct InstanceData : IVertexType
     {
@@ -18,10 +18,8 @@ internal sealed class FrameRenderer
         VertexDeclaration IVertexType.VertexDeclaration => VertexDeclaration;
     }
 
-    public FrameRenderer(SpriteBatch spriteBatch, Main main)
+    public FrameRenderer(Main main)
     {
-        this.spriteBatch = spriteBatch;
-
         var vertices = new VertexPositionColorTexture[] {
             new (new Vector3(0, 0, 0), Color.White, new Vector2(0, 0)),
             new (new Vector3(1, 0, 0), Color.White, new Vector2(1, 0)),
@@ -60,10 +58,12 @@ internal sealed class FrameRenderer
 
     private Viewport lastViewport;
 
+    private float partialTick;
+
+    private Matrix viewMatrix;
     private Matrix projection;
 
-    private SpriteBatch spriteBatch;
-    public void RenderFrame(RenderBuffer renderStack, Viewport viewport, float partialTick)
+    public void SetData(RenderBuffer buffer, float partialTick, Viewport viewport)
     {
         if (viewport.Width != lastViewport.Width || viewport.Height != lastViewport.Height)
         {
@@ -74,79 +74,86 @@ internal sealed class FrameRenderer
                 projection.M42 += -0.5f * projection.M22;
             }
 
-            lastViewport = viewport;
+            this.lastViewport = viewport;
         }
+
+        this.partialTick = partialTick;
+        this.viewMatrix = buffer.GetViewMatrix();
+    }
+
+    public sealed override void Render()
+    {
 
         device.Clear(Color.CornflowerBlue);
-        //var viewMatrix = renderStack.Camera.GetViewMatrix(partialTick, viewport.Height, viewport.Width);
         device.RasterizerState = RasterizerState.CullNone;
-        //Render(renderStack, viewMatrix * projection);
+        Matrix matrixTransform = viewMatrix * projection;
+        
     }
 
-    private void Render(RenderBuffer renderStack, Matrix matrixTransform)
-    {
-        int i = 0;
-        int count = 0;
-        int dataSetLength = 0;
+    // private void Render(RenderBuffer renderStack, Matrix matrixTransform)
+    // {
+    //     int i = 0;
+    //     int count = 0;
+    //     int dataSetLength = 0;
 
-        try
-        {
-            //instancingEffect.Parameters["MatrixTransform"].SetValue(matrixTransform);
+    //     try
+    //     {
+    //         //instancingEffect.Parameters["MatrixTransform"].SetValue(matrixTransform);
 
-            // var spritesBatch = renderStack.SpriteBatchRenderItemStack;
-            // var spritesBatchDataSet = spritesBatch.DataSet;
-            // var batchPositionsDataSet = renderStack.BatchPositions.DataSet;
-            // var spritesBatchCount = spritesBatch.Count;
+    //         // var spritesBatch = renderStack.SpriteBatchRenderItemStack;
+    //         // var spritesBatchDataSet = spritesBatch.DataSet;
+    //         // var batchPositionsDataSet = renderStack.BatchPositions.DataSet;
+    //         // var spritesBatchCount = spritesBatch.Count;
 
-            // int instanceIndex = 0;
-            // Texture2D texture = null;
+    //         // int instanceIndex = 0;
+    //         // Texture2D texture = null;
 
-            // i = 0;
-            // count = spritesBatchCount;
-            // dataSetLength = spritesBatchDataSet.Length;
-            // for (i = 0; i < spritesBatchCount; i++)
-            // {
-            //     ref var renderItem = ref spritesBatchDataSet[i];
-            //     var tex = renderItem.Sprite.TextureRegion.Texture;
-            //     var origin = renderItem.Sprite.Origin;
-            //     var scale = renderItem.Scale;
+    //         // i = 0;
+    //         // count = spritesBatchCount;
+    //         // dataSetLength = spritesBatchDataSet.Length;
+    //         // for (i = 0; i < spritesBatchCount; i++)
+    //         // {
+    //         //     ref var renderItem = ref spritesBatchDataSet[i];
+    //         //     var tex = renderItem.Sprite.TextureRegion.Texture;
+    //         //     var origin = renderItem.Sprite.Origin;
+    //         //     var scale = renderItem.Scale;
 
-            //     Console.WriteLine(scale);
+    //         //     Console.WriteLine(scale);
 
-            //     if(tex != texture && texture != null)
-            //         Flush(ref instanceIndex);
+    //         //     if(tex != texture && texture != null)
+    //         //         Flush(ref instanceIndex);
 
-            //     texture = tex;
+    //         //     texture = tex;
 
-            //     if(texture == null)
-            //         break;
+    //         //     if(texture == null)
+    //         //         break;
 
-            //     instancingEffect.Parameters["SpriteTexture"].SetValue(texture);
+    //         //     instancingEffect.Parameters["SpriteTexture"].SetValue(texture);
 
-            //     var source = renderItem.Sprite.TextureRegion.SourceRectangle;
-            //     Vector4 sourceVec = new Vector4(source.X, source.Y, source.Width, source.Height);
+    //         //     var source = renderItem.Sprite.TextureRegion.SourceRectangle;
+    //         //     Vector4 sourceVec = new Vector4(source.X, source.Y, source.Width, source.Height);
                 
-            //     int sourceIndex = renderItem.StartIndex;
-            //     int destinationIndex = renderItem.Length;
+    //         //     int sourceIndex = renderItem.StartIndex;
+    //         //     int destinationIndex = renderItem.Length;
 
-            //     for (int j = 0; j < destinationIndex; j++)
-            //     {
-            //         if(instanceIndex >= instanceDataArray.Length)
-            //             Flush(ref instanceIndex);
+    //         //     for (int j = 0; j < destinationIndex; j++)
+    //         //     {
+    //         //         if(instanceIndex >= instanceDataArray.Length)
+    //         //             Flush(ref instanceIndex);
 
-            //         instanceDataArray[instanceIndex].Position =  batchPositionsDataSet[j];
-            //         instanceIndex++;
-            //     }
-            // } 
+    //         //         instanceDataArray[instanceIndex].Position =  batchPositionsDataSet[j];
+    //         //         instanceIndex++;
+    //         //     }
+    //         // } 
 
-            //Flush(ref instanceIndex);
-        }
-        catch
-        {
-            Logger.Get().Err($"Exception happened during batch rendering: RenderStack[{renderStack.BufferID}] -> (Index/Count/Length : {i}/{count}/{dataSetLength})");
-            throw;
-        }
-    }
+    //         //Flush(ref instanceIndex);
+    //     }
+    //     catch
+    //     {
+    //         Logger.Get().Err($"Exception happened during batch rendering: RenderStack[{renderStack.BufferID}] -> (Index/Count/Length : {i}/{count}/{dataSetLength})");
+    //         throw;
+    //     }
+    // }
     private void Flush(Effect effect, ref int currentInstanceCount)
     {
         if (currentInstanceCount == 0) return;

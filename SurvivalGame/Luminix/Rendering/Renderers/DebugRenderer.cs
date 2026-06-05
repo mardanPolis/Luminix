@@ -2,13 +2,11 @@ using System;
 using System.Text;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using Microsoft.Xna.Framework.Input;
-using Luminix.Resources;
 using Luminix.Threading;
 
 namespace Luminix.Rendering;
 
-public abstract class DebugRenderer
+public abstract class DebugRenderer : ImmediateRenderer
 {
     protected SpriteBatch spriteBatch { get; private set; }
     internal void Initialize(SpriteBatch spriteBatch)
@@ -18,8 +16,6 @@ public abstract class DebugRenderer
     }
     
     protected Texture2D pixel;
-
-    public abstract void Render();
     
     protected void DrawLine(Vector2 start, Vector2 end, Color color, int thickness = 1)
     {
@@ -38,34 +34,34 @@ public abstract class DebugRenderer
             0);
     }
 
-    protected void DrawPanel(Vector2 start, Vector2 scale, Color color)
+    protected void DrawPanel(Vector2 start, Vector2 size, Color color)
     {
         Rectangle rect = new Rectangle(
             (int)start.X, 
             (int)start.Y, 
-            (int)scale.X, 
-            (int)scale.Y
+            (int)size.X, 
+            (int)size.Y
         );
         spriteBatch.Draw(pixel, rect, color);
     }
     protected void DrawGraph(Vector2 position, float height, double[] data, double maxValue, int valueLineThickness, int valueMargin, int lastIndex, bool invertedWidth)
     {
         float graphAreaWidth = data.Length * valueLineThickness;
-        Vector2 scale = new Vector2(graphAreaWidth + (valueMargin * 2), height);
+        Vector2 size = new Vector2(graphAreaWidth + (valueMargin * 2), height);
         
         // Draw the background
         if(invertedWidth)
-            position = new Vector2(position.X - scale.X, position.Y);
+            position = new Vector2(position.X - size.X, position.Y);
 
-        DrawPanel(position, scale, Color.Black * 0.5f);
+        DrawPanel(position, size, Color.Black * 0.5f);
 
         Vector2 leftUpper  = position + new Vector2(valueMargin, valueMargin);
-        Vector2 leftLower  = position + new Vector2(valueMargin, scale.Y - valueMargin);
-        Vector2 rightUpper = position + new Vector2(scale.X - valueMargin, valueMargin);
-        Vector2 rightLower = position + new Vector2(scale.X - valueMargin, scale.Y - valueMargin);
+        Vector2 leftLower  = position + new Vector2(valueMargin, size.Y - valueMargin);
+        Vector2 rightUpper = position + new Vector2(size.X - valueMargin, valueMargin);
+        Vector2 rightLower = position + new Vector2(size.X - valueMargin, size.Y - valueMargin);
 
         // 3. Graphing Constants
-        float availableHeight = scale.Y - (valueMargin * 2) - 5;
+        float availableHeight = size.Y - (valueMargin * 2) - 5;
         float graphBottomY = leftLower.Y;
 
         for (int i = 0; i < data.Length; i++)

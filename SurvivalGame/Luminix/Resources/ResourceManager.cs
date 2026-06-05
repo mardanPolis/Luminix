@@ -83,26 +83,29 @@ public sealed class ResourceManager : Microsoft.Xna.Framework.Content.ContentMan
     {
         MethodInfo method = typeof(Microsoft.Xna.Framework.Content.ContentManager).GetMethod("RecordDisposable", BindingFlags.Instance | BindingFlags.NonPublic) ??
          throw new InvalidOperationException("Could not find method RecordDisposable on ContentManager.");
-        RecordDisposable = (Action<IDisposable>)Delegate.CreateDelegate(typeof(Action<IDisposable>), this, method);
+        this.recordDisposable = (Action<IDisposable>)Delegate.CreateDelegate(typeof(Action<IDisposable>), this, method);
 
         this.main = main;
+        this.provider = new ResourceProvider();
 
         this.textures = new Textures();
         this.resources = [];
+
     }
 
     public new string RootDirectory => AssetIO.ASSET_DIRECTORY;
-
     public IReadOnlyDictionary<string, Resource> Resources => resources;
+    public ResourceProvider ResourceProvider => provider;
 
-    private Action<IDisposable> RecordDisposable;
+    private Action<IDisposable> recordDisposable;
+
     private Main main;
-
-    private Stream openedStream = null; 
+    private ResourceProvider provider;
     private bool disposed = false;
 
-    private Textures textures;
+    private Stream openedStream = null; 
 
+    private Textures textures;
     private ImmutableDictionary<string, Resource> resources;
 
     public void CreateResource(Asset asset)
@@ -157,6 +160,8 @@ public sealed class ResourceManager : Microsoft.Xna.Framework.Content.ContentMan
                 break;
             }
         }
+
+        provider.Set(resources);
     }
 
     private void CreateTexture(string name, Color[] colors, Vector2 size)
@@ -168,7 +173,7 @@ public sealed class ResourceManager : Microsoft.Xna.Framework.Content.ContentMan
         texture.SetData(colors);
 
         textures.NewSource(name, texture);
-        RecordDisposable(texture);
+        recordDisposable(texture);
 
     }
     private void CreateTexture(string name, Stream stream)
@@ -195,7 +200,7 @@ public sealed class ResourceManager : Microsoft.Xna.Framework.Content.ContentMan
         AudioResource resource = new AudioResource(soundEffect, name);
         resources = resources.Add(name, resource);
 
-        RecordDisposable(soundEffect);
+        recordDisposable(soundEffect);
     }
     private void CreateAudio(string name, Stream stream)
     {
