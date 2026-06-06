@@ -9,6 +9,8 @@ using Luminix.Resources.AssetHandlers;
 using Luminix.Threading.Bridges;
 using Luminix.AssetHandlers;
 using System.Collections.Generic;
+using Microsoft.Xna.Framework;
+using Game.Simulation;
 
 namespace Luminix.Threading;
 
@@ -38,6 +40,11 @@ public sealed class CoreThread : TickedThread
     private WorkerThreadPool workerThreadPool;
     private AssetIO assetIO;
 
+    private Camera camera;
+
+    private TextureResource circle;
+    private TextureResource square;
+
     protected sealed override void Initialize()
     {
         IsBackground = true;
@@ -51,6 +58,9 @@ public sealed class CoreThread : TickedThread
         input           = new Input();
         workerThreadPool = new WorkerThreadPool(workerThreadCount);
         assetIO          = new AssetIO();
+
+        camera = new Camera();
+        _ = new CameraMover(camera);
 
         workerThreadPool.Initialize();
 
@@ -68,6 +78,10 @@ public sealed class CoreThread : TickedThread
 
         var process = Process.GetCurrentProcess();
         logger.Log("Total threads at initialization: " + process.Threads.Count);
+
+        //TODO : Remove these test resources;
+        circle = resources.GetResource<TextureResource>("circle");
+        square = resources.GetResource<TextureResource>("square");
     }
 
     protected sealed override void OnTick()
@@ -95,6 +109,7 @@ public sealed class CoreThread : TickedThread
     {
         Bridges.CoreToRender.RenderBridge.Swap();
 
+
         input.ReadFrom(Bridges.RenderToCore.InputBridge);
  
         resources.Set(RenderToCore.ResourceBridge.Get());
@@ -104,16 +119,18 @@ public sealed class CoreThread : TickedThread
         universeController.TickCount = UnsafeTickCount;
 
         universe.World?.Tick();
+
+        camera.Tick();
     }
     
     private void Render()
     {
-        Optimize(TickIntervalInTicks, CurrentElapsedTicks);
-    }
-
-    private void Optimize(long maxTime, long time)
-    {
-        //if(maxTime * 0.6 > time) currWriteStack.Optimize();
+        //TODO : Remove
+        var RenderBuffer = CoreToRender.RenderBridge.CurrentWriteBuffer;
+        RenderBuffer.Reset();
+        RenderBuffer.Set(camera);
+        RenderBuffer.PostSprite(circle, new Vector3(0, 0, 0), new Vector2(1, 1), 0);
+        RenderBuffer.PostSprite(square, new Vector3(1, 0, 0), new Vector2(1, 1), 0);
     }
 
     private void LoadBootAssets(AssetLoadingHandler assetLoadingHandler)

@@ -73,8 +73,6 @@ public sealed class ShaderResource : Resource
         ArgumentNullException.ThrowIfNull(source, nameof(source));
 
         Source = source;
-
-        source.Parameters[0].
     }
 
     internal readonly Effect Source;

@@ -4,28 +4,28 @@ namespace Luminix.Threading.Bridges;
 
 internal class RenderBridge
 {
-    private volatile RenderBuffer writeStack;
-    private volatile RenderBuffer currReadStack;
-    private volatile RenderBuffer prevReadStack;
+    private volatile RenderBuffer writeBuffer;
+    private volatile RenderBuffer currReadBuffer;
+    private volatile RenderBuffer prevReadBuffer;
 
     private volatile bool pendingStack = false;
 
-    public RenderBuffer CurrentWriteStack => writeStack;
-    public bool PendingStack => pendingStack;
+    public RenderBuffer CurrentWriteBuffer => writeBuffer;
+    public bool PendingBuffer => pendingStack;
 
     public RenderBridge()
     {
-        writeStack = new RenderBuffer(new Identifiers.ID(1));
-        currReadStack = new RenderBuffer(new Identifiers.ID(2));
-        prevReadStack = new RenderBuffer(new Identifiers.ID(3));
+        writeBuffer = new RenderBuffer(new Identifiers.ID(1));
+        currReadBuffer = new RenderBuffer(new Identifiers.ID(2));
+        prevReadBuffer = new RenderBuffer(new Identifiers.ID(3));
     }
 
     public void Swap()
     {
-        var temp = currReadStack;
-        currReadStack = writeStack;
-        writeStack = prevReadStack;
-        prevReadStack = temp;
+        var temp = currReadBuffer;
+        currReadBuffer = writeBuffer;
+        writeBuffer = prevReadBuffer;
+        prevReadBuffer = temp;
 
         pendingStack = true;
     }
@@ -33,6 +33,6 @@ internal class RenderBridge
     public RenderBuffer Read()
     {
         pendingStack = false;
-        return currReadStack;
+        return currReadBuffer;
     }
 }

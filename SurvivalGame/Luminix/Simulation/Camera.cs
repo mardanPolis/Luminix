@@ -7,12 +7,13 @@ namespace Luminix.Simulation;
 
 public class Camera
 {
-    private Universe universe;
+    public record struct Data(Vector2 Position0, Vector2 Position, float OrthographicSize0, float OrthographicSize);
     public Camera()
     {
         universe = Workspace.Current.GetService<Universe>();
     }
 
+    private Universe universe;
     private DenseList<CameraComponent> cameraComponents = [];
 
     private Vector2 position0 = Vector2.Zero;
@@ -34,6 +35,11 @@ public class Camera
     public float OrthographicSize { get { return orthoSize0; } set { orthoSize0 = value > 0.01f ? value : 0.01f; orthoSize = orthoSize0;  } }
     internal float TOrthographicSize => orthoSize;
 
+    public Data GetCameraSnapshot()
+    {
+        return new Data(position0, position, orthoSize0, orthoSize);
+    }
+
     public virtual Matrix GetViewMatrix()
     {
         var viewport = universe.Viewport;
@@ -43,7 +49,7 @@ public class Camera
 
         var translation = Matrix.CreateTranslation(new Vector3(-position0.X, position0.Y, 0f));
         var scale = Matrix.CreateScale(scaleX, -scaleY, 1f);
-        var screenCenter = Matrix.CreateTranslation(new Vector3(viewport.Width * 0.5f, -viewport.Height * 0.5f, 0f));
+        var screenCenter = Matrix.CreateTranslation(new Vector3(viewport.Width * 0.5f, viewport.Height * 0.5f, 0f));
 
         return translation * scale * screenCenter;
     }
@@ -75,6 +81,9 @@ public class Camera
     {
         position0 = position;
         orthoSize0 = orthoSize;
+
+        for(int component = 0; component < cameraComponents.Count; component++)
+            cameraComponents[component].Tick();
     }
 
     internal void AttachComponent(CameraComponent cameraComponent)

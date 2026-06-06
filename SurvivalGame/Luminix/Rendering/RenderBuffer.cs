@@ -15,12 +15,12 @@ internal sealed class RenderBuffer
     {
         SpriteNonInterpolated,
         SpriteInterpolated,
-        FontNonInterpolated,
-        FontInterpolated,
+        TextNonInterpolated,
+        TextInterpolated,
     }
 
     public readonly record struct RenderGroup(Vector2 topLeft, Vector2 btmRight);
-    public readonly record struct RenderCommand(uint SortKey, RenderObjectType type, int DataIndex) : IComparable<RenderCommand>
+    public readonly record struct RenderCommand(ulong SortKey, RenderObjectType type, int DataIndex) : IComparable<RenderCommand>
     {
         public int CompareTo(RenderCommand other) => SortKey.CompareTo(other.SortKey);
     }
@@ -39,7 +39,7 @@ internal sealed class RenderBuffer
     public readonly ID BufferID;
     private bool sorted;
 
-    private Matrix viewMatrix;
+    private Camera.Data cameraData;
 
     private readonly List<InstanceSprite>  instanceSprites;
     private readonly List<InstanceText>    instanceTexts;
@@ -52,15 +52,24 @@ internal sealed class RenderBuffer
 
     public void Set(Camera camera)
     {
-        viewMatrix = camera.GetViewMatrix();
+        cameraData = camera.GetCameraSnapshot();
     }
 
     public void PostSprite(TextureResource texture, Vector3 position, Vector2 size, float rotation)
     {
-        uint key = BuildSpriteKey(texture);
+        ulong key = BuildSpriteKey(texture);
  
         int dataIndex = instanceSprites.Count;
-        instanceSprites.Add(new InstanceSprite(texture, position, size, rotation));
+        instanceSprites.Add(new InstanceSprite(null, texture, position, size, rotation));
+        renderCommands.Add(new RenderCommand(key, RenderObjectType.SpriteNonInterpolated, dataIndex));
+    }
+    
+    public void PostSprite(ShaderResource shader, TextureResource texture, Vector3 position, Vector2 size, float rotation)
+    {
+        ulong key = BuildSpriteKey(shader, texture);
+ 
+        int dataIndex = instanceSprites.Count;
+        instanceSprites.Add(new InstanceSprite(shader, texture, position, size, rotation));
         renderCommands.Add(new RenderCommand(key, RenderObjectType.SpriteNonInterpolated, dataIndex));
     }
 
@@ -75,10 +84,19 @@ internal sealed class RenderBuffer
 
     public void PostInterpolatedSprite(TextureResource texture, Vector3 position0, Vector3 position, Vector2 size0, Vector2 size, float rotation0, float rotation)
     {
-        uint key = BuildSpriteKey(texture);
+        ulong key = BuildSpriteKey(texture);
  
         int dataIndex = interpolatedInstanceSprites.Count;
-        interpolatedInstanceSprites.Add(new InterpolatedInstanceSprite(texture, position0, position, size0, size, rotation0, rotation));
+        interpolatedInstanceSprites.Add(new InterpolatedInstanceSprite(null, texture, position0, position, size0, size, rotation0, rotation));
+        renderCommands.Add(new RenderCommand(key, RenderObjectType.SpriteNonInterpolated, dataIndex));
+    }
+
+    public void PostInterpolatedSprite(ShaderResource shader, TextureResource texture, Vector3 position0, Vector3 position, Vector2 size0, Vector2 size, float rotation0, float rotation)
+    {
+        ulong key = BuildSpriteKey(shader, texture);
+ 
+        int dataIndex = interpolatedInstanceSprites.Count;
+        interpolatedInstanceSprites.Add(new InterpolatedInstanceSprite(shader, texture, position0, position, size0, size, rotation0, rotation));
         renderCommands.Add(new RenderCommand(key, RenderObjectType.SpriteNonInterpolated, dataIndex));
     }
 
@@ -100,8 +118,8 @@ internal sealed class RenderBuffer
 
     //TODO : Add PostBatch, batched sprites only.
 
-    public Matrix GetViewMatrix()
-        => viewMatrix;
+    public Camera.Data GetCameraData()
+        => cameraData;
 
     public ReadOnlySpan<RenderCommand> GetRenderCommands() 
         => System.Runtime.InteropServices.CollectionsMarshal.AsSpan(renderCommands);
@@ -117,6 +135,9 @@ internal sealed class RenderBuffer
 
     public ReadOnlySpan<InterpolatedInstanceText> GetInterpolatedTexts() 
         => System.Runtime.InteropServices.CollectionsMarshal.AsSpan(interpolatedInstanceTexts);
+
+    public ReadOnlySpan<RenderGroup> GetGroups() 
+        => System.Runtime.InteropServices.CollectionsMarshal.AsSpan(renderGroups);
 
     public void Sort()
     {
@@ -143,9 +164,22 @@ internal sealed class RenderBuffer
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static uint BuildSpriteKey(TextureResource texture)
+    private static ulong BuildSpriteKey(TextureResource texture)
     {
-        return (uint)RuntimeHelpers.GetHashCode(texture.Source);
+        return (ulong)RuntimeHelpers.GetHashCode(texture?.Source);
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static ulong BuildSpriteKey(ShaderResource shader, TextureResource texture)
+    {
+        int shaderHash = RuntimeHelpers.GetHashCode(shader?.Source);
+        int textureHash = RuntimeHelpers.GetHashCode(texture?.Source);
+
+        uint shaderCode = (uint)shaderHash;
+        uint textureCode = (uint)textureHash;
+
+        ulong combinedHash = ((ulong)shaderCode << 32) | (ulong)textureCode;
+        return combinedHash;
     }
  
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

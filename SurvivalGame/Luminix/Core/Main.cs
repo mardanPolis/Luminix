@@ -10,7 +10,6 @@ using Luminix.Threading.Bridges;
 using Luminix.Workspaces;
 using Luminix.Core.InputHandlers;
 using Luminix.Resources.AssetHandlers;
-using System.IO;
 using System.Reflection;
 using Luminix.IO;
 using Luminix.Resources.BuiltIn;
@@ -45,8 +44,6 @@ public class Main : Microsoft.Xna.Framework.Game
 
         resourceManager = new ResourceManager(this);
         IsMouseVisible = true;
-
-        ImmediateRenderer.ResourceManager = resourceManager;
 
         //initialize thread bridges
         CoreToRender.Initialize();
@@ -119,7 +116,7 @@ public class Main : Microsoft.Xna.Framework.Game
             //base initialization
             base.Initialize();
 
-            TextureAsset nullTextureAsset = new ("null", BuiltInResources.NullTextureColor, new Vector2(32, 32));
+            TextureAsset nullTextureAsset = new ("NullTexture", BuiltInResources.NullTextureColor, new Vector2(32, 32));
             resourceManager.CreateResource(nullTextureAsset);
 
             //Loading Embedded assets
@@ -140,7 +137,7 @@ public class Main : Microsoft.Xna.Framework.Game
             //Renderer initialization   
             renderingSystem.Initialize();
 
-            TargetElapsedTime = TimeSpan.FromSeconds(1d / 30d);
+            TargetElapsedTime = TimeSpan.FromSeconds(1d / 144d);
             IsFixedTimeStep = true;
 
 

@@ -9,12 +9,24 @@ using Luminix.Resources;
 
 namespace Luminix.Rendering;
 
-internal sealed class RenderingSystem : Workspace.Service
+public sealed class RenderingSystem : Workspace.Service
 {
+    internal RenderingSystem(Main main)
+    {
+        ArgumentNullException.ThrowIfNull(main);
+        ArgumentNullException.ThrowIfNull(main.GraphicsDeviceManager);
+
+        this.main = main;
+        this.graphics = main.GraphicsDeviceManager;
+        this.resourceManager = main.ResourceManager;
+    }
+
     private Main main;
-    private FrameRenderer frameRenderer;
+    private BatchRenderer batchRenderer;
     private GraphicsDeviceManager graphics;
     private ResourceManager resourceManager;
+
+    private SpriteBatch spriteBatch;
 
     private RenderBuffer renderBuffer;
 
@@ -27,38 +39,27 @@ internal sealed class RenderingSystem : Workspace.Service
     public ulong FrameCount => Interlocked.Read(ref frameCount);
     public long DrawCount => Interlocked.Read(ref drawCount);
 
-    private List<DebugRenderer> debugRenderers;
+    internal SpriteBatch SpriteBatch => spriteBatch;
 
-    public RenderingSystem(Main main)
-    {
-        ArgumentNullException.ThrowIfNull(main);
-        ArgumentNullException.ThrowIfNull(main.GraphicsDeviceManager);
-
-        this.main = main;
-        this.graphics = main.GraphicsDeviceManager;
-    }
-
-    public void Initialize()
+    internal void Initialize()
     {
         renderBuffer = CoreToRender.RenderBridge.Read();
 
-        frameRenderer = new FrameRenderer(main);
+        spriteBatch = new SpriteBatch(GraphicsDevice);
+        batchRenderer = new BatchRenderer();
     }
 
-    public void DrawFrame(float partialTick)
+    internal void DrawFrame(float partialTick)
     {
-        if (CoreToRender.RenderBridge.PendingStack)
+        if (CoreToRender.RenderBridge.PendingBuffer)
         {
             renderBuffer = CoreToRender.RenderBridge.Read();
             renderBuffer.Sort();
         }
 
         partialTick = Math.Clamp(partialTick, 0f, 1f);
-        frameRenderer.SetData(renderBuffer, partialTick, )
-
-        if(debugRenderers != null)
-            for (int i = 0; i < debugRenderers.Count; i++)
-                debugRenderers[i].Render();
+        batchRenderer.SetData(renderBuffer, partialTick, graphics.GraphicsDevice.Viewport);
+        batchRenderer.Render();
 
         Interlocked.Increment(ref frameCount);
         Interlocked.Exchange(ref drawCount, GraphicsDevice.Metrics.DrawCount);

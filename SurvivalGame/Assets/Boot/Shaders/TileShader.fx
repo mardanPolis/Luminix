@@ -1,3 +1,4 @@
+float4x4 MatrixTransform;
 Texture2D Texture;
 float textureSize;
 float textureRegionSize;
@@ -6,8 +7,6 @@ float textureRegionOrigin;
 float2 Scale;
 
 float PositionZ;
-
-float4x4 MatrixTransform;
 
 sampler2D TextureSampler = sampler_state
 {
@@ -44,9 +43,7 @@ VertexShaderOutput MainVS(VertexInput vertex, InstanceInput instance)
 
     output.Position = mul(worldPos, MatrixTransform);
     output.Color = vertex.Color;
-
-    float invTexSize = 1.0 / textureSize;
-    output.TextureCoordinates = (vertex.TextureCoordinates * textureRegionSize + instance.SourceRectPos) * invTexSize;
+    output.TextureCoordinates = (vertex.TextureCoordinates * textureRegionSize + instance.SourceRectPos) / textureSize;
 
     return output;
 }
