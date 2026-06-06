@@ -39,7 +39,7 @@ internal sealed class RenderBuffer
     public readonly ID BufferID;
     private bool sorted;
 
-    private Camera.Data cameraData;
+    private Camera.Data? cameraData;
 
     private readonly List<InstanceSprite>  instanceSprites;
     private readonly List<InstanceText>    instanceTexts;
@@ -52,7 +52,7 @@ internal sealed class RenderBuffer
 
     public void Set(Camera camera)
     {
-        cameraData = camera.GetCameraSnapshot();
+        cameraData = camera?.GetCameraSnapshot();
     }
 
     public void PostSprite(TextureResource texture, Vector3 position, Vector2 size, float rotation)
@@ -118,7 +118,7 @@ internal sealed class RenderBuffer
 
     //TODO : Add PostBatch, batched sprites only.
 
-    public Camera.Data GetCameraData()
+    public Camera.Data? GetCameraData()
         => cameraData;
 
     public ReadOnlySpan<RenderCommand> GetRenderCommands() 

@@ -11,6 +11,10 @@ public class Camera
     public Camera()
     {
         universe = Workspace.Current.GetService<Universe>();
+        if(universe.World == null)
+        {
+            throw new NullReferenceException("Unable to create a camera reason: a world instance was not found.");
+        }
     }
 
     private Universe universe;

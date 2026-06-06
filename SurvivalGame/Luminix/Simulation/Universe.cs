@@ -47,24 +47,12 @@ public sealed class Universe : Workspace.Service
 
     public Viewport Viewport { get; private set; } // TODO: create a way to get the viewport over the bridge
 
+    public World World { get; private set; }
+
     //Renderers
 
 
-    //Current World
-    private World world;
-    public World World => world;
-
-    public void NewBlankWorld(string name)
-    {
-        if(world != null)
-        {
-            logger.Wrn("Unable to create a blank world!, because a world already exists!");
-            return;
-        }
-
-        WorldComponent[] worldComponents = [];
-        world = new World(name, worldComponents);
-    }
+    //World
 
     public void LoadWorld(string worldName)
     {
@@ -74,16 +62,5 @@ public sealed class Universe : Workspace.Service
     public void SaveWorld()
     {
         
-    }
-
-    public void ExitWorld()
-    {
-        if(world == null)
-        {
-            logger.Wrn("Unable to exit a world, no world to exit!");
-            return;
-        }
-
-        world = null;
     }
 }

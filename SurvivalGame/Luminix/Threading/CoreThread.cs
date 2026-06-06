@@ -40,8 +40,6 @@ public sealed class CoreThread : TickedThread
     private WorkerThreadPool workerThreadPool;
     private AssetIO assetIO;
 
-    private Camera camera;
-
     private TextureResource circle;
     private TextureResource square;
 
@@ -59,9 +57,6 @@ public sealed class CoreThread : TickedThread
         workerThreadPool = new WorkerThreadPool(workerThreadCount);
         assetIO          = new AssetIO();
 
-        camera = new Camera();
-        _ = new CameraMover(camera);
-
         workerThreadPool.Initialize();
 
         var assetLoadingHandler = new AssetLoadingHandler(workerThreadPool, assetIO);
@@ -78,10 +73,6 @@ public sealed class CoreThread : TickedThread
 
         var process = Process.GetCurrentProcess();
         logger.Log("Total threads at initialization: " + process.Threads.Count);
-
-        //TODO : Remove these test resources;
-        circle = resources.GetResource<TextureResource>("circle");
-        square = resources.GetResource<TextureResource>("square");
     }
 
     protected sealed override void OnTick()
@@ -119,18 +110,13 @@ public sealed class CoreThread : TickedThread
         universeController.TickCount = UnsafeTickCount;
 
         universe.World?.Tick();
-
-        camera.Tick();
     }
     
     private void Render()
     {
-        //TODO : Remove
         var RenderBuffer = CoreToRender.RenderBridge.CurrentWriteBuffer;
         RenderBuffer.Reset();
-        RenderBuffer.Set(camera);
-        RenderBuffer.PostSprite(circle, new Vector3(0, 0, 0), new Vector2(1, 1), 0);
-        RenderBuffer.PostSprite(square, new Vector3(1, 0, 0), new Vector2(1, 1), 0);
+        RenderBuffer.Set(universe.World?.MainCamera);
     }
 
     private void LoadBootAssets(AssetLoadingHandler assetLoadingHandler)

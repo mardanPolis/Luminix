@@ -37,7 +37,7 @@ public sealed class RenderingSystem : Workspace.Service
 
     private Viewport viewport;
 
-    private Matrix viewMatrix;
+    private Matrix? viewMatrix;
     private Matrix projectionMatrix;
 
     public ResourceManager ResourceManager => resourceManager;
@@ -47,9 +47,9 @@ public sealed class RenderingSystem : Workspace.Service
     public long DrawCount => Interlocked.Read(ref drawCount);
     public Viewport Viewport => viewport;
 
-    public Matrix ViewMatrix => viewMatrix;
+    public Matrix? ViewMatrix => viewMatrix;
     public Matrix ProjectionMatrix => projectionMatrix;
-    public Matrix MatrixTransform => viewMatrix * projectionMatrix;
+    public Matrix? TransformMatrix => viewMatrix.HasValue ? viewMatrix.Value * projectionMatrix : null;
 
     internal SpriteBatch SpriteBatch => spriteBatch;
 
@@ -72,7 +72,7 @@ public sealed class RenderingSystem : Workspace.Service
         immediateRenderers.Add(systemDebugRenderer);
     }
 
-    internal void DrawFrame(float partialTick)
+    internal void NewFrame(float partialTick)
     {
         if (CoreToRender.RenderBridge.PendingBuffer)
         {
@@ -85,7 +85,7 @@ public sealed class RenderingSystem : Workspace.Service
         var cameraData = renderBuffer.GetCameraData();
 
         projectionMatrix = GetProjectionMatrix(viewport, out viewport);
-        viewMatrix =       GetViewMatrix(cameraData, viewport, partialTick);
+        viewMatrix       = cameraData.HasValue ? GetViewMatrix(cameraData.Value, viewport, partialTick) : null;
 
         GraphicsDevice.Clear(Color.Black);
         GraphicsDevice.RasterizerState = RasterizerState.CullNone;

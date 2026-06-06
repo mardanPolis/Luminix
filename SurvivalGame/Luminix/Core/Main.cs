@@ -176,7 +176,7 @@ public class Main : Microsoft.Xna.Framework.Game
     }
     protected override void Draw(GameTime gameTime)
     {
-        renderingSystem.DrawFrame(coreThread.PartialTick);
+        renderingSystem.NewFrame(coreThread.PartialTick);
         base.Draw(gameTime);
 
         frameTime = stopwatch.Elapsed.TotalNanoseconds;

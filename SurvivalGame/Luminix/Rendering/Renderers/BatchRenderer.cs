@@ -79,10 +79,28 @@ internal sealed class BatchRenderer : ImmediateRenderer
 
     public sealed override void Render()
     {
-        Matrix matrixTransform = renderingSystem.MatrixTransform;
- 
+        Matrix? transformMatrix = renderingSystem.TransformMatrix;
+
+        if(!transformMatrix.HasValue)
+        {
+            Vector2 textSize = defaultFontBold.Source.MeasureString("No camera detected!");
+            Vector2 Center = new Vector2(
+                renderingSystem.Viewport.Width / 2 - textSize.X / 2,
+                renderingSystem.Viewport.Height / 2 - textSize.Y / 2
+            );
+
+            spriteBatch.Begin();
+            spriteBatch.DrawString(defaultFontBold.Source, "No camera detected!", Center, Color.White);
+            spriteBatch.End();
+            return;
+        }
+
+        Matrix transformMatrixValue = transformMatrix.Value;
+
+        spriteBatch.Begin(transformMatrix:transformMatrixValue, sortMode:SpriteSortMode.Immediate);
+
         Vector2 frustumTopLeft, frustumBtmRight;
-        ComputeFrustumBounds(out frustumTopLeft, out frustumBtmRight);
+        ComputeFrustumBounds(renderingSystem.ViewMatrix.Value, out frustumTopLeft, out frustumBtmRight);
  
         frustumCulledGroups.Clear();
         var groups = renderBuffer.GetGroups();
@@ -143,7 +161,7 @@ internal sealed class BatchRenderer : ImmediateRenderer
  
                         if (prevEffect != effect || prevTexture != textureSource)
                         {
-                            effect.Parameters[MATRIX_PARAMETER].SetValue(matrixTransform);
+                            effect.Parameters[MATRIX_PARAMETER].SetValue(transformMatrixValue);
                             effect.Parameters[TEXTURE_PARAMETER].SetValue(textureSource);
                             effect.Parameters[TEXTURE_SIZE_PARAMETER].SetValue(new Vector2(textureSource.Width, textureSource.Height));
                         }
@@ -191,7 +209,7 @@ internal sealed class BatchRenderer : ImmediateRenderer
  
                         if (prevEffect != effect || prevTexture != textureSource)
                         {
-                            effect.Parameters[MATRIX_PARAMETER].SetValue(matrixTransform);
+                            effect.Parameters[MATRIX_PARAMETER].SetValue(transformMatrixValue);
                             effect.Parameters[TEXTURE_PARAMETER].SetValue(textureSource);
                             effect.Parameters[TEXTURE_SIZE_PARAMETER].SetValue(new Vector2(textureSource.Width, textureSource.Height));
                         }
@@ -261,10 +279,11 @@ internal sealed class BatchRenderer : ImmediateRenderer
             throw;
         }
 
+        spriteBatch.End();
     }
-    private void ComputeFrustumBounds(out Vector2 topLeft, out Vector2 btmRight)
+    private void ComputeFrustumBounds(Matrix viewMatrix, out Vector2 topLeft, out Vector2 btmRight)
     {
-        Matrix invView = Matrix.Invert(renderingSystem.ViewMatrix);
+        Matrix invView = Matrix.Invert(viewMatrix);
  
         float halfW = renderingSystem.Viewport.Width  * 0.5f;
         float halfH = renderingSystem.Viewport.Height * 0.5f;
