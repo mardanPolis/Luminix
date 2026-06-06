@@ -18,6 +18,9 @@ public abstract class ImmediateRenderer
 
         defaultShader = resourceProvider.GetResource<ShaderResource>("GenericShader");
         defaultTexture = resourceProvider.GetResource<TextureResource>("NullTexture");
+        defaultFontBold = resourceProvider.GetResource<FontResource>("IBMPlexMono-Bold");
+        defaultFontMedium = resourceProvider.GetResource<FontResource>("IBMPlexMono-Medium");
+        defaultFontRegular = resourceProvider.GetResource<FontResource>("IBMPlexMono-Regular");
     }
 
     protected readonly RenderingSystem  renderingSystem;
@@ -26,6 +29,10 @@ public abstract class ImmediateRenderer
 
     protected readonly ShaderResource  defaultShader;
     protected readonly TextureResource defaultTexture;
+    protected readonly FontResource    defaultFontBold;
+    protected readonly FontResource    defaultFontMedium;
+    protected readonly FontResource    defaultFontRegular;
+
     public abstract void Render();
 
 }

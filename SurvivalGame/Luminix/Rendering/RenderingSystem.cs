@@ -6,6 +6,7 @@ using Luminix.Threading.Bridges;
 using Luminix.Workspaces;
 using Luminix.Resources;
 using Luminix.Simulation;
+using System.Collections.Generic;
 
 namespace Luminix.Rendering;
 
@@ -23,6 +24,7 @@ public sealed class RenderingSystem : Workspace.Service
 
     private Main main;
     private BatchRenderer batchRenderer;
+    private SystemDebugRenderer systemDebugRenderer;
     private GraphicsDeviceManager graphics;
     private ResourceManager resourceManager;
 
@@ -51,12 +53,23 @@ public sealed class RenderingSystem : Workspace.Service
 
     internal SpriteBatch SpriteBatch => spriteBatch;
 
+    //TODO : add a way to create ImmediateRenderers
+
+    List<ImmediateRenderer> immediateRenderers;
+
     internal void Initialize()
     {
         renderBuffer = CoreToRender.RenderBridge.Read();
 
         spriteBatch = new SpriteBatch(GraphicsDevice);
+
+        immediateRenderers = new List<ImmediateRenderer>();
+
         batchRenderer = new BatchRenderer();
+        systemDebugRenderer = new SystemDebugRenderer(main, main.CoreThread);
+
+        immediateRenderers.Add(batchRenderer);
+        immediateRenderers.Add(systemDebugRenderer);
     }
 
     internal void DrawFrame(float partialTick)
@@ -79,7 +92,10 @@ public sealed class RenderingSystem : Workspace.Service
         GraphicsDevice.BlendState = BlendState.AlphaBlend;
 
         batchRenderer.SetData(renderBuffer, partialTick);
-        batchRenderer.Render();
+        for(int i = 0; i < immediateRenderers.Count; i++)
+        {
+            immediateRenderers[i].Render();
+        }
 
         Interlocked.Increment(ref frameCount);
         Interlocked.Exchange(ref drawCount, GraphicsDevice.Metrics.DrawCount);

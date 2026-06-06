@@ -77,6 +77,9 @@ public class Main : Microsoft.Xna.Framework.Game
 
     private InputHandler inputHandler;
 
+    public Thread MainSystemThread => mainThread;
+    public CoreThread CoreThread => coreThread;
+
     public double FrameTime => frameTime;
     public double FrameDeltaTime => time != null ? time.ElapsedGameTime.TotalSeconds : 0;
     public double FPS => FrameDeltaTime > 0 ? 1.0 / FrameDeltaTime : double.MaxValue;
@@ -117,7 +120,9 @@ public class Main : Microsoft.Xna.Framework.Game
             base.Initialize();
 
             TextureAsset nullTextureAsset = new ("NullTexture", BuiltInResources.NullTextureColor, new Vector2(32, 32));
+            TextureAsset pixelTextureAsset = new ("Pixel", BuiltInResources.PixelTextureColor, new Vector2(1, 1));
             resourceManager.CreateResource(nullTextureAsset);
+            resourceManager.CreateResource(pixelTextureAsset);
 
             //Loading Embedded assets
             foreach(var asset in embeddedIO.EnumerateAssets(Assembly.GetExecutingAssembly(), silent:true))

@@ -17,4 +17,14 @@ internal static class BuiltInResources
             return pixels;
         }
     }
+
+    public static Color[] PixelTextureColor
+    {
+        get
+        {
+            Color[] pixels = new Color[1];
+            pixels[0] = Color.White;
+            return pixels;
+        }
+    }
 }
