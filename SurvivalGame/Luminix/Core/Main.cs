@@ -37,7 +37,7 @@ public class Main : Microsoft.Xna.Framework.Game
 
         stopwatch = Stopwatch.StartNew();
         graphics = new GraphicsDeviceManager(this);
-        graphics.SynchronizeWithVerticalRetrace = false;
+        graphics.SynchronizeWithVerticalRetrace = true;
         graphics.PreferredBackBufferWidth = 1920;
         graphics.PreferredBackBufferHeight = 1080;
         graphics.IsFullScreen = false;

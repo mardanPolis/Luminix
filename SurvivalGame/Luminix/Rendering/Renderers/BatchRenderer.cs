@@ -64,55 +64,22 @@ internal sealed class BatchRenderer : ImmediateRenderer
 
     private GraphicsDevice device;
 
-    private Viewport lastViewport;
-
     private RenderBuffer renderBuffer;
 
     private float partialTick;
 
-    private Matrix viewMatrix;
-    private Matrix projection;
 
     private readonly HashSet<int> frustumCulledGroups = new();
 
-    public void SetData(RenderBuffer buffer, float partialTick, Viewport viewport)
+    public void SetData(RenderBuffer buffer, float partialTick)
     {
-        if (viewport.Width != lastViewport.Width || viewport.Height != lastViewport.Height)
-        {
-            Matrix.CreateOrthographicOffCenter(0f, viewport.Width, viewport.Height, 0f, 4f, -4f, out projection);
-            if (device.UseHalfPixelOffset)
-            {
-                projection.M41 += -0.5f * projection.M11;
-                projection.M42 += -0.5f * projection.M22;
-            }
-
-            this.lastViewport = viewport;
-        }
-        
         this.renderBuffer = buffer;
         this.partialTick = partialTick;
-        var cameraData = buffer.GetCameraData();
-
-        Vector2 position = Vector2.Lerp(cameraData.Position0, cameraData.Position, partialTick);
-        float orthoSize  = MathHelper.Lerp(cameraData.OrthographicSize0, cameraData.OrthographicSize, partialTick);
-
-        float scaleY = viewport.Height / orthoSize;
-        float scaleX = scaleY;
-
-        var translation = Matrix.CreateTranslation(new Vector3(-position.X, position.Y, 0f));
-        var scale = Matrix.CreateScale(scaleX, scaleY, 1f);
-        var screenCenter = Matrix.CreateTranslation(new Vector3(viewport.Width * 0.5f, viewport.Height * 0.5f, 0f));
-
-        viewMatrix = translation * scale * screenCenter;
     }
 
     public sealed override void Render()
     {
-        device.Clear(Color.CornflowerBlue);
-        device.RasterizerState = RasterizerState.CullNone;
-        device.BlendState = BlendState.AlphaBlend;
-        
-        Matrix matrixTransform = viewMatrix * projection;
+        Matrix matrixTransform = renderingSystem.MatrixTransform;
  
         Vector2 frustumTopLeft, frustumBtmRight;
         ComputeFrustumBounds(out frustumTopLeft, out frustumBtmRight);
@@ -226,6 +193,7 @@ internal sealed class BatchRenderer : ImmediateRenderer
                         {
                             effect.Parameters[MATRIX_PARAMETER].SetValue(matrixTransform);
                             effect.Parameters[TEXTURE_PARAMETER].SetValue(textureSource);
+                            effect.Parameters[TEXTURE_SIZE_PARAMETER].SetValue(new Vector2(textureSource.Width, textureSource.Height));
                         }
  
                         prevEffect  = effect;
@@ -256,22 +224,26 @@ internal sealed class BatchRenderer : ImmediateRenderer
  
                     case RenderBuffer.RenderObjectType.TextNonInterpolated:
                     {
-                        var textInstance = nonInterpolatedTexts[commandDataIndex];
+                        var instance = nonInterpolatedTexts[commandDataIndex];
  
-                        if (frustumCulledGroups.Contains(textInstance.Group))
+                        if (frustumCulledGroups.Contains(instance.Group))
                             continue;
 
-
-
+                        spriteBatch.DrawString(instance.Font.Source, instance.Text, new Vector2(instance.Position.X, instance.Position.Y), Color.White,
+                        instance.Rotation, new Vector2(0, 0), instance.Size, SpriteEffects.None, instance.Position.Z);
                         break;
                     }
  
                     case RenderBuffer.RenderObjectType.TextInterpolated:
                     {
-                        var textInstance = interpolatedTexts[commandDataIndex];
+                        var instance = interpolatedTexts[commandDataIndex];
 
+                        var position = Vector3.Lerp(instance.Position0, instance.Position, partialTick);
+                        var size = Vector2.Lerp(instance.Size0, instance.Size, partialTick);
+                        var rotation = MathHelper.Lerp(instance.Rotation0, instance.Rotation, partialTick);
 
-
+                        spriteBatch.DrawString(instance.Font.Source, instance.Text, new Vector2(position.X, position.Y), Color.White,
+                        instance.Rotation, new Vector2(0, 0), size, SpriteEffects.None, position.Z);
                         break;
                     }
                 }
@@ -292,10 +264,10 @@ internal sealed class BatchRenderer : ImmediateRenderer
     }
     private void ComputeFrustumBounds(out Vector2 topLeft, out Vector2 btmRight)
     {
-        Matrix invView = Matrix.Invert(viewMatrix);
+        Matrix invView = Matrix.Invert(renderingSystem.ViewMatrix);
  
-        float halfW = lastViewport.Width  * 0.5f;
-        float halfH = lastViewport.Height * 0.5f;
+        float halfW = renderingSystem.Viewport.Width  * 0.5f;
+        float halfH = renderingSystem.Viewport.Height * 0.5f;
  
         Vector2 camPos = new Vector2(invView.Translation.X, invView.Translation.Y);
  

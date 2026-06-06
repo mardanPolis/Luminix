@@ -8,13 +8,6 @@ namespace Luminix.Rendering;
 
 public abstract class DebugRenderer : ImmediateRenderer
 {
-    protected SpriteBatch spriteBatch { get; private set; }
-    internal void Initialize(SpriteBatch spriteBatch)
-    {
-        this.spriteBatch = spriteBatch;
-        //pixel = ResourceManager.LoadTexture("pixel");
-    }
-    
     protected Texture2D pixel;
     
     protected void DrawLine(Vector2 start, Vector2 end, Color color, int thickness = 1)
