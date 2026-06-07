@@ -3,9 +3,8 @@ using System.Text;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Luminix.Threading;
-using System.Resources;
-using Microsoft.Xna.Framework.Input;
 using Luminix.Resources;
+using System.Diagnostics;
 
 namespace Luminix.Rendering;
 
@@ -13,10 +12,13 @@ public abstract class DebugRenderer : ImmediateRenderer
 {
     public DebugRenderer()
     {
+        if(!Settings.Debug)
+            throw new InvalidOperationException($"Debug mode is not enabled. '{GetType().Name}' cannot be instantiated.");
+        
         pixel = resourceProvider.GetResource<TextureResource>("Pixel").Source;
     }
     protected Texture2D pixel;
-    
+
     protected void DrawLine(Vector2 start, Vector2 end, Color color, int thickness = 1)
     {
         Vector2 edge = end - start;
@@ -170,10 +172,14 @@ internal sealed class SystemDebugRenderer : DebugRenderer
     {
         this.main = main;
         this.coreThread = coreThread;
+
+        graphics = GraphicsAdapter.DefaultAdapter.Description.Split('/')[0];
     }
 
     private Main main;
     private CoreThread coreThread;
+
+    private string graphics;
 
     private double[] managedMemoryAmounts = new double[128];
     private StringBuilder sb = new StringBuilder();
@@ -182,8 +188,11 @@ internal sealed class SystemDebugRenderer : DebugRenderer
     private double elapsed = 0;
     private double fps = 0;
 
-    public override void Render()
+    public override void UnscaledRender()
     {
+        if(!Settings.DebugInfo)
+            return;
+
         Viewport viewport = renderingSystem.GraphicsDevice.Viewport;
 
         float gHeight = 200f;
@@ -211,9 +220,10 @@ internal sealed class SystemDebugRenderer : DebugRenderer
             frameTime = main.FrameTime; 
             elapsed = 0;
         }
-
+        
         sb.Clear();
         sb.Append("GAME VERSION:").Append(Main.VERSION).Append("\n");
+        sb.Append(graphics).Append($" : {renderingSystem.ResolutionWidth}x{renderingSystem.ResolutionHeight}").Append("\n");
         AppendDouble(sb, fps, 3, 3);
         sb.Append(":FPS | ");
         AppendDouble(sb, tickDeltaTime > 0 ? 1.0 / tickDeltaTime : 0, 3, 3);
@@ -259,7 +269,6 @@ internal sealed class SystemDebugRenderer : DebugRenderer
         sb.Append(renderingSystem.DrawCount);
 
         spriteBatch.Begin();
-
         spriteBatch.DrawString(defaultFontRegular.Source, sb,
             new Vector2(15, 15), Color.White);
 
@@ -268,7 +277,6 @@ internal sealed class SystemDebugRenderer : DebugRenderer
 
         graphPos = new Vector2(20, viewport.Height - gHeight - 20);
         DrawGraph(graphPos, gHeight, tickTimes, budgetUs, 5, 5, currentIndex, false);
-
         spriteBatch.End();
     }
 }

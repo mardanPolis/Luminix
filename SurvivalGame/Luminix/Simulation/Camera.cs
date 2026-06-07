@@ -17,8 +17,8 @@ public class Camera
         }
     }
 
-    private Universe universe;
-    private DenseList<CameraComponent> cameraComponents = [];
+    protected Universe universe;
+    protected readonly DenseList<CameraComponent> cameraComponents = [];
 
     private Vector2 position0 = Vector2.Zero;
     private Vector2 position = Vector2.Zero;

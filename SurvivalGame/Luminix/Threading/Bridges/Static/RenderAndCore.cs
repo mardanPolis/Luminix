@@ -2,6 +2,7 @@ using Luminix.Rendering;
 
 namespace Luminix.Threading.Bridges;
 
+//TODO : refactor and make a better bridge system.
 internal static class CoreToRender
 {
     private static RenderBridge renderBridge;

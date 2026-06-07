@@ -81,20 +81,8 @@ internal sealed class BatchRenderer : ImmediateRenderer
     {
         Matrix? transformMatrix = renderingSystem.TransformMatrix;
 
-        if(!transformMatrix.HasValue)
-        {
-            Vector2 textSize = defaultFontBold.Source.MeasureString("No camera detected!");
-            Vector2 Center = new Vector2(
-                renderingSystem.Viewport.Width / 2 - textSize.X / 2,
-                renderingSystem.Viewport.Height / 2 - textSize.Y / 2
-            );
-
-            spriteBatch.Begin();
-            spriteBatch.DrawString(defaultFontBold.Source, "No camera detected!", Center, Color.White);
-            spriteBatch.End();
-            return;
-        }
-
+        if(!transformMatrix.HasValue) return;
+        
         Matrix transformMatrixValue = transformMatrix.Value;
 
         spriteBatch.Begin(transformMatrix:transformMatrixValue, sortMode:SpriteSortMode.Immediate);
@@ -281,6 +269,23 @@ internal sealed class BatchRenderer : ImmediateRenderer
 
         spriteBatch.End();
     }
+
+    public override void UnscaledRender()
+    {
+        if(!renderingSystem.TransformMatrix.HasValue)
+        {
+            spriteBatch.Begin();
+            Vector2 textSize = defaultFontBold.Source.MeasureString("No camera detected!");
+            Vector2 Center = new Vector2(
+                renderingSystem.Viewport.Width / 2 - textSize.X / 2,
+                renderingSystem.Viewport.Height / 2 - textSize.Y / 2
+            );
+
+            spriteBatch.DrawString(defaultFontBold.Source, "No camera detected!", Center, Color.White);
+            spriteBatch.End();
+        }
+    }
+
     private void ComputeFrustumBounds(Matrix viewMatrix, out Vector2 topLeft, out Vector2 btmRight)
     {
         Matrix invView = Matrix.Invert(viewMatrix);

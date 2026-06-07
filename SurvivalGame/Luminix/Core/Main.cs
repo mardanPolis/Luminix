@@ -13,6 +13,7 @@ using Luminix.Resources.AssetHandlers;
 using System.Reflection;
 using Luminix.IO;
 using Luminix.Resources.BuiltIn;
+using Microsoft.Xna.Framework.Input;
 
 namespace Luminix;
 public class Main : Microsoft.Xna.Framework.Game
@@ -32,6 +33,8 @@ public class Main : Microsoft.Xna.Framework.Game
         settingsController.DebugAssets = true;
         settingsController.DebugInitialization = true;
 
+        Settings.DebugInfo = true;
+
         settingsController.MinWorkerThreadCount = 2;
         settingsController.MaxWorkerThreadCount = 5;
 
@@ -41,6 +44,8 @@ public class Main : Microsoft.Xna.Framework.Game
         graphics.PreferredBackBufferWidth = 1920;
         graphics.PreferredBackBufferHeight = 1080;
         graphics.IsFullScreen = false;
+        graphics.HardwareModeSwitch = false;
+        graphics.PreferHalfPixelOffset = false;
 
         resourceManager = new ResourceManager(this);
         IsMouseVisible = true;
@@ -63,6 +68,8 @@ public class Main : Microsoft.Xna.Framework.Game
     private long startBytes = 0;
     private long allocated = 0;
     private double frameTime;
+
+    private Point windowPosition;
 
     private Stopwatch stopwatch;
     private GameTime time;
@@ -95,8 +102,13 @@ public class Main : Microsoft.Xna.Framework.Game
 
     internal ResourceManager ResourceManager => resourceManager;
     internal GraphicsDeviceManager GraphicsDeviceManager => graphics;
-
     private AssetRegistrationHandler assetRegistrationHandler;
+
+    private bool[] functionKeys = { false, false, false, false, false, false, false };
+    private Keys[] keys = { Keys.F1, Keys.F2, Keys.F3, Keys.F4, Keys.F5, Keys.F11, Keys.F12 };
+    private Action[] keyActions = new Action[7];
+    
+    private bool takeScreenshot = false;
 
     protected override void Initialize()
     {
@@ -145,7 +157,15 @@ public class Main : Microsoft.Xna.Framework.Game
             TargetElapsedTime = TimeSpan.FromSeconds(1d / 144d);
             IsFixedTimeStep = true;
 
+            keyActions[0] = () => Settings.DebugInfo = !Settings.DebugInfo;                                                 //F1
+            keyActions[1] = () => Settings.DebugConsole = !Settings.DebugConsole;                                           //F2
+            keyActions[2] = () => Settings.DebugInspector = !Settings.DebugInspector;                                       //F3
+            keyActions[3] = () => Settings.DebugGizmosPanel = !Settings.DebugGizmosPanel;                                   //F4
+            keyActions[4] = () => Settings.DebugEventPanel = !Settings.DebugEventPanel;                                     //F5
+            keyActions[5] = () => { renderingSystem.Fullscreen(!renderingSystem.IsFullScreen); renderingSystem.Apply(); };  //F11
+            keyActions[6] = () => takeScreenshot = true;                                                                    //F12
 
+            windowPosition = Window.ClientBounds.Location;
         }
         catch
         {
@@ -165,23 +185,79 @@ public class Main : Microsoft.Xna.Framework.Game
     protected override void Update(GameTime gameTime)
     {
         stopwatch.Restart();
-        startBytes = GC.GetAllocatedBytesForCurrentThread();
-
         inputHandler.Update(IsActive);
         assetRegistrationHandler.Run();
 
         RenderToCore.WindowIsActive = IsActive;
 
+        KeyboardState keyboard = Keyboard.GetState();
+        for (int i = 0; i < functionKeys.Length; i++)
+        {
+            if (functionKeys[i] && keyboard.IsKeyUp(keys[i]))
+            {
+                keyActions[i]();
+            }
+
+            functionKeys[i] = keyboard.IsKeyDown(keys[i]);
+        }
+
+        //TODO : remove
+        if(keyboard.IsKeyDown(Keys.P))
+        {
+            renderingSystem.SetResolution(1920, 1080);
+            renderingSystem.Apply();
+        }
+        else if(keyboard.IsKeyDown(Keys.O))
+        {
+            renderingSystem.SetResolution(1600, 900);
+            renderingSystem.Apply();
+        }
+        else if(keyboard.IsKeyDown(Keys.I))
+        {
+            renderingSystem.SetResolution(1280, 720);
+            renderingSystem.Apply();
+        }
+        else if(keyboard.IsKeyDown(Keys.U))
+        {
+            renderingSystem.SetResolution(854, 480);
+            renderingSystem.Apply();
+        }
+
+        var windowPos = Window.ClientBounds.Location;
+        if(windowPos != windowPosition)
+            OnWindowMove(windowPos);
+
+        windowPosition = windowPos;
+
         base.Update(gameTime);
     }
+    
     protected override void Draw(GameTime gameTime)
     {
-        renderingSystem.NewFrame(coreThread.PartialTick);
+        float partialTick = coreThread.PartialTick;
+
+        if(takeScreenshot)
+        {
+            renderingSystem.TakeScreenshot(partialTick);
+            takeScreenshot = false;
+        }
+        else
+        {
+            renderingSystem.NewFrame(partialTick);
+        }
+
         base.Draw(gameTime);
 
         frameTime = stopwatch.Elapsed.TotalNanoseconds;
         time = gameTime;
         long endBytes = GC.GetAllocatedBytesForCurrentThread();
         allocated = endBytes - startBytes;
+
+        startBytes = GC.GetAllocatedBytesForCurrentThread();
+    }
+
+    private void OnWindowMove(Point position)
+    {
+        
     }
 }

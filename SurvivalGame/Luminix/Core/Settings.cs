@@ -23,23 +23,34 @@ public static class Settings
     }
     private static volatile bool initialized;
     
-    private static volatile bool debug;
+    private static bool debug;
+    private static bool debugInitialization;
+    private static bool debugAssets;
     private static volatile bool debugInfo;
-    private static volatile bool debugGizmos;
-    private static volatile bool debugInitialization;
-    private static volatile bool debugAssets;
+    private static volatile bool debugConsole;
+    private static volatile bool debugInspector;
+    private static volatile bool debugGizmoPanel;
+    private static volatile bool debugEventPanel;
     private static volatile int pixelsPerUnit = 32;
     private static volatile int maxWorkerThreadCount = 5;
     private static volatile int minWorkerThreadCount = 2;
+    private static volatile int screenshotWidth = 1920;
+    private static volatile int screenshotHeight = 1080;
 
     public static bool Debug { get => debug; }
-    public static bool DebugInfo { get => debugInfo; set => debugInfo = value; }
-    public static bool DebugGizmos { get => debugGizmos; set => debugGizmos = value; }
     public static bool DebugInitialization { get => debugInitialization; }
     public static bool DebugAssets { get => debugAssets; }
+    public static bool DebugInfo { get => debugInfo; set => debugInfo = value; }
+    public static bool DebugConsole { get => debugConsole; set => debugConsole = value; }
+    public static bool DebugInspector { get => debugInspector; set => debugInspector = value; }
+    public static bool DebugGizmosPanel { get => debugGizmoPanel; set => debugGizmoPanel = value; }
+    public static bool DebugEventPanel { get => debugEventPanel; set => debugEventPanel = value; }
     public static int PixelsPerUnit { get => pixelsPerUnit; }
     public static int MaxWorkerThreadCount { get => maxWorkerThreadCount; }
     public static int MinWorkerThreadCount { get => minWorkerThreadCount; }
+
+    public static int ScreenshotWidth { get => screenshotWidth; }
+    public static int ScreenshotHeight { get => screenshotHeight; }
 
     private static volatile bool finalized;
     private static Flags options { get; } = new Flags();

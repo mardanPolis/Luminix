@@ -40,9 +40,6 @@ public sealed class CoreThread : TickedThread
     private WorkerThreadPool workerThreadPool;
     private AssetIO assetIO;
 
-    private TextureResource circle;
-    private TextureResource square;
-
     protected sealed override void Initialize()
     {
         IsBackground = true;
