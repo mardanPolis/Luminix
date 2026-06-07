@@ -122,27 +122,28 @@ public sealed class RenderingSystem : Workspace.Service
 
         var cameraData = renderBuffer.GetCameraData();
 
-        GraphicsDevice.Clear(Color.Black);
         GraphicsDevice.RasterizerState = RasterizerState.CullNone;
         GraphicsDevice.BlendState = BlendState.AlphaBlend;
 
         if(GraphicsDevice.PresentationParameters.Bounds != screenBounds)
             CreateRenderTargetDestination();
 
+        GraphicsDevice.SetRenderTarget(this.renderTarget);
+        GraphicsDevice.Clear(Color.Black);
         projectionMatrix = GetProjectionMatrix(viewport, out viewport);
-        viewMatrix       = GetViewMatrix(cameraData, viewport, partialTick);
-
+        viewMatrix = GetViewMatrix(cameraData, viewport, partialTick);
+        
         batchRenderer.SetData(renderBuffer, partialTick);
 
-        GraphicsDevice.SetRenderTarget(this.renderTarget);
-        
         for(int i = 0; i < immediateRenderers.Count; i++)
         {
             immediateRenderers[i].Render();
         }
 
         GraphicsDevice.SetRenderTarget(this.unscaledRenderTarget);
+        GraphicsDevice.Clear(Color.Transparent);
         projectionMatrix = GetProjectionMatrix(viewport, out viewport);
+        viewMatrix = GetViewMatrix(cameraData, viewport, partialTick);
     
         for(int i = 0; i < immediateRenderers.Count; i++)
         {
@@ -150,7 +151,6 @@ public sealed class RenderingSystem : Workspace.Service
         }
 
         GraphicsDevice.SetRenderTarget(renderTarget);
-        
         spriteBatch.Begin();
         spriteBatch.Draw(this.renderTarget, renderTargetDestination, Color.White);
         spriteBatch.Draw(this.unscaledRenderTarget, unscaledRenderTargetDestination, Color.White);

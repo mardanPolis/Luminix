@@ -15,6 +15,9 @@ public class Camera
         {
             throw new NullReferenceException("Unable to create a camera reason: a world instance was not found.");
         }
+
+        var world = universe.World;
+        world.RegisterCamera(this);
     }
 
     protected Universe universe;
@@ -24,6 +27,8 @@ public class Camera
     private Vector2 position = Vector2.Zero;
     private float orthoSize0 = 15f;
     private float orthoSize = 15f;
+
+    private bool isDestroyed;
 
     public Vector2 Position { get {return position0; } set { position0 = value; position = value; } }
     internal Vector2 TPosition => position;
@@ -38,6 +43,8 @@ public class Camera
     }
     public float OrthographicSize { get { return orthoSize0; } set { orthoSize0 = value > 0.01f ? value : 0.01f; orthoSize = orthoSize0;  } }
     internal float TOrthographicSize => orthoSize;
+
+    public bool IsDestroyed => isDestroyed;
 
     public Data GetCameraSnapshot()
     {
@@ -79,6 +86,18 @@ public class Camera
     public void ScaleTo(float orthoSize)
     {
         this.orthoSize = Math.Max(orthoSize, 0.01f);
+    }
+
+    public void Destroy()
+    {
+        isDestroyed = true;
+
+        if(universe.World == null)
+        {
+            throw new NullReferenceException("Unable to create a camera reason: a world instance was not found.");
+        }
+
+        universe.World.DestroyCamera(this);
     }
 
     internal void Tick()

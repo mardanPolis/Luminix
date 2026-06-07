@@ -204,12 +204,12 @@ public class Main : Microsoft.Xna.Framework.Game
         //TODO : remove
         if(keyboard.IsKeyDown(Keys.P))
         {
-            renderingSystem.SetResolution(1920, 1080);
+            renderingSystem.SetResolution(2560, 1440);
             renderingSystem.Apply();
         }
         else if(keyboard.IsKeyDown(Keys.O))
         {
-            renderingSystem.SetResolution(1600, 900);
+            renderingSystem.SetResolution(1920, 1080);
             renderingSystem.Apply();
         }
         else if(keyboard.IsKeyDown(Keys.I))
@@ -219,7 +219,7 @@ public class Main : Microsoft.Xna.Framework.Game
         }
         else if(keyboard.IsKeyDown(Keys.U))
         {
-            renderingSystem.SetResolution(854, 480);
+            renderingSystem.SetResolution(640, 360);
             renderingSystem.Apply();
         }
 

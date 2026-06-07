@@ -272,18 +272,18 @@ internal sealed class BatchRenderer : ImmediateRenderer
 
     public override void UnscaledRender()
     {
-        if(!renderingSystem.TransformMatrix.HasValue)
-        {
-            spriteBatch.Begin();
-            Vector2 textSize = defaultFontBold.Source.MeasureString("No camera detected!");
-            Vector2 Center = new Vector2(
-                renderingSystem.Viewport.Width / 2 - textSize.X / 2,
-                renderingSystem.Viewport.Height / 2 - textSize.Y / 2
-            );
+        if(renderingSystem.TransformMatrix.HasValue)
+            return;
 
-            spriteBatch.DrawString(defaultFontBold.Source, "No camera detected!", Center, Color.White);
-            spriteBatch.End();
-        }
+        spriteBatch.Begin();
+        Vector2 textSize = defaultFontBold.Source.MeasureString("No camera detected!");
+        Vector2 Center = new Vector2(
+            renderingSystem.Viewport.Width / 2 - textSize.X / 2,
+            renderingSystem.Viewport.Height / 2 - textSize.Y / 2
+        );
+
+        spriteBatch.DrawString(defaultFontBold.Source, "No camera detected!", Center, Color.White);
+        spriteBatch.End();
     }
 
     private void ComputeFrustumBounds(Matrix viewMatrix, out Vector2 topLeft, out Vector2 btmRight)

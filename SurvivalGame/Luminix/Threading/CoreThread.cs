@@ -40,6 +40,10 @@ public sealed class CoreThread : TickedThread
     private WorkerThreadPool workerThreadPool;
     private AssetIO assetIO;
 
+
+
+    private TextureResource circle;
+
     protected sealed override void Initialize()
     {
         IsBackground = true;
@@ -70,6 +74,12 @@ public sealed class CoreThread : TickedThread
 
         var process = Process.GetCurrentProcess();
         logger.Log("Total threads at initialization: " + process.Threads.Count);
+
+        circle = resources.GetResource<TextureResource>("circle");
+
+        universe.LoadWorld("SimWorld");
+        Camera camera = new Camera();
+        
     }
 
     protected sealed override void OnTick()
@@ -97,7 +107,6 @@ public sealed class CoreThread : TickedThread
     {
         Bridges.CoreToRender.RenderBridge.Swap();
 
-
         input.ReadFrom(Bridges.RenderToCore.InputBridge);
  
         resources.Set(RenderToCore.ResourceBridge.Get());
@@ -109,11 +118,15 @@ public sealed class CoreThread : TickedThread
         universe.World?.Tick();
     }
     
+    float rot;
+
     private void Render()
     {
         var RenderBuffer = CoreToRender.RenderBridge.CurrentWriteBuffer;
         RenderBuffer.Reset();
         RenderBuffer.Set(universe.World?.MainCamera);
+        RenderBuffer.PostSprite(circle, Vector3.Zero, Vector2.One, 0);
+        RenderBuffer.PostSprite(circle, new Vector3(1, 2, 0), Vector2.One, rot += 0.5f);
     }
 
     private void LoadBootAssets(AssetLoadingHandler assetLoadingHandler)

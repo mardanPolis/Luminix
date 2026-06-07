@@ -4,6 +4,7 @@ using System.Numerics;
 using Microsoft.Xna.Framework.Graphics;
 using Luminix.Threading;
 using Luminix.Workspaces;
+using Game.Simulation;
 
 namespace Luminix.Simulation;
 
@@ -35,10 +36,15 @@ public sealed class Universe : Workspace.Service
         controller = new Controller(this);
 
         this.initialized = true;
+
+        this.worlds = new Dictionary<string, Type>();
+        this.worlds.Add(typeof(SimWorld).Name, typeof(SimWorld));
     }
 
     private readonly bool initialized;
     private readonly Logger logger;
+
+    private Dictionary<string, Type> worlds;
 
     //Global Variables
     public uint TickRate { get; private set; }
@@ -54,9 +60,14 @@ public sealed class Universe : Workspace.Service
 
     //World
 
-    public void LoadWorld(string worldName)
+    public World LoadWorld(string worldName)
     {
-        
+        if(worlds.TryGetValue(worldName, out Type world))
+        {
+            World = (World)Activator.CreateInstance(world);
+            return World;
+        }
+        return null;
     }
 
     public void SaveWorld()
