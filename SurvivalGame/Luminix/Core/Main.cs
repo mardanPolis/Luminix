@@ -14,6 +14,7 @@ using System.Reflection;
 using Luminix.IO;
 using Luminix.Resources.BuiltIn;
 using Microsoft.Xna.Framework.Input;
+using Microsoft.Xna.Framework.Graphics;
 
 namespace Luminix;
 public class Main : Microsoft.Xna.Framework.Game
@@ -38,12 +39,14 @@ public class Main : Microsoft.Xna.Framework.Game
         settingsController.MinWorkerThreadCount = 2;
         settingsController.MaxWorkerThreadCount = 5;
 
+        var displayMode = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode;
+
         stopwatch = Stopwatch.StartNew();
         graphics = new GraphicsDeviceManager(this);
         graphics.SynchronizeWithVerticalRetrace = true;
-        graphics.PreferredBackBufferWidth = 1920;
-        graphics.PreferredBackBufferHeight = 1080;
-        graphics.IsFullScreen = false;
+        graphics.PreferredBackBufferWidth = displayMode.Width;
+        graphics.PreferredBackBufferHeight = displayMode.Height;
+        graphics.IsFullScreen = true;
         graphics.HardwareModeSwitch = false;
         graphics.PreferHalfPixelOffset = false;
 
@@ -150,7 +153,7 @@ public class Main : Microsoft.Xna.Framework.Game
                     logger.Err($"Failed to load embedded asset '{asset.Name}', reason: {ex}");
                 }
             }
-        
+
             //Renderer initialization   
             renderingSystem.Initialize();
 

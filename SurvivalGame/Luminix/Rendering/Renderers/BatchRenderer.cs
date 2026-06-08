@@ -206,7 +206,7 @@ internal sealed class BatchRenderer : ImmediateRenderer
                         prevTexture = textureSource;
  
                         Vector3 position = Vector3.Lerp(instance.Position0, instance.Position, partialTick);
-                        Vector2 size =     Vector2.Lerp(instance.Size0, instance.Size, partialTick);
+                        Vector2 size     = Vector2.Lerp(instance.Size0, instance.Size, partialTick);
                         float   rotation = MathHelper.Lerp(instance.Rotation0, instance.Rotation, partialTick);
  
                         float texW = textureSource.Width;

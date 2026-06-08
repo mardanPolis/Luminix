@@ -178,6 +178,7 @@ public sealed class RenderingSystem : Workspace.Service
 
                 NewFrame(partialTick, screenShotTarget);
                 screenShotTarget.SaveAsPng(stream, screenShotRect.Width, screenShotRect.Height);
+                screenShotTarget.Dispose();
 
                 Logger.Get().Log($"Screenshot saved to: {screenshotPath}");
             }
@@ -211,6 +212,7 @@ public sealed class RenderingSystem : Workspace.Service
 
         if(changedResolution && (resolution.Width != renderTarget.Width || resolution.Height != renderTarget.Height))
         {
+            renderTarget.Dispose();
             renderTarget = new RenderTarget2D(GraphicsDevice, resolution.Width, resolution.Height);
         }
 
