@@ -110,7 +110,7 @@ public sealed class RenderingSystem : Workspace.Service
         }
     }
 
-    internal void NewFrame(float partialTick, RenderTarget2D renderTarget = null)
+    internal void NewFrame(float partialTick)
     {
         if (CoreToRender.RenderBridge.PendingBuffer)
         {
@@ -150,13 +150,12 @@ public sealed class RenderingSystem : Workspace.Service
             immediateRenderers[i].UnscaledRender();
         }
 
-        GraphicsDevice.SetRenderTarget(renderTarget);
+        GraphicsDevice.SetRenderTarget(null);
         spriteBatch.Begin();
         spriteBatch.Draw(this.renderTarget, renderTargetDestination, Color.White);
         spriteBatch.Draw(this.unscaledRenderTarget, unscaledRenderTargetDestination, Color.White);
         spriteBatch.End();
 
-        GraphicsDevice.SetRenderTarget(null);
         
         Interlocked.Increment(ref frameCount);
         Interlocked.Exchange(ref drawCount, GraphicsDevice.Metrics.DrawCount);
@@ -176,7 +175,47 @@ public sealed class RenderingSystem : Workspace.Service
                 var screenShotRect = new Rectangle(0, 0, Settings.ScreenshotWidth, Settings.ScreenshotHeight);
                 var screenShotTarget = new RenderTarget2D(GraphicsDevice, Settings.ScreenshotWidth, Settings.ScreenshotHeight);
 
-                NewFrame(partialTick, screenShotTarget);
+                NewFrame(partialTick);
+
+                var renderTargetDestination = this.renderTargetDestination;
+                var unscaledRenderTargetDestination = this.unscaledRenderTargetDestination;
+
+                {
+                    float scaleX = (float)screenShotTarget.Width / renderTarget.Width;
+                    float scaleY = (float)screenShotTarget.Height / renderTarget.Height;
+                    float scale = Math.Min(scaleX, scaleY);
+
+                    int newWidth = (int)(renderTarget.Width * scale);
+                    int newHeight = (int)(renderTarget.Height * scale);
+
+                    int posX = (screenShotTarget.Width - newWidth) / 2;
+                    int posY = (screenShotTarget.Height - newHeight) / 2;
+
+                    renderTargetDestination = new Rectangle(posX, posY, newWidth, newHeight);
+                }
+                {
+                    float scaleX = (float)screenShotTarget.Width / unscaledRenderTarget.Width;
+                    float scaleY = (float)screenShotTarget.Height / unscaledRenderTarget.Height;
+                    float scale = Math.Min(scaleX, scaleY);
+
+                    int newWidth = (int)(unscaledRenderTarget.Width * scale);
+                    int newHeight = (int)(unscaledRenderTarget.Height * scale);
+
+                    int posX = (screenShotTarget.Width - newWidth) / 2;
+                    int posY = (screenShotTarget.Height - newHeight) / 2;
+
+                    unscaledRenderTargetDestination = new Rectangle(posX, posY, newWidth, newHeight);
+                }
+
+                GraphicsDevice.SetRenderTarget(screenShotTarget);
+
+                spriteBatch.Begin();
+                spriteBatch.Draw(this.renderTarget, renderTargetDestination, Color.White);
+                spriteBatch.Draw(this.unscaledRenderTarget, unscaledRenderTargetDestination, Color.White);
+                spriteBatch.End();
+
+                GraphicsDevice.SetRenderTarget(null);
+
                 screenShotTarget.SaveAsPng(stream, screenShotRect.Width, screenShotRect.Height);
                 screenShotTarget.Dispose();
 
