@@ -6,7 +6,7 @@ using Microsoft.Xna.Framework.Graphics;
 
 namespace Luminix.Rendering;
 
-internal sealed class BatchRenderer : ImmediateRenderer
+internal sealed class WorldRenderer : ImmediateRenderer
 {
     private struct Data : IVertexType
     {
@@ -28,7 +28,7 @@ internal sealed class BatchRenderer : ImmediateRenderer
         VertexDeclaration IVertexType.VertexDeclaration => VertexDeclaration;
     }
 
-    public BatchRenderer()
+    public WorldRenderer()
     {
         var vertices = new VertexPositionColorTexture[] {
             new (new Vector3(-0.5f, -0.5f, 0), Color.White, new Vector2(0, 0)),

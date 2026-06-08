@@ -8,7 +8,7 @@ namespace Luminix.Resources.AssetHandlers;
 
 internal class AssetRegistrationHandler
 {
-    public AssetRegistrationHandler(AssetBridge assetBridge, ResourceManager resourceManager)
+    public AssetRegistrationHandler(AssetBridge assetBridge, ResourceBridge[] resourceBridges, ResourceManager resourceManager)
     {
         ArgumentNullException.ThrowIfNull(assetBridge, nameof(assetBridge));
         ArgumentNullException.ThrowIfNull(resourceManager, nameof(resourceManager));
@@ -16,18 +16,24 @@ internal class AssetRegistrationHandler
         this.assetBridge = assetBridge;
         this.resourceManager = resourceManager;
 
-        action = resourceManager.CreateResource;
+        this.action = resourceManager.CreateResource;
+        this.resourceBridges = resourceBridges;
     }
 
     private readonly AssetBridge assetBridge;
     private readonly Action<Asset> action;
+
+    private readonly ResourceBridge[] resourceBridges;
 
     private readonly ResourceManager resourceManager;
 
     public void Run()
     {
         assetBridge.ConsumeAssets(action, out List<TaskCompletionSource> tsks);
-        RenderToCore.ResourceBridge.Set(resourceManager.Resources);
+        
+        for(int b = 0; b < resourceBridges.Length; b++)
+            resourceBridges[b].Set(resourceManager.Resources);
+
         for(int i = 0; i < tsks.Count; i++)
             tsks[i].SetResult();
     }

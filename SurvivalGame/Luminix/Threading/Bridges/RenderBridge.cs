@@ -8,10 +8,10 @@ internal class RenderBridge
     private volatile RenderBuffer currReadBuffer = null;
     private volatile RenderBuffer prevReadBuffer = null;
 
-    private volatile bool pendingStack = false;
-
     public RenderBuffer CurrentWriteBuffer => writeBuffer;
-    public bool PendingBuffer => pendingStack;
+    public RenderBuffer CurrentReadBuffer => currReadBuffer;
+
+    public volatile bool WindowActive = true;
 
     public RenderBuffer CreateBuffer()
     {
@@ -19,19 +19,11 @@ internal class RenderBridge
         return writeBuffer;
     }
 
-    public void Swap()
+    public void SwapBuffers()
     {
         var temp = currReadBuffer;
         currReadBuffer = writeBuffer;
         writeBuffer = prevReadBuffer;
         prevReadBuffer = temp;
-
-        pendingStack = true;
-    }
-
-    public RenderBuffer Read()
-    {
-        pendingStack = false;
-        return currReadBuffer;
     }
 }

@@ -17,12 +17,16 @@ namespace Luminix.Threading;
 
 public sealed class CoreThread : TickedThread
 {
-    internal CoreThread(int workerThreadCount) : base(60)
+    internal CoreThread(InputBridge inputBridge, ResourceBridge resourceBridge, RenderBridge renderBridge, AssetBridge assetBridge, int workerThreadCount) : base(60)
     {   
-
         this.Name = "CoreThread";
         this.IsBackground = false;
         this.workerThreadCount = workerThreadCount;
+
+        this.inputBridge = inputBridge;
+        this.renderBridge = renderBridge;
+        this.resourceBridge = resourceBridge;
+        this.assetBridge = assetBridge;
     }
 
     private double tickUpdateTime = 0;
@@ -32,6 +36,11 @@ public sealed class CoreThread : TickedThread
     public double TickRenderTime => Volatile.Read(ref tickRenderTime);
 
     private int workerThreadCount;
+
+    private InputBridge inputBridge;
+    private RenderBridge renderBridge;
+    private ResourceBridge resourceBridge;
+    private AssetBridge assetBridge;
 
     private Universe universe;
     private ResourceProvider resources;
@@ -117,12 +126,12 @@ public sealed class CoreThread : TickedThread
 
     private void Tick()
     {
-        Bridges.CoreToRender.RenderBridge.Swap();
+        renderBridge.SwapBuffers();
 
-        input.ReadFrom(Bridges.RenderToCore.InputBridge.ReadBuffer);
-        Bridges.RenderToCore.InputBridge.Swap();
+        input.ReadFrom(inputBridge.ReadBuffer);
+        inputBridge.Swap();
 
-        resources.Set(RenderToCore.ResourceBridge.Get());
+        resources.Set(resourceBridge.Get());
 
         for(int key = 0; key < debugKeys.Length; key++)
         {
@@ -141,7 +150,7 @@ public sealed class CoreThread : TickedThread
 
     private void Render()
     {
-        var RenderBuffer = CoreToRender.RenderBridge.CurrentWriteBuffer ?? CoreToRender.RenderBridge.CreateBuffer();
+        var RenderBuffer = renderBridge.CurrentWriteBuffer ?? renderBridge.CreateBuffer();
         RenderBuffer.Reset();
         RenderBuffer.Set(universe.World?.MainCamera);
         RenderBuffer.PostSprite(circle, Vector3.Zero, Vector2.One, 0);
@@ -152,12 +161,12 @@ public sealed class CoreThread : TickedThread
     {
         var loadedAssets = assetLoadingHandler.Run(true);
 
-        var task = CoreToRender.AssetBridge.RegisterAsync(loadedAssets);
+        var task = assetBridge.RegisterAsync(loadedAssets);
 
         Workspace.Current.SetSubState("receiving boot assets");
         
         task.Wait();
-        resources.Set(RenderToCore.ResourceBridge.Get());
+        resources.Set(resourceBridge.Get());
     }
 
     private void LoadAssets(AssetLoadingHandler assetLoadingHandler, TextureAssetAtlasHandler atlasHandler)
@@ -203,12 +212,12 @@ public sealed class CoreThread : TickedThread
             }
         }
         
-        var task = CoreToRender.AssetBridge.RegisterAsync(assets);
+        var task = assetBridge.RegisterAsync(assets);
 
         Workspace.Current.SetSubState("receiving assets");
         
         task.Wait();
-        resources.Set(RenderToCore.ResourceBridge.Get());
+        resources.Set(resourceBridge.Get());
 
         long before = GC.GetTotalMemory(false);
         GC.Collect();

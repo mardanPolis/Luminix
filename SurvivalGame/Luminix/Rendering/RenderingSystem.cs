@@ -2,21 +2,20 @@ using System;
 using System.Threading;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using Luminix.Threading.Bridges;
 using Luminix.Workspaces;
 using Luminix.Resources;
 using Luminix.Simulation;
 using System.Collections.Generic;
-using Luminix.Identifiers;
 using System.IO;
 using Microsoft.Xna.Framework.Input;
 using Luminix.Threading.Buffers;
+using Luminix.Threading.Bridges;
 
 namespace Luminix.Rendering;
 
 public sealed class RenderingSystem : Workspace.Service
 {
-    internal RenderingSystem(Main main)
+    internal RenderingSystem(Main main, RenderBridge[] renderBridges)
     {
         ArgumentNullException.ThrowIfNull(main);
         ArgumentNullException.ThrowIfNull(main.GraphicsDeviceManager);
@@ -27,16 +26,23 @@ public sealed class RenderingSystem : Workspace.Service
         this.resourceManager = main.ResourceManager;
 
         resolution = new Rectangle(0, 0, graphics.PreferredBackBufferWidth, graphics.PreferredBackBufferHeight);
+
+        coreRenderBridge = renderBridges[0];
+        uiRenderBridge = renderBridges[1];
     }
 
     private Main main;
-    private BatchRenderer batchRenderer;
+    private WorldRenderer worldRenderer;
     private SystemDebugRenderer systemDebugRenderer;
     private GraphicsDeviceManager graphics;
     private GameWindow window;
     private ResourceManager resourceManager;
 
-    private RenderBuffer renderBuffer;
+    private RenderBridge coreRenderBridge;
+    private RenderBridge uiRenderBridge;
+
+    private RenderBuffer worldRenderBuffer;
+    private RenderBuffer uiRenderBuffer;
 
     private SpriteBatch spriteBatch;
     private RenderTarget2D renderTarget;
@@ -89,16 +95,14 @@ public sealed class RenderingSystem : Workspace.Service
 
     internal void Initialize()
     {
-        renderBuffer = CoreToRender.RenderBridge.Read();
-
         spriteBatch = new SpriteBatch(GraphicsDevice);
         renderTarget = new RenderTarget2D(GraphicsDevice, ResolutionWidth, ResolutionHeight);
         unscaledRenderTarget = new RenderTarget2D(GraphicsDevice, ResolutionWidth, ResolutionHeight);
 
         immediateRenderers = new List<ImmediateRenderer>();
 
-        batchRenderer = new BatchRenderer();
-        immediateRenderers.Add(batchRenderer);
+        worldRenderer = new WorldRenderer();
+        immediateRenderers.Add(worldRenderer);
 
         if(Settings.Debug)
         {
@@ -109,15 +113,21 @@ public sealed class RenderingSystem : Workspace.Service
 
     internal void NewFrame(float partialTick)
     {
-        if (CoreToRender.RenderBridge.PendingBuffer)
+        if (coreRenderBridge.CurrentReadBuffer != worldRenderBuffer)
         {
-            renderBuffer = CoreToRender.RenderBridge.Read();
-            renderBuffer.Sort();
+            worldRenderBuffer = coreRenderBridge.CurrentReadBuffer;
+            worldRenderBuffer.Sort();
+        }
+
+        if (uiRenderBridge.CurrentReadBuffer != uiRenderBuffer)
+        {
+            uiRenderBuffer = uiRenderBridge.CurrentReadBuffer;
+            uiRenderBuffer.Sort();
         }
 
         partialTick = Math.Clamp(partialTick, 0f, 1f);
 
-        var cameraData = renderBuffer?.GetCameraData();
+        var cameraData = worldRenderBuffer?.GetCameraData();
 
         GraphicsDevice.RasterizerState = RasterizerState.CullNone;
         GraphicsDevice.BlendState = BlendState.AlphaBlend;
@@ -130,7 +140,7 @@ public sealed class RenderingSystem : Workspace.Service
         projectionMatrix = GetProjectionMatrix(viewport, out viewport);
         viewMatrix = GetViewMatrix(cameraData, viewport, partialTick);
         
-        batchRenderer.SetData(renderBuffer, partialTick);
+        worldRenderer.SetData(worldRenderBuffer, partialTick);
 
         for(int i = 0; i < immediateRenderers.Count; i++)
         {
