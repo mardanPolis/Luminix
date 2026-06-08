@@ -25,9 +25,8 @@ internal sealed class RenderBuffer
         public int CompareTo(RenderCommand other) => SortKey.CompareTo(other.SortKey);
     }
     
-    public RenderBuffer(ID iD)
+    public RenderBuffer()
     {
-        BufferID = iD;
         instanceSprites = new(2560);
         instanceTexts = new(128);
         interpolatedInstanceSprites = new(2560);
@@ -36,7 +35,6 @@ internal sealed class RenderBuffer
         renderCommands = new(instanceSprites.Count + instanceTexts.Count + interpolatedInstanceSprites.Count + interpolatedInstanceTexts.Count);
     }
 
-    public readonly ID BufferID;
     private bool sorted;
 
     private Camera.Data? cameraData;

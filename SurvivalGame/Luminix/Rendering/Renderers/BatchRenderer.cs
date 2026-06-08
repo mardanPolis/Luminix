@@ -83,6 +83,7 @@ internal sealed class BatchRenderer : ImmediateRenderer
         Matrix? transformMatrix = renderingSystem.TransformMatrix;
 
         if(!transformMatrix.HasValue) return;
+        if(renderBuffer == null) return;
         
         Matrix transformMatrixValue = transformMatrix.Value;
 
@@ -263,7 +264,6 @@ internal sealed class BatchRenderer : ImmediateRenderer
         {
             Logger.Get().Err(
                 $"Exception happened during batch rendering: " +
-                $"RenderStack[{renderBuffer.BufferID}] -> " +
                 $"(CommandIndex/CommandCount : {commandIndex}/{commandCount})");
             throw;
         }
@@ -274,6 +274,8 @@ internal sealed class BatchRenderer : ImmediateRenderer
     public override void UnscaledRender()
     {
         if(renderingSystem.TransformMatrix.HasValue)
+            return;
+        if(renderBuffer == null)
             return;
 
         spriteBatch.Begin();

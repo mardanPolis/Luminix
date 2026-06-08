@@ -117,7 +117,7 @@ public sealed class RenderingSystem : Workspace.Service
 
         partialTick = Math.Clamp(partialTick, 0f, 1f);
 
-        var cameraData = renderBuffer.GetCameraData();
+        var cameraData = renderBuffer?.GetCameraData();
 
         GraphicsDevice.RasterizerState = RasterizerState.CullNone;
         GraphicsDevice.BlendState = BlendState.AlphaBlend;

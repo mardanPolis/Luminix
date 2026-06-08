@@ -141,7 +141,7 @@ public sealed class CoreThread : TickedThread
 
     private void Render()
     {
-        var RenderBuffer = CoreToRender.RenderBridge.CurrentWriteBuffer;
+        var RenderBuffer = CoreToRender.RenderBridge.CurrentWriteBuffer ?? CoreToRender.RenderBridge.CreateBuffer();
         RenderBuffer.Reset();
         RenderBuffer.Set(universe.World?.MainCamera);
         RenderBuffer.PostSprite(circle, Vector3.Zero, Vector2.One, 0);
