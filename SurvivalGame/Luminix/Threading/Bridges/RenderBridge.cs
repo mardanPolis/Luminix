@@ -1,4 +1,4 @@
-using Luminix.Rendering;
+using Luminix.Threading.Buffers;
 
 namespace Luminix.Threading.Bridges;
 

@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using Microsoft.Xna.Framework.Input;
 using Luminix.Threading.Bridges;
 using Luminix.Workspaces;
+using Luminix.Threading.Buffers;
 
 namespace Luminix;
 
@@ -18,95 +19,89 @@ public sealed class Input : Workspace.Service
         SideButton2 = 4
     }
 
-    private Dictionary<Keys, Action[]> keyDownActions = new Dictionary<Keys, Action[]>();
-    private Dictionary<Keys, Action[]> keyUpActions = new Dictionary<Keys, Action[]>();
-
-    private Dictionary<byte, Action<short, short>[]> mouseButtonDownActions = new Dictionary<byte, Action<short, short>[]>();
-    private Dictionary<byte, Action<short, short>[]> mouseButtonUpActions = new Dictionary<byte, Action<short, short>[]>();
-
-    private long[] keyInput = new long[4];
-
-    private short mouseX = 0;
-    private short mouseY = 0;
-    private byte mouseButtonStates = 0;
-
-    internal void ReadFrom(InputBridge inputBridge)
+    internal struct KeyboardData
     {
-        inputBridge.Read(out long[] _readKeyBuffer, out ConcurrentQueue<byte> _pressedKeys, out ConcurrentQueue<byte> _releasedKeys,
-        out InputBridge.MouseData mouseData);
-
-        Array.Copy(_readKeyBuffer, keyInput, _readKeyBuffer.Length);
-        mouseX = (short)(mouseData.position >> 16);
-        mouseY = (short)mouseData.position;
-        mouseButtonStates = mouseData.buttonStates;
-
-        while(_pressedKeys.TryDequeue(out byte key))
+        public KeyboardData()
         {
-            if (keyDownActions.TryGetValue((Keys)key, out var actions))
-            {
-                for (int i = 0; i < actions.Length; i++)
-                    actions[i]();
-            }
+            keys = new long[4];
         }
 
-        while(_releasedKeys.TryDequeue(out byte key))
+        public readonly long[] keys;
+
+        public void CopyFrom(KeyboardData keyboardData)
         {
-            if (keyUpActions.TryGetValue((Keys)key, out var actions))
-            {
-                for (int i = 0; i < actions.Length; i++)
-                    actions[i]();
-            }
+            Array.Copy(keyboardData.keys, this.keys, 4);
         }
 
-        while(mouseData.pressedButtons.TryDequeue(out (byte, short, short) pressEvent))
+        public void CopyFrom(long[] keys)
         {
-            if (mouseButtonDownActions.TryGetValue(pressEvent.Item1, out var actions))
-            {
-                var x = pressEvent.Item2;
-                var y = pressEvent.Item3;
-                for (int i = 0; i < actions.Length; i++)
-                    actions[i](x, y);
-            }
-        }
-
-        while(mouseData.releasedButtons.TryDequeue(out (byte, short, short) pressEvent))
-        {
-            if (mouseButtonUpActions.TryGetValue(pressEvent.Item1, out var actions))
-            {
-                var x = pressEvent.Item2;
-                var y = pressEvent.Item3;
-                for (int i = 0; i < actions.Length; i++)
-                    actions[i](x, y);
-            }
+            Array.Copy(keys, this.keys, 4);
         }
     }
 
-    //TO DO: implement subscribe and unsubscribe methods for keys and mouse buttons
-    public void Subscribe(Action action, Keys key)
+    internal struct MouseData()
     {
-        
+        public byte buttons = 0;
+        public int position = 0;
     }
 
-    public bool IsKeyDown(Keys keys)
+    private KeyboardData prevKeyboardData = new KeyboardData();
+    private KeyboardData currKeyboardData = new KeyboardData();
+    private MouseData prevMouseData;
+    private MouseData currMouseData;
+
+    internal void ReadFrom(InputBuffer inputBridge)
+    {
+        inputBridge.Read(out long[] _newKeyboardData, out MouseData _mouseData);
+
+        prevKeyboardData.CopyFrom(currKeyboardData);
+        currKeyboardData.CopyFrom(_newKeyboardData);
+
+        prevMouseData = currMouseData;
+        currMouseData = _mouseData;
+
+        inputBridge.Clear();
+    }
+
+    public bool GetKeyDown(Keys keys)
     {
         byte key = (byte)keys;
-        return (keyInput[key >> 6] & (1L << (key & 63))) != 0;
+        int keyHouse = key >> 6;
+        long keyRoom  = 1L << (key & 63);
+        return (currKeyboardData.keys[keyHouse] & keyRoom) != (prevKeyboardData.keys[keyHouse] & keyRoom);
     }
-    public bool IsKeyUp(Keys keys)
+    public bool GetKeyUp(Keys keys)
     {
         byte key = (byte)keys;
-        return (keyInput[key >> 6] & (1L << (key & 63))) == 0;
+        int keyHouse = key >> 6;
+        long keyRoom  = 1L << (key & 63);
+        return (currKeyboardData.keys[keyHouse] & keyRoom) == (prevKeyboardData.keys[keyHouse] & keyRoom);
+    }
+    public bool GetKey(Keys keys)
+    {
+        byte key = (byte)keys;
+        return (currKeyboardData.keys[key >> 6] & (1L << (key & 63))) != 0;
     }
 
-    public bool IsMouseButtonDown(MouseButtons button)
+    public bool GetMouseButtonDown(MouseButtons buttons)
     {
-        return (mouseButtonStates & (1 << ((byte)button & 7))) != 0;
+        byte button = (byte)buttons;
+        int buttonRoom  = 1 << ((byte)button & 7);
+        return (currMouseData.buttons & buttonRoom) != (prevMouseData.buttons & buttonRoom);
     }
-    public bool IsMouseButtonUp(MouseButtons button)
+    public bool GetMouseButtonUp(MouseButtons buttons)
     {
-        return (mouseButtonStates & (1 << ((byte)button & 7))) == 0;
+        byte button = (byte)buttons;
+        int buttonRoom  = 1 << ((byte)button & 7);
+        return (currMouseData.buttons & buttonRoom) == (prevMouseData.buttons & buttonRoom);
+    }
+    public bool GetMouseButton(MouseButtons buttons)
+    {
+        byte button = (byte)buttons;
+        int buttonRoom  = 1 << ((byte)button & 7);
+        return (currMouseData.buttons & buttonRoom) != 0;
     }
 
-    public short MouseX => mouseX;
-    public short MouseY => mouseY;
+    public short MouseX => (byte)(currMouseData.position >> 16);
+    public short MouseY => (byte)(currMouseData.position);
 }

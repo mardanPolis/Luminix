@@ -21,19 +21,19 @@ public class CameraMover : CameraComponent
 
         var cameraPos = camera.Position;
 
-        if(input.IsKeyDown(Keys.W))
+        if(input.GetKey(Keys.W))
             cameraPos.Y += speed * (camera.OrthographicSize * 0.1f);
-        if(input.IsKeyDown(Keys.S))
+        if(input.GetKey(Keys.S))
             cameraPos.Y -= speed * (camera.OrthographicSize * 0.1f);
 
-        if(input.IsKeyDown(Keys.A))
+        if(input.GetKey(Keys.A))
             cameraPos.X -= speed * (camera.OrthographicSize * 0.1f);
-        if(input.IsKeyDown(Keys.D))
+        if(input.GetKey(Keys.D))
             cameraPos.X += speed * (camera.OrthographicSize * 0.1f);
             
         float direction = 0;
-        if(input.IsKeyDown(Keys.E)) direction += 1f;
-        if(input.IsKeyDown(Keys.Q)) direction -= 1f;
+        if(input.GetKey(Keys.E)) direction += 1f;
+        if(input.GetKey(Keys.Q)) direction -= 1f;
 
         if (direction != 0)
         {

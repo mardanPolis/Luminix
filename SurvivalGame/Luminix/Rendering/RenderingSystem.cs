@@ -10,6 +10,7 @@ using System.Collections.Generic;
 using Luminix.Identifiers;
 using System.IO;
 using Microsoft.Xna.Framework.Input;
+using Luminix.Threading.Buffers;
 
 namespace Luminix.Rendering;
 
@@ -34,8 +35,6 @@ public sealed class RenderingSystem : Workspace.Service
     private GraphicsDeviceManager graphics;
     private GameWindow window;
     private ResourceManager resourceManager;
-
-    private FontResource defaultFontBold;
 
     private RenderBuffer renderBuffer;
 
@@ -100,8 +99,6 @@ public sealed class RenderingSystem : Workspace.Service
 
         batchRenderer = new BatchRenderer();
         immediateRenderers.Add(batchRenderer);
-
-        defaultFontBold = resourceManager.ResourceProvider.GetResource<FontResource>("IBMPlexMono-Bold");
 
         if(Settings.Debug)
         {

@@ -22,15 +22,15 @@ internal class InputHandler
             keyboardHandler.Update();
             mouseHandler.Update();
 
-            RenderToCore.InputBridge.Write(keyboardHandler.currKeyboardStates, mouseHandler.mousePosition, mouseHandler.mouseButtonStates);
+            RenderToCore.InputBridge.WriteBuffer.Push(keyboardHandler.keyboardStates, mouseHandler.mousePosition, mouseHandler.mouseButtonStates);
         }
         else
         {
-            Array.Clear(keyboardHandler.currKeyboardStates, 0, 4);
+            Array.Clear(keyboardHandler.keyboardStates, 0, 4);
 
             MouseState mouseState = Mouse.GetState();
             mouseHandler.MousePosition(ref mouseState);
-            RenderToCore.InputBridge.Write(keyboardHandler.currKeyboardStates, mouseHandler.mousePosition, 0);
+            RenderToCore.InputBridge.WriteBuffer.Push(keyboardHandler.keyboardStates, mouseHandler.mousePosition, 0);
         }
     }
 }

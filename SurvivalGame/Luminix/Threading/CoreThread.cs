@@ -1,22 +1,23 @@
 using System;
 using System.Diagnostics;
 using System.Threading;
+using System.Collections.Generic;
+using Microsoft.Xna.Framework.Input;
+using Microsoft.Xna.Framework;
 using Luminix.Simulation;
 using Luminix.Workspaces;
 using Luminix.IO;
 using Luminix.Resources;
 using Luminix.Resources.AssetHandlers;
 using Luminix.Threading.Bridges;
-using Luminix.AssetHandlers;
-using System.Collections.Generic;
-using Microsoft.Xna.Framework;
+using Luminix.Threading.Buffers;
 using Game.Simulation;
 
 namespace Luminix.Threading;
 
 public sealed class CoreThread : TickedThread
 {
-    internal CoreThread(int workerThreadCount) : base(20)
+    internal CoreThread(int workerThreadCount) : base(60)
     {   
 
         this.Name = "CoreThread";
@@ -40,7 +41,7 @@ public sealed class CoreThread : TickedThread
     private WorkerThreadPool workerThreadPool;
     private AssetIO assetIO;
 
-
+    private Keys[] keys = { Keys.F1, Keys.F2, Keys.F3, Keys.F4, Keys.F5, Keys.F11, Keys.F12 };
 
     private TextureResource circle;
 
@@ -79,6 +80,7 @@ public sealed class CoreThread : TickedThread
 
         universe.LoadWorld("SimWorld");
         Camera camera = new Camera();
+        _ = new CameraMover(camera);
         
     }
 
@@ -107,8 +109,9 @@ public sealed class CoreThread : TickedThread
     {
         Bridges.CoreToRender.RenderBridge.Swap();
 
-        input.ReadFrom(Bridges.RenderToCore.InputBridge);
- 
+        input.ReadFrom(Bridges.RenderToCore.InputBridge.ReadBuffer);
+        Bridges.RenderToCore.InputBridge.Swap();
+
         resources.Set(RenderToCore.ResourceBridge.Get());
 
         universeController.TickRate = TickRate;

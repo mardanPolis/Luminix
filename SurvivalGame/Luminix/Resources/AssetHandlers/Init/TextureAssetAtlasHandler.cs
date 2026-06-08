@@ -1,14 +1,11 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using Luminix.Collections;
 using Luminix.IO;
-using Luminix.Resources;
 using Luminix.Threading;
-using Microsoft.Xna.Framework;
 
-namespace Luminix.AssetHandlers;
+namespace Luminix.Resources.AssetHandlers;
 
 internal class TextureAssetAtlasHandler
 {

@@ -1,8 +1,12 @@
 using System;
 using System.Diagnostics;
 using System.Threading;
+using System.Reflection;
+using System.Linq;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
+using Microsoft.Xna.Framework.Input;
+using Microsoft.Xna.Framework.Graphics;
 using Luminix.Rendering;
 using Luminix.Resources;
 using Luminix.Threading;
@@ -10,12 +14,8 @@ using Luminix.Threading.Bridges;
 using Luminix.Workspaces;
 using Luminix.Core.InputHandlers;
 using Luminix.Resources.AssetHandlers;
-using System.Reflection;
 using Luminix.IO;
 using Luminix.Resources.BuiltIn;
-using Microsoft.Xna.Framework.Input;
-using Microsoft.Xna.Framework.Graphics;
-using System.Linq;
 
 namespace Luminix;
 public class Main : Microsoft.Xna.Framework.Game
@@ -59,9 +59,9 @@ public class Main : Microsoft.Xna.Framework.Game
         stopwatch = Stopwatch.StartNew();
         graphics = new GraphicsDeviceManager(this);
         graphics.SynchronizeWithVerticalRetrace = true;
-        graphics.PreferredBackBufferWidth = displayMode.Width;
-        graphics.PreferredBackBufferHeight = displayMode.Height;
-        graphics.IsFullScreen = true;
+        graphics.PreferredBackBufferWidth = 1920;
+        graphics.PreferredBackBufferHeight = 1080;
+        graphics.IsFullScreen = false;
         graphics.HardwareModeSwitch = false;
         graphics.PreferHalfPixelOffset = false;
 
@@ -123,7 +123,6 @@ public class Main : Microsoft.Xna.Framework.Game
     private AssetRegistrationHandler assetRegistrationHandler;
 
     private bool[] functionKeys = { false, false, false, false, false, false, false };
-    private Keys[] keys = { Keys.F1, Keys.F2, Keys.F3, Keys.F4, Keys.F5, Keys.F11, Keys.F12 };
     private Action[] keyActions = new Action[7];
     
     private bool takeScreenshot = false;
@@ -207,39 +206,6 @@ public class Main : Microsoft.Xna.Framework.Game
         assetRegistrationHandler.Run();
 
         RenderToCore.WindowIsActive = IsActive;
-
-        KeyboardState keyboard = Keyboard.GetState();
-        for (int i = 0; i < functionKeys.Length; i++)
-        {
-            if (functionKeys[i] && keyboard.IsKeyUp(keys[i]))
-            {
-                keyActions[i]();
-            }
-
-            functionKeys[i] = keyboard.IsKeyDown(keys[i]);
-        }
-
-        //TODO : remove
-        if(keyboard.IsKeyDown(Keys.P))
-        {
-            renderingSystem.SetResolution(2560, 1440);
-            renderingSystem.Apply();
-        }
-        else if(keyboard.IsKeyDown(Keys.O))
-        {
-            renderingSystem.SetResolution(1920, 1080);
-            renderingSystem.Apply();
-        }
-        else if(keyboard.IsKeyDown(Keys.I))
-        {
-            renderingSystem.SetResolution(1280, 720);
-            renderingSystem.Apply();
-        }
-        else if(keyboard.IsKeyDown(Keys.U))
-        {
-            renderingSystem.SetResolution(640, 360);
-            renderingSystem.Apply();
-        }
 
         var windowPos = Window.ClientBounds.Location;
         if(windowPos != windowPosition)

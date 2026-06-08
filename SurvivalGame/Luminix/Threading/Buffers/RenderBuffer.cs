@@ -7,7 +7,7 @@ using Luminix.Resources;
 using Luminix.Simulation;
 using Microsoft.Xna.Framework;
 
-namespace Luminix.Rendering;
+namespace Luminix.Threading.Buffers;
 
 internal sealed class RenderBuffer
 {

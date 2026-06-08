@@ -1,73 +1,25 @@
-using System;
-using System.Collections.Concurrent;
-using Microsoft.Xna.Framework.Input;
+using Luminix.Threading.Buffers;
 
 namespace Luminix.Threading.Bridges;
 
 internal class InputBridge
 {
-    //keyboard
-    private volatile long[] writeKeyBuffer = new long[4];
-    private volatile long[] readKeyBuffer = new long[4];
+    private volatile InputBuffer writeBuffer;
+    private volatile InputBuffer readBuffer;
 
-    private ConcurrentQueue<byte> PressedKeys = new ConcurrentQueue<byte>();
-    private ConcurrentQueue<byte> ReleasedKeys = new ConcurrentQueue<byte>();
-    
-    //mouse
-    private volatile byte mouseButtonStates = 0;
-    private volatile int mousePosition = 0;
+    public InputBuffer ReadBuffer => readBuffer;
+    public InputBuffer WriteBuffer => writeBuffer;
 
-    private ConcurrentQueue<(byte, short, short)> pressedButtons = new ConcurrentQueue<(byte, short, short)>();
-    private ConcurrentQueue<(byte, short, short)> releasedButtons = new ConcurrentQueue<(byte, short, short)>();
-
-    public struct MouseData
+    public InputBridge()
     {
-        public byte buttonStates;
-        public int position;
-        public ConcurrentQueue<(byte, short, short)> pressedButtons;
-        public ConcurrentQueue<(byte, short, short)> releasedButtons;
+        writeBuffer = new InputBuffer();
+        readBuffer = new InputBuffer();
     }
 
-    public void Read(out long[] _readKeyBuffer, out ConcurrentQueue<byte> _pressedKeys, out ConcurrentQueue<byte> _releasedKeys,
-    out MouseData _mouseData)
+    public void Swap()
     {
-        _readKeyBuffer = readKeyBuffer;
-        _pressedKeys = PressedKeys;
-        _releasedKeys = ReleasedKeys;
-
-        _mouseData = new()
-        {
-            buttonStates = mouseButtonStates,
-            position = mousePosition,
-            pressedButtons = pressedButtons,
-            releasedButtons = releasedButtons
-        };
+        var temp = readBuffer;
+        readBuffer = writeBuffer;
+        writeBuffer = temp;
     }
-
-    public void Write(long[] packedInputs, int mousePosition, byte mouseButtonStates)
-    {
-        Array.Copy(packedInputs, writeKeyBuffer, writeKeyBuffer.Length);
-        this.mousePosition = mousePosition;
-        this.mouseButtonStates = mouseButtonStates;
-        (readKeyBuffer, writeKeyBuffer) = (writeKeyBuffer, readKeyBuffer);
-    }
-
-    public void PressKeyEvent(Keys key)
-    {
-        PressedKeys.Enqueue((byte)key);
-    }
-    public void ReleaseKeyEvent(Keys key)
-    {
-        ReleasedKeys.Enqueue((byte)key);
-    }
-
-    public void PressButtonEvent(byte button, short mouseX, short mouseY)
-    {
-        pressedButtons.Enqueue((button, mouseX, mouseY));
-    }
-    public void ReleaseButtonEvent(byte button, short mouseX, short mouseY)
-    {
-        releasedButtons.Enqueue((button, mouseX, mouseY));
-    }
-
 }

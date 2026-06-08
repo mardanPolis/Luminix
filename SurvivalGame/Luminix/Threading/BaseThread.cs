@@ -29,6 +29,11 @@ public abstract class BaseThread
                 thread.Value = this;
                 threadAction();
             }
+            catch(Exception ex)
+            {
+                logger.Err(ex);
+                throw;
+            }
             finally
             {
                 thread.Value = null;
