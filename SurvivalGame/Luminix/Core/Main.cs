@@ -15,19 +15,34 @@ using Luminix.IO;
 using Luminix.Resources.BuiltIn;
 using Microsoft.Xna.Framework.Input;
 using Microsoft.Xna.Framework.Graphics;
+using System.Linq;
 
 namespace Luminix;
 public class Main : Microsoft.Xna.Framework.Game
 {
-    public const string VERSION = "v1.0";
+    public static string Version { get; private set; }
+    public static string BuildDate { get; private set; }
+
     public Main()
     {
+        Assembly assembly = Assembly.GetExecutingAssembly();
+        string version = assembly.GetName().Version.ToString().Replace(" ", "");
+
+        var attribute = assembly.GetCustomAttributes<AssemblyMetadataAttribute>()
+                            .FirstOrDefault(a => a.Key == "BuildDate");
+        string buildDate = attribute?.Value ?? "Unknown";
+
+        Main.Version = version;
+        Main.BuildDate = buildDate;
+
         //workspace
         workspace = Workspace.Create();
         embeddedIO = new EmbeddedIO();
 
         logger = Logger.Get();
         logger.Log($"Started initialization");
+        logger.Log($"Build-Version: {version}");
+        logger.Log($"Build-Date:    {buildDate}");
 
         Settings.Initialize(out Settings.Controller settingsController);
         settingsController.Debug = true;

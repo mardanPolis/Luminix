@@ -222,7 +222,7 @@ internal sealed class SystemDebugRenderer : DebugRenderer
         }
         
         sb.Clear();
-        sb.Append("GAME VERSION:").Append(Main.VERSION).Append("\n");
+        sb.Append("Build-Version:").Append(Main.Version).Append(" | Build-Date:").Append(Main.BuildDate).Append("\n");
         sb.Append(graphics).Append($" : {renderingSystem.ResolutionWidth}x{renderingSystem.ResolutionHeight}").Append("\n");
         AppendDouble(sb, fps, 3, 3);
         sb.Append(":FPS | ");
