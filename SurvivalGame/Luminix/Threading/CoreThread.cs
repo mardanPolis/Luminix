@@ -17,7 +17,7 @@ namespace Luminix.Threading;
 
 public sealed class CoreThread : TickedThread
 {
-    internal CoreThread(int workerThreadCount) : base(20)
+    internal CoreThread(int workerThreadCount) : base(60)
     {   
 
         this.Name = "CoreThread";
@@ -41,8 +41,9 @@ public sealed class CoreThread : TickedThread
     private WorkerThreadPool workerThreadPool;
     private AssetIO assetIO;
 
-    private Keys[] keys = { Keys.F1, Keys.F2, Keys.F3, Keys.F4, Keys.F5, Keys.F11, Keys.F12 };
-
+    private Keys[] debugKeys = { Keys.F1, Keys.F2, Keys.F3, Keys.F4, Keys.F5, Keys.F11, Keys.F12 };
+    private Action[] debugKeyActions = new Action[7];
+    
     private TextureResource circle;
 
     protected sealed override void Initialize()
@@ -76,6 +77,15 @@ public sealed class CoreThread : TickedThread
         var process = Process.GetCurrentProcess();
         logger.Log("Total threads at initialization: " + process.Threads.Count);
 
+        debugKeyActions[0] = () => Settings.DebugInfo = !Settings.DebugInfo;                 //F1
+        debugKeyActions[1] = () => Settings.DebugConsole = !Settings.DebugConsole;           //F2
+        debugKeyActions[2] = () => Settings.DebugInspector = !Settings.DebugInspector;       //F3
+        debugKeyActions[3] = () => Settings.DebugGizmosPanel = !Settings.DebugGizmosPanel;   //F4
+        debugKeyActions[4] = () => Settings.DebugEventPanel = !Settings.DebugEventPanel;     //F5
+        debugKeyActions[5] = () => { logger.Wrn("Fullscreen not implemented!"); };           //F11
+        debugKeyActions[6] = () => { logger.Wrn("Screenshot not implemented!"); };           //F12
+
+        //TODO : Remove
         circle = resources.GetResource<TextureResource>("circle");
 
         universe.LoadWorld("SimWorld");
@@ -113,6 +123,12 @@ public sealed class CoreThread : TickedThread
         Bridges.RenderToCore.InputBridge.Swap();
 
         resources.Set(RenderToCore.ResourceBridge.Get());
+
+        for(int key = 0; key < debugKeys.Length; key++)
+        {
+            if(input.GetKeyUp(debugKeys[key]))
+                debugKeyActions[key]();
+        }
 
         universeController.TickRate = TickRate;
         universeController.DeltaTime = UnsafeTickDeltaTime;

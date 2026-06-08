@@ -5,7 +5,6 @@ using System.Reflection;
 using System.Linq;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
-using Microsoft.Xna.Framework.Input;
 using Microsoft.Xna.Framework.Graphics;
 using Luminix.Rendering;
 using Luminix.Resources;
@@ -122,9 +121,6 @@ public class Main : Microsoft.Xna.Framework.Game
     internal GraphicsDeviceManager GraphicsDeviceManager => graphics;
     private AssetRegistrationHandler assetRegistrationHandler;
 
-    private bool[] functionKeys = { false, false, false, false, false, false, false };
-    private Action[] keyActions = new Action[7];
-    
     private bool takeScreenshot = false;
 
     protected override void Initialize()
@@ -173,14 +169,6 @@ public class Main : Microsoft.Xna.Framework.Game
 
             TargetElapsedTime = TimeSpan.FromSeconds(1d / 144d);
             IsFixedTimeStep = true;
-
-            keyActions[0] = () => Settings.DebugInfo = !Settings.DebugInfo;                                                 //F1
-            keyActions[1] = () => Settings.DebugConsole = !Settings.DebugConsole;                                           //F2
-            keyActions[2] = () => Settings.DebugInspector = !Settings.DebugInspector;                                       //F3
-            keyActions[3] = () => Settings.DebugGizmosPanel = !Settings.DebugGizmosPanel;                                   //F4
-            keyActions[4] = () => Settings.DebugEventPanel = !Settings.DebugEventPanel;                                     //F5
-            keyActions[5] = () => { renderingSystem.Fullscreen(!renderingSystem.IsFullScreen); renderingSystem.Apply(); };  //F11
-            keyActions[6] = () => takeScreenshot = true;                                                                    //F12
 
             windowPosition = Window.ClientBounds.Location;
         }

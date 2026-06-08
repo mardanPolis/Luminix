@@ -68,14 +68,22 @@ public sealed class Input : Workspace.Service
         byte key = (byte)keys;
         int keyHouse = key >> 6;
         long keyRoom  = 1L << (key & 63);
-        return (currKeyboardData.keys[keyHouse] & keyRoom) != (prevKeyboardData.keys[keyHouse] & keyRoom);
+
+        bool isDownNow = (currKeyboardData.keys[keyHouse] & keyRoom) != 0;
+        bool wasDownBefore = (prevKeyboardData.keys[keyHouse] & keyRoom) != 0;
+
+        return isDownNow && !wasDownBefore;
     }
     public bool GetKeyUp(Keys keys)
     {
         byte key = (byte)keys;
         int keyHouse = key >> 6;
         long keyRoom  = 1L << (key & 63);
-        return (currKeyboardData.keys[keyHouse] & keyRoom) == (prevKeyboardData.keys[keyHouse] & keyRoom);
+
+        bool isDownNow = (currKeyboardData.keys[keyHouse] & keyRoom) != 0;
+        bool wasDownBefore = (prevKeyboardData.keys[keyHouse] & keyRoom) != 0;
+
+        return !isDownNow && wasDownBefore;
     }
     public bool GetKey(Keys keys)
     {
@@ -87,13 +95,21 @@ public sealed class Input : Workspace.Service
     {
         byte button = (byte)buttons;
         int buttonRoom  = 1 << ((byte)button & 7);
-        return (currMouseData.buttons & buttonRoom) != (prevMouseData.buttons & buttonRoom);
+
+        bool isDownNow = (currMouseData.buttons & buttonRoom) != 0;
+        bool wasDownBefore = (prevMouseData.buttons & buttonRoom) != 0;
+
+        return isDownNow && !wasDownBefore;
     }
     public bool GetMouseButtonUp(MouseButtons buttons)
     {
         byte button = (byte)buttons;
         int buttonRoom  = 1 << ((byte)button & 7);
-        return (currMouseData.buttons & buttonRoom) == (prevMouseData.buttons & buttonRoom);
+
+        bool isDownNow = (currMouseData.buttons & buttonRoom) != 0;
+        bool wasDownBefore = (prevMouseData.buttons & buttonRoom) != 0;
+
+        return !isDownNow && wasDownBefore;
     }
     public bool GetMouseButton(MouseButtons buttons)
     {
