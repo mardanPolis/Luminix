@@ -23,11 +23,11 @@ public class TickedThread : BaseThread
     private Stopwatch internalStopwatch;
 
     private long tickCount = 0;
-    private volatile uint tickIntervalInTicks = 0;
+    private long tickIntervalInTicks = 0;
     private long lastTickDate = 0;
     private double deltaTime = 0;
 
-    protected uint TickIntervalInTicks => tickIntervalInTicks;
+    protected long TickIntervalInTicks => tickIntervalInTicks;
     protected long CurrentElapsedTicks => internalStopwatch.ElapsedTicks;
 
     public uint TickRate
@@ -98,45 +98,46 @@ public class TickedThread : BaseThread
             initAllocated = endBytes;
 
             long nextTick = 0;
-
             int currentIndex = 0;
 
             Workspace.Current?.SetState(Workspace.State.Running);
 
+            long threshold15ms = (long)(15 * Stopwatch.Frequency / 1000.0);
+            long threshold4ms = (long)(4 * Stopwatch.Frequency / 1000.0);
+            long threshold1ms = (long)(1 * Stopwatch.Frequency / 1000.0);
+
             while (running)
             {
                 long currentTicks = stopwatch.ElapsedTicks;
-                long targetTick = Interlocked.Read(ref nextTick);
 
-                if(currentTicks < targetTick)
+                if(currentTicks <= nextTick)
                 {
                     long ticksRemaining = nextTick - currentTicks;
-                    double msRemaining = (double)ticksRemaining / Stopwatch.Frequency * 1000;
                     
-                    if (msRemaining > 15)
+                    if (ticksRemaining > threshold15ms)
                         Thread.Sleep(10);
-                    else if (msRemaining > 4)
+                    else if (ticksRemaining > threshold4ms)
                         Thread.Yield();
-                    else if (msRemaining > 1)
-                        Thread.SpinWait(5);
+                    else if (ticksRemaining > threshold1ms)
+                        Thread.SpinWait(1);
 
                     continue;
                 } 
                 
                 //Setting deltaTime
-                Interlocked.Exchange(ref deltaTime, internalStopwatch.Elapsed.TotalSeconds);
-                
                 var temp = tickTimesBuffer1;
                 tickTimesBuffer1 = tickTimesBuffer2;
                 tickTimesBuffer2 = temp;
 
-                internalStopwatch.Restart(); // NEW TICK
-
                 Interlocked.Increment(ref tickCount);
                 Interlocked.Exchange(ref lastTickDate, nextTick);
-                Interlocked.Add(ref nextTick, tickIntervalInTicks);
+                nextTick += Interlocked.Read(ref tickIntervalInTicks);
 
                 startBytes = GC.GetAllocatedBytesForCurrentThread();
+
+                Interlocked.Exchange(ref deltaTime, internalStopwatch.Elapsed.TotalSeconds);
+                
+                internalStopwatch.Restart(); // NEW TICK
 
                 update();
 
@@ -177,37 +178,38 @@ public class TickedThread : BaseThread
 
             long nextTick = 0;
 
-            nextTick = stopwatch.ElapsedTicks;
-    
             Workspace.Current?.SetState(Workspace.State.Running);
+
+            long threshold15ms = (long)(15 * Stopwatch.Frequency / 1000.0);
+            long threshold4ms = (long)(4 * Stopwatch.Frequency / 1000.0);
+            long threshold1ms = (long)(1 * Stopwatch.Frequency / 1000.0);
 
             while (running)
             {
                 long currentTicks = stopwatch.ElapsedTicks;
-                long targetTick = Interlocked.Read(ref nextTick);
-
-                if(currentTicks < targetTick)
+                if(currentTicks < nextTick)
                 {
                     long ticksRemaining = nextTick - currentTicks;
-                    double msRemaining = (double)ticksRemaining / Stopwatch.Frequency * 1000;
 
-                    if (msRemaining > 15)
+                    if (ticksRemaining > threshold15ms)
                         Thread.Sleep(10);
-                    else if (msRemaining > 4)
+                    else if (ticksRemaining > threshold4ms)
                         Thread.Yield();
-                    else if (msRemaining > 1)
-                        Thread.SpinWait(5);
+                    else if (ticksRemaining > threshold1ms)
+                        Thread.SpinWait(1);
                         
                     continue;
                 }
-                
-                Interlocked.Exchange(ref deltaTime, internalStopwatch.Elapsed.TotalSeconds);
-                
-                internalStopwatch.Restart();
+
+                if(!(currentTicks > nextTick))
+                    return;
 
                 Interlocked.Increment(ref tickCount);
                 Interlocked.Exchange(ref lastTickDate, nextTick);
-                Interlocked.Add(ref nextTick, tickIntervalInTicks);
+                nextTick += Interlocked.Read(ref tickIntervalInTicks);
+
+                Interlocked.Exchange(ref deltaTime, internalStopwatch.Elapsed.TotalSeconds);
+                internalStopwatch.Restart();
 
                 update();
             }

@@ -224,9 +224,9 @@ internal sealed class SystemDebugRenderer : DebugRenderer
         sb.Clear();
         sb.Append("Build-Version:").Append(Main.Version).Append(" | Build-Date:").Append(Main.BuildDate).Append("\n");
         sb.Append(graphics).Append($" : {renderingSystem.ResolutionWidth}x{renderingSystem.ResolutionHeight}").Append("\n");
-        AppendDouble(sb, fps, 3, 3);
+        AppendDouble(sb, fps, 0, 3);
         sb.Append(":FPS | ");
-        AppendDouble(sb, tickDeltaTime > 0 ? 1.0 / tickDeltaTime : 0, 3, 3);
+        AppendDouble(sb, tickDeltaTime > 0 ? MathF.Round(1.0f / (float)tickDeltaTime) : 0, 0, 3);
         sb.Append(":TPS\n");
 
         sb.Append("FrameTime : ");

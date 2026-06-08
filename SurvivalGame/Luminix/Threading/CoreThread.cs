@@ -17,7 +17,7 @@ namespace Luminix.Threading;
 
 public sealed class CoreThread : TickedThread
 {
-    internal CoreThread(int workerThreadCount) : base(60)
+    internal CoreThread(int workerThreadCount) : base(20)
     {   
 
         this.Name = "CoreThread";

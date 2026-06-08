@@ -26,7 +26,7 @@ public class Main : Microsoft.Xna.Framework.Game
     public Main()
     {
         Assembly assembly = Assembly.GetExecutingAssembly();
-        string version = assembly.GetName().Version.ToString().Replace(" ", "");
+        string version = assembly.GetName().Version.ToString();
 
         var attribute = assembly.GetCustomAttributes<AssemblyMetadataAttribute>()
                             .FirstOrDefault(a => a.Key == "BuildDate");
@@ -41,8 +41,8 @@ public class Main : Microsoft.Xna.Framework.Game
 
         logger = Logger.Get();
         logger.Log($"Started initialization");
-        logger.Log($"Build-Version: {version}");
-        logger.Log($"Build-Date:    {buildDate}");
+        logger.Log($"Build-Vers: {version}");
+        logger.Log($"Build-Date: {buildDate}");
 
         Settings.Initialize(out Settings.Controller settingsController);
         settingsController.Debug = true;
