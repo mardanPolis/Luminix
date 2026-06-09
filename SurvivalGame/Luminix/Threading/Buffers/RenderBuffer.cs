@@ -53,7 +53,7 @@ internal sealed class RenderBuffer
         cameraData = camera?.GetCameraSnapshot();
     }
 
-    public void PostSprite(TextureResource texture, Vector3 position, Vector2 size, float rotation)
+    public void PushSprite(TextureResource texture, Vector3 position, Vector2 size, float rotation)
     {
         ulong key = BuildSpriteKey(texture);
  
@@ -62,7 +62,7 @@ internal sealed class RenderBuffer
         renderCommands.Add(new RenderCommand(key, RenderObjectType.SpriteNonInterpolated, dataIndex));
     }
     
-    public void PostSprite(ShaderResource shader, TextureResource texture, Vector3 position, Vector2 size, float rotation)
+    public void PushSprite(ShaderResource shader, TextureResource texture, Vector3 position, Vector2 size, float rotation)
     {
         ulong key = BuildSpriteKey(shader, texture);
  
@@ -71,7 +71,7 @@ internal sealed class RenderBuffer
         renderCommands.Add(new RenderCommand(key, RenderObjectType.SpriteNonInterpolated, dataIndex));
     }
 
-    public void PostText(FontResource font, string text, Vector3 position, Vector2 size, float rotation)
+    public void PushText(FontResource font, string text, Vector3 position, Vector2 size, float rotation)
     {
         uint key = BuildFontKey(font);
  
@@ -80,7 +80,7 @@ internal sealed class RenderBuffer
         renderCommands.Add(new RenderCommand(key, RenderObjectType.SpriteNonInterpolated, dataIndex));
     }
 
-    public void PostInterpolatedSprite(TextureResource texture, Vector3 position0, Vector3 position, Vector2 size0, Vector2 size, float rotation0, float rotation)
+    public void PushInterpolatedSprite(TextureResource texture, Vector3 position0, Vector3 position, Vector2 size0, Vector2 size, float rotation0, float rotation)
     {
         ulong key = BuildSpriteKey(texture);
  
@@ -89,7 +89,7 @@ internal sealed class RenderBuffer
         renderCommands.Add(new RenderCommand(key, RenderObjectType.SpriteNonInterpolated, dataIndex));
     }
 
-    public void PostInterpolatedSprite(ShaderResource shader, TextureResource texture, Vector3 position0, Vector3 position, Vector2 size0, Vector2 size, float rotation0, float rotation)
+    public void PushInterpolatedSprite(ShaderResource shader, TextureResource texture, Vector3 position0, Vector3 position, Vector2 size0, Vector2 size, float rotation0, float rotation)
     {
         ulong key = BuildSpriteKey(shader, texture);
  
@@ -98,7 +98,7 @@ internal sealed class RenderBuffer
         renderCommands.Add(new RenderCommand(key, RenderObjectType.SpriteNonInterpolated, dataIndex));
     }
 
-    public void PostInterpolatedText(FontResource font, string text, Vector3 position0, Vector3 position, Vector2 size0, Vector2 size, float rotation0, float rotation)
+    public void PushInterpolatedText(FontResource font, string text, Vector3 position0, Vector3 position, Vector2 size0, Vector2 size, float rotation0, float rotation)
     {
         uint key = BuildFontKey(font);
  
@@ -109,12 +109,12 @@ internal sealed class RenderBuffer
 
 
     //TODO : Add RenderGroups, NonInterpolated only.
-    public void PostSpriteGroup()
+    public void PushSpriteGroup()
     {
         
     }
 
-    //TODO : Add PostBatch, batched sprites only.
+    //TODO : Add PushBatch, batched sprites only.
 
     public Camera.Data? GetCameraData()
         => cameraData;

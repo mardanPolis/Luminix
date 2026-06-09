@@ -38,13 +38,13 @@ public static class Settings
     private static volatile int screenshotHeight = 1080;
 
     public static bool Debug { get => debug; }
-    public static bool DebugInitialization { get => debugInitialization; }
-    public static bool DebugAssets { get => debugAssets; }
-    public static bool DebugInfo { get => debugInfo; set => debugInfo = value; }
-    public static bool DebugConsole { get => debugConsole; set => debugConsole = value; }
-    public static bool DebugInspector { get => debugInspector; set => debugInspector = value; }
-    public static bool DebugGizmosPanel { get => debugGizmoPanel; set => debugGizmoPanel = value; }
-    public static bool DebugEventPanel { get => debugEventPanel; set => debugEventPanel = value; }
+    public static bool DebugInitialization { get => debug && debugInitialization; }
+    public static bool DebugAssets { get => debug && debugAssets; }
+    public static bool DebugInfo { get => debug && debugInfo; set => debugInfo = value; }
+    public static bool DebugConsole { get => debug && debugConsole; set => debugConsole = value; }
+    public static bool DebugInspector { get => debug && debugInspector; set => debugInspector = value; }
+    public static bool DebugGizmosPanel { get => debug && debugGizmoPanel; set => debugGizmoPanel = value; }
+    public static bool DebugEventPanel { get => debug && debugEventPanel; set => debugEventPanel = value; }
     public static int PixelsPerUnit { get => pixelsPerUnit; }
     public static int MaxWorkerThreadCount { get => maxWorkerThreadCount; }
     public static int MinWorkerThreadCount { get => minWorkerThreadCount; }
@@ -52,29 +52,9 @@ public static class Settings
     public static int ScreenshotWidth { get => screenshotWidth; }
     public static int ScreenshotHeight { get => screenshotHeight; }
 
-    private static volatile bool finalized;
-    private static Flags options { get; } = new Flags();
-
-
     internal static void Initialize(out Controller controller)
     {
         controller = new Controller();
         initialized = true;
     }
-
-    internal static void FinalizeOptions()
-    {
-        finalized = true;
-    }
-
-    public static bool HasOption(string option) => options.HasFlag(option);
-    public static bool? GetOption(string option) => options.GetFlag(option);
-    public static void AddOption(string option, bool value)
-    {
-        if(finalized)
-            throw new InvalidOperationException("Cant add options after settings have been finalized!");
-
-        options.SetFlag(option, value);
-    }
-
 }

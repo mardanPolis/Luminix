@@ -43,8 +43,6 @@ internal class AssetLoadingHandler
                 logger.Wrn($"Duplicate assets with name '{assetFile.Name}' at locations: '{assetFile.RelativePath}' '{assets[assetFile.Name].RelativePath}'");
         }
 
-        logger.Log("Loading");
-
         ConcurrentBag<Asset> loadedAssets = [];
 
         workerThreadPool.ParallelFor(validAssetFiles, assetFile =>

@@ -6,14 +6,14 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SurvivalGame", "SurvivalGam
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
-		Debug|Any CPU = Debug|Any CPU
-		Release|Any CPU = Release|Any CPU
+		Debug|x64 CPU = Debug|x64 CPU
+		Release|x64 CPU = Release|x64 CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{7593B3E6-3CC3-A5A4-EA2F-7BFC21E2F5A0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{7593B3E6-3CC3-A5A4-EA2F-7BFC21E2F5A0}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{7593B3E6-3CC3-A5A4-EA2F-7BFC21E2F5A0}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{7593B3E6-3CC3-A5A4-EA2F-7BFC21E2F5A0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7593B3E6-3CC3-A5A4-EA2F-7BFC21E2F5A0}.Debug|x64 CPU.ActiveCfg = Debug|x64 CPU
+		{7593B3E6-3CC3-A5A4-EA2F-7BFC21E2F5A0}.Debug|x64 CPU.Build.0 = Debug|x64 CPU
+		{7593B3E6-3CC3-A5A4-EA2F-7BFC21E2F5A0}.Release|x64 CPU.ActiveCfg = Release|x64 CPU
+		{7593B3E6-3CC3-A5A4-EA2F-7BFC21E2F5A0}.Release|x64 CPU.Build.0 = Release|x64 CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

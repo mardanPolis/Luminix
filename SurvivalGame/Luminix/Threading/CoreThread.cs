@@ -153,8 +153,8 @@ public sealed class CoreThread : TickedThread
         var RenderBuffer = renderBridge.CurrentWriteBuffer ?? renderBridge.CreateBuffer();
         RenderBuffer.Reset();
         RenderBuffer.Set(universe.World?.MainCamera);
-        RenderBuffer.PostSprite(circle, Vector3.Zero, Vector2.One, 0);
-        RenderBuffer.PostSprite(circle, new Vector3(1, 2, 0), Vector2.One, rot += 0.5f);
+        RenderBuffer.PushSprite(circle, Vector3.Zero, Vector2.One, 0);
+        RenderBuffer.PushSprite(circle, new Vector3(1, 2, 0), Vector2.One, rot += 0.5f);
     }
 
     private void LoadBootAssets(AssetLoadingHandler assetLoadingHandler)
