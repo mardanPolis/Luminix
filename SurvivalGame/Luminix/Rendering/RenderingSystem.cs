@@ -15,7 +15,7 @@ namespace Luminix.Rendering;
 
 public sealed class RenderingSystem : Workspace.Service
 {
-    internal RenderingSystem(Main main, RenderBridge[] renderBridges)
+    internal RenderingSystem(Main main, IRenderBridge[] renderBridges)
     {
         ArgumentNullException.ThrowIfNull(main);
         ArgumentNullException.ThrowIfNull(main.GraphicsDeviceManager);
@@ -27,22 +27,21 @@ public sealed class RenderingSystem : Workspace.Service
 
         resolution = new Rectangle(0, 0, graphics.PreferredBackBufferWidth, graphics.PreferredBackBufferHeight);
 
-        coreRenderBridge = renderBridges[0];
-        uiRenderBridge = renderBridges[1];
+        coreRenderBridge = (RenderBridge<WorldRenderBuffer>)renderBridges[0];
+        uiRenderBridge = (RenderBridge<UIRenderBuffer>)renderBridges[1];
     }
 
     private Main main;
     private WorldRenderer worldRenderer;
-    private SystemDebugRenderer systemDebugRenderer;
     private GraphicsDeviceManager graphics;
     private GameWindow window;
     private ResourceManager resourceManager;
 
-    private RenderBridge coreRenderBridge;
-    private RenderBridge uiRenderBridge;
+    private RenderBridge<WorldRenderBuffer> coreRenderBridge;
+    private RenderBridge<UIRenderBuffer> uiRenderBridge;
 
-    private RenderBuffer worldRenderBuffer;
-    private RenderBuffer uiRenderBuffer;
+    private WorldRenderBuffer worldRenderBuffer;
+    private UIRenderBuffer uiRenderBuffer;
 
     private SpriteBatch spriteBatch;
     private RenderTarget2D renderTarget;
@@ -63,6 +62,8 @@ public sealed class RenderingSystem : Workspace.Service
 
     private bool changedResolution = false;
     private bool changedFullscreen = false;
+
+    private List<ImmediateRenderer> immediateRenderers;
 
     public bool IsFullScreen => graphics.IsFullScreen;
 
@@ -89,10 +90,6 @@ public sealed class RenderingSystem : Workspace.Service
 
     internal SpriteBatch SpriteBatch => spriteBatch;
 
-    //TODO : add a way to create ImmediateRenderers
-
-    List<ImmediateRenderer> immediateRenderers;
-
     internal void Initialize()
     {
         spriteBatch = new SpriteBatch(GraphicsDevice);
@@ -103,12 +100,6 @@ public sealed class RenderingSystem : Workspace.Service
 
         worldRenderer = new WorldRenderer();
         immediateRenderers.Add(worldRenderer);
-
-        if(Settings.Debug)
-        {
-            systemDebugRenderer = new SystemDebugRenderer(main, main.CoreThread);
-            immediateRenderers.Add(systemDebugRenderer);
-        }
     }
 
     internal void NewFrame(float partialTick)

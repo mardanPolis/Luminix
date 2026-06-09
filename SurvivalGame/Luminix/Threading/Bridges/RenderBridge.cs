@@ -2,20 +2,29 @@ using Luminix.Threading.Buffers;
 
 namespace Luminix.Threading.Bridges;
 
-internal class RenderBridge
+internal interface IRenderBridge
 {
-    private volatile RenderBuffer writeBuffer = null;
-    private volatile RenderBuffer currReadBuffer = null;
-    private volatile RenderBuffer prevReadBuffer = null;
+    RenderBuffer WriteBuffer { get; }
+    RenderBuffer ReadBuffer { get; }
 
-    public RenderBuffer CurrentWriteBuffer => writeBuffer;
-    public RenderBuffer CurrentReadBuffer => currReadBuffer;
+    RenderBuffer CreateBuffer();
+    void SwapBuffers();
+}
 
-    public volatile bool WindowActive = true;
+internal sealed class RenderBridge<T> : IRenderBridge where T : RenderBuffer, new()
+{
+    private volatile T writeBuffer = null;
+    private volatile T currReadBuffer = null;
+    private volatile T prevReadBuffer = null;
+
+    public RenderBuffer WriteBuffer => writeBuffer;
+    public RenderBuffer ReadBuffer => currReadBuffer;
+    public T CurrentWriteBuffer => writeBuffer;
+    public T CurrentReadBuffer => currReadBuffer;
 
     public RenderBuffer CreateBuffer()
     {
-        writeBuffer = new RenderBuffer();
+        writeBuffer = new T();
         return writeBuffer;
     }
 
@@ -26,4 +35,4 @@ internal class RenderBridge
         writeBuffer = prevReadBuffer;
         prevReadBuffer = temp;
     }
-}
+} 

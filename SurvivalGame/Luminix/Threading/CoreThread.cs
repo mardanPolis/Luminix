@@ -10,21 +10,22 @@ using Luminix.IO;
 using Luminix.Resources;
 using Luminix.Resources.AssetHandlers;
 using Luminix.Threading.Bridges;
-using Luminix.Threading.Buffers;
 using Game.Simulation;
+using Luminix.Threading.Buffers;
 
 namespace Luminix.Threading;
 
 public sealed class CoreThread : TickedThread
 {
-    internal CoreThread(InputBridge inputBridge, ResourceBridge resourceBridge, RenderBridge renderBridge, AssetBridge assetBridge, int workerThreadCount) : base(60)
+    internal CoreThread(IRenderBridge[] renderBridges, AssetBridge assetBridge, InputBridge inputBridge, ResourceBridge resourceBridge, int workerThreadCount) : base(60)
     {   
         this.Name = "CoreThread";
         this.IsBackground = false;
         this.workerThreadCount = workerThreadCount;
 
+        this.worldRenderBridge = (RenderBridge<WorldRenderBuffer>)renderBridges[0];
+        this.uiRenderBridge = (RenderBridge<UIRenderBuffer>)renderBridges[1];
         this.inputBridge = inputBridge;
-        this.renderBridge = renderBridge;
         this.resourceBridge = resourceBridge;
         this.assetBridge = assetBridge;
     }
@@ -37,15 +38,16 @@ public sealed class CoreThread : TickedThread
 
     private int workerThreadCount;
 
+    private RenderBridge<WorldRenderBuffer> worldRenderBridge;
+    private RenderBridge<UIRenderBuffer> uiRenderBridge;
     private InputBridge inputBridge;
-    private RenderBridge renderBridge;
     private ResourceBridge resourceBridge;
     private AssetBridge assetBridge;
 
     private Universe universe;
+    private Universe.Controller universeController;
     private ResourceProvider resources;
     private TypeRegistry typeRegistry;
-    private Universe.Controller universeController;
     private Input input;
     private WorkerThreadPool workerThreadPool;
     private AssetIO assetIO;
@@ -94,6 +96,8 @@ public sealed class CoreThread : TickedThread
         debugKeyActions[5] = () => { logger.Wrn("Fullscreen not implemented!"); };           //F11
         debugKeyActions[6] = () => { logger.Wrn("Screenshot not implemented!"); };           //F12
 
+        IsBackground = false;
+
         //TODO : Remove
         circle = resources.GetResource<TextureResource>("circle");
 
@@ -103,15 +107,21 @@ public sealed class CoreThread : TickedThread
         
     }
 
-    protected sealed override void OnTick()
+    protected sealed override void DebugInitialize()
     {
-        Tick();
+        Initialize();
+
+    }
+
+    protected sealed override void Tick()
+    {
+        Update();
         Render();
     }
 
-    protected sealed override void OnDebugTick()
+    protected sealed override void DebugTick()
     {
-        Tick();
+        Update();
         long updateTime = CurrentElapsedTicks;
         Render();
         long renderTime = CurrentElapsedTicks;
@@ -124,9 +134,10 @@ public sealed class CoreThread : TickedThread
         Interlocked.Exchange(ref tickRenderTime, elapsedRenderTime.TotalMicroseconds);
     }
 
-    private void Tick()
+    private void Update()
     {
-        renderBridge.SwapBuffers();
+        worldRenderBridge.SwapBuffers();
+        uiRenderBridge.SwapBuffers();
 
         input.ReadFrom(inputBridge.ReadBuffer);
         inputBridge.Swap();
@@ -140,8 +151,8 @@ public sealed class CoreThread : TickedThread
         }
 
         universeController.TickRate = TickRate;
-        universeController.DeltaTime = UnsafeTickDeltaTime;
-        universeController.TickCount = UnsafeTickCount;
+        universeController.DeltaTime = TickDeltaTime;
+        universeController.TickCount = TickCount;
 
         universe.World?.Tick();
     }
@@ -150,11 +161,13 @@ public sealed class CoreThread : TickedThread
 
     private void Render()
     {
-        var RenderBuffer = renderBridge.CurrentWriteBuffer ?? renderBridge.CreateBuffer();
-        RenderBuffer.Reset();
-        RenderBuffer.Set(universe.World?.MainCamera);
-        RenderBuffer.PushSprite(circle, Vector3.Zero, Vector2.One, 0);
-        RenderBuffer.PushSprite(circle, new Vector3(1, 2, 0), Vector2.One, rot += 0.5f);
+        var worldRenderBuffer = worldRenderBridge.CurrentWriteBuffer ?? (WorldRenderBuffer)worldRenderBridge.CreateBuffer();
+        worldRenderBuffer.Reset();
+        worldRenderBuffer.Set(universe.World?.MainCamera);
+        worldRenderBuffer.PushSprite(circle, Vector3.Zero, Vector2.One, 0);
+        worldRenderBuffer.PushSprite(circle, new Vector3(1, 2, 0), Vector2.One, rot += 0.5f);
+
+        var uiRenderBuffer = uiRenderBridge.CurrentWriteBuffer ?? (UIRenderBuffer)uiRenderBridge.CreateBuffer();
     }
 
     private void LoadBootAssets(AssetLoadingHandler assetLoadingHandler)

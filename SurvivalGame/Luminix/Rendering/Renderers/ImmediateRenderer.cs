@@ -34,6 +34,5 @@ public abstract class ImmediateRenderer
     protected readonly FontResource    defaultFontRegular;
 
     public virtual void Render() {}
-
     public virtual void UnscaledRender() {}
 }

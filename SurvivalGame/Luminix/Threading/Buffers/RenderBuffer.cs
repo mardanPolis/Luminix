@@ -1,15 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
-using Luminix.Identifiers;
-using Luminix.Rendering.RenderInstances;
 using Luminix.Resources;
-using Luminix.Simulation;
-using Microsoft.Xna.Framework;
 
 namespace Luminix.Threading.Buffers;
 
-internal sealed class RenderBuffer
+internal abstract class RenderBuffer
 {
     public enum RenderObjectType : byte
     {
@@ -19,123 +15,26 @@ internal sealed class RenderBuffer
         TextInterpolated,
     }
 
-    public readonly record struct RenderGroup(Vector2 topLeft, Vector2 btmRight);
-    public readonly record struct RenderCommand(ulong SortKey, RenderObjectType type, int DataIndex) : IComparable<RenderCommand>
+    public readonly record struct RenderCommand(ulong SortKey, RenderObjectType Type, int DataIndex) : IComparable<RenderCommand>
     {
         public int CompareTo(RenderCommand other) => SortKey.CompareTo(other.SortKey);
     }
     
     public RenderBuffer()
     {
-        instanceSprites = new(2560);
-        instanceTexts = new(128);
-        interpolatedInstanceSprites = new(2560);
-        interpolatedInstanceTexts = new(128);
-
-        renderCommands = new(instanceSprites.Count + instanceTexts.Count + interpolatedInstanceSprites.Count + interpolatedInstanceTexts.Count);
+        renderCommands = new(4096);
     }
 
     private bool sorted;
 
-    private Camera.Data? cameraData;
-
-    private readonly List<InstanceSprite>  instanceSprites;
-    private readonly List<InstanceText>    instanceTexts;
- 
-    private readonly List<InterpolatedInstanceSprite>  interpolatedInstanceSprites;
-    private readonly List<InterpolatedInstanceText>    interpolatedInstanceTexts;
- 
     private readonly List<RenderCommand> renderCommands;
-    private readonly List<RenderGroup>   renderGroups   = new(1024);
-
-    public void Set(Camera camera)
-    {
-        cameraData = camera?.GetCameraSnapshot();
-    }
-
-    public void PushSprite(TextureResource texture, Vector3 position, Vector2 size, float rotation)
-    {
-        ulong key = BuildSpriteKey(texture);
- 
-        int dataIndex = instanceSprites.Count;
-        instanceSprites.Add(new InstanceSprite(null, texture, position, size, rotation));
-        renderCommands.Add(new RenderCommand(key, RenderObjectType.SpriteNonInterpolated, dataIndex));
-    }
-    
-    public void PushSprite(ShaderResource shader, TextureResource texture, Vector3 position, Vector2 size, float rotation)
-    {
-        ulong key = BuildSpriteKey(shader, texture);
- 
-        int dataIndex = instanceSprites.Count;
-        instanceSprites.Add(new InstanceSprite(shader, texture, position, size, rotation));
-        renderCommands.Add(new RenderCommand(key, RenderObjectType.SpriteNonInterpolated, dataIndex));
-    }
-
-    public void PushText(FontResource font, string text, Vector3 position, Vector2 size, float rotation)
-    {
-        uint key = BuildFontKey(font);
- 
-        int dataIndex = instanceTexts.Count;
-        instanceTexts.Add(new InstanceText(font, text, position, size, rotation));
-        renderCommands.Add(new RenderCommand(key, RenderObjectType.SpriteNonInterpolated, dataIndex));
-    }
-
-    public void PushInterpolatedSprite(TextureResource texture, Vector3 position0, Vector3 position, Vector2 size0, Vector2 size, float rotation0, float rotation)
-    {
-        ulong key = BuildSpriteKey(texture);
- 
-        int dataIndex = interpolatedInstanceSprites.Count;
-        interpolatedInstanceSprites.Add(new InterpolatedInstanceSprite(null, texture, position0, position, size0, size, rotation0, rotation));
-        renderCommands.Add(new RenderCommand(key, RenderObjectType.SpriteNonInterpolated, dataIndex));
-    }
-
-    public void PushInterpolatedSprite(ShaderResource shader, TextureResource texture, Vector3 position0, Vector3 position, Vector2 size0, Vector2 size, float rotation0, float rotation)
-    {
-        ulong key = BuildSpriteKey(shader, texture);
- 
-        int dataIndex = interpolatedInstanceSprites.Count;
-        interpolatedInstanceSprites.Add(new InterpolatedInstanceSprite(shader, texture, position0, position, size0, size, rotation0, rotation));
-        renderCommands.Add(new RenderCommand(key, RenderObjectType.SpriteNonInterpolated, dataIndex));
-    }
-
-    public void PushInterpolatedText(FontResource font, string text, Vector3 position0, Vector3 position, Vector2 size0, Vector2 size, float rotation0, float rotation)
-    {
-        uint key = BuildFontKey(font);
- 
-        int dataIndex = interpolatedInstanceTexts.Count;
-        interpolatedInstanceTexts.Add(new InterpolatedInstanceText(font, text, position0, position, size0, size, rotation0, rotation));
-        renderCommands.Add(new RenderCommand(key, RenderObjectType.SpriteNonInterpolated, dataIndex));
-    }
-
-
-    //TODO : Add RenderGroups, NonInterpolated only.
-    public void PushSpriteGroup()
-    {
-        
-    }
-
-    //TODO : Add PushBatch, batched sprites only.
-
-    public Camera.Data? GetCameraData()
-        => cameraData;
-
     public ReadOnlySpan<RenderCommand> GetRenderCommands() 
         => System.Runtime.InteropServices.CollectionsMarshal.AsSpan(renderCommands);
 
-    public ReadOnlySpan<InstanceSprite> GetSprites() 
-        => System.Runtime.InteropServices.CollectionsMarshal.AsSpan(instanceSprites);
-
-    public ReadOnlySpan<InstanceText> GetTexts() 
-        => System.Runtime.InteropServices.CollectionsMarshal.AsSpan(instanceTexts);
-
-    public ReadOnlySpan<InterpolatedInstanceSprite> GetInterpolatedSprites() 
-        => System.Runtime.InteropServices.CollectionsMarshal.AsSpan(interpolatedInstanceSprites);
-
-    public ReadOnlySpan<InterpolatedInstanceText> GetInterpolatedTexts() 
-        => System.Runtime.InteropServices.CollectionsMarshal.AsSpan(interpolatedInstanceTexts);
-
-    public ReadOnlySpan<RenderGroup> GetGroups() 
-        => System.Runtime.InteropServices.CollectionsMarshal.AsSpan(renderGroups);
+    protected void NewCommand(ulong SortKey, RenderObjectType Type, int DataIndex)
+    {
+        renderCommands.Add(new RenderCommand(SortKey, Type, DataIndex));
+    }
 
     public void Sort()
     {
@@ -148,27 +47,20 @@ internal sealed class RenderBuffer
         sorted = true;
     }
 
-    public void Reset()
+    public virtual void Reset()
     {
         sorted = false;
-
-        instanceSprites.Clear();
-        instanceTexts.Clear();
-        interpolatedInstanceSprites.Clear();
-        interpolatedInstanceTexts.Clear();
-
         renderCommands.Clear();
-        renderGroups.Clear();
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static ulong BuildSpriteKey(TextureResource texture)
+    protected static ulong BuildSpriteKey(TextureResource texture)
     {
         return (ulong)RuntimeHelpers.GetHashCode(texture?.Source);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static ulong BuildSpriteKey(ShaderResource shader, TextureResource texture)
+    protected static ulong BuildSpriteKey(ShaderResource shader, TextureResource texture)
     {
         int shaderHash = RuntimeHelpers.GetHashCode(shader?.Source);
         int textureHash = RuntimeHelpers.GetHashCode(texture?.Source);
@@ -181,7 +73,7 @@ internal sealed class RenderBuffer
     }
  
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static uint BuildFontKey(FontResource font)
+    protected static uint BuildFontKey(FontResource font)
     {
         return (uint)RuntimeHelpers.GetHashCode(font.Source);
     }

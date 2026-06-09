@@ -65,14 +65,14 @@ internal sealed class WorldRenderer : ImmediateRenderer
 
     private GraphicsDevice device;
 
-    private RenderBuffer renderBuffer;
+    private WorldRenderBuffer renderBuffer;
 
     private float partialTick;
 
 
     private readonly HashSet<int> frustumCulledGroups = new();
 
-    public void SetData(RenderBuffer buffer, float partialTick)
+    public void SetData(WorldRenderBuffer buffer, float partialTick)
     {
         this.renderBuffer = buffer;
         this.partialTick = partialTick;
@@ -124,7 +124,7 @@ internal sealed class WorldRenderer : ImmediateRenderer
             for (commandIndex = 0; commandIndex < commandCount; commandIndex++, instanceIndex++)
             {
                 var command         = commands[commandIndex];
-                var commandDataType = command.type;
+                var commandDataType = command.Type;
                 var commandDataIndex = command.DataIndex;
 
                 switch (commandDataType)

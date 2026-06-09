@@ -15,6 +15,7 @@ using Luminix.Core.InputHandlers;
 using Luminix.Resources.AssetHandlers;
 using Luminix.IO;
 using Luminix.Resources.BuiltIn;
+using Luminix.Threading.Buffers;
 
 namespace Luminix;
 public class Main : Microsoft.Xna.Framework.Game
@@ -53,8 +54,6 @@ public class Main : Microsoft.Xna.Framework.Game
         settingsController.MinWorkerThreadCount = 2;
         settingsController.MaxWorkerThreadCount = 5;
 
-        var displayMode = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode;
-
         stopwatch = Stopwatch.StartNew();
         graphics = new GraphicsDeviceManager(this);
         graphics.SynchronizeWithVerticalRetrace = true;
@@ -67,54 +66,40 @@ public class Main : Microsoft.Xna.Framework.Game
         resourceManager = new ResourceManager(this);
         IsMouseVisible = true;
 
-        inputBridges = new InputBridge[2];
-        renderBridges = new RenderBridge[2];
-        resourceBridges = new ResourceBridge[2];
+        renderBridges = new IRenderBridge[2];
 
         //initialize threads
-        {   //CoreThread
-            coreAssetBridge = new AssetBridge();
+        {
+            coreRenderBridge = new RenderBridge<WorldRenderBuffer>();
             coreInputBridge = new InputBridge();
-            coreRenderBridge = new RenderBridge();
             coreResourceBridge = new ResourceBridge();
+            coreAssetBridge = new AssetBridge();
+
+            uiRenderBridge = new RenderBridge<UIRenderBuffer>();
+
+            renderBridges[0] = coreRenderBridge;
+            renderBridges[1] = uiRenderBridge;
 
             int workerThreadCount = Math.Max(Settings.MinWorkerThreadCount, Environment.ProcessorCount - 2);
-            coreThread = new CoreThread(coreInputBridge, coreResourceBridge, coreRenderBridge, coreAssetBridge, workerThreadCount);
+            coreThread = new CoreThread(renderBridges, coreAssetBridge, coreInputBridge, coreResourceBridge, workerThreadCount);
 
-            inputBridges[0] = coreInputBridge;
-            renderBridges[0] = coreRenderBridge;
-            resourceBridges[0] = coreResourceBridge;
         }
-        {   //UIThread
-            uiInputBridge = new InputBridge();
-            uiRenderBridge = new RenderBridge();
-            uiResourceBridge = new ResourceBridge();
-
-            //TODO : UI thread initialization
-
-            inputBridges[1] = uiInputBridge;
-            renderBridges[1] = uiRenderBridge;
-            resourceBridges[1] = uiResourceBridge;
-        }
-
         //starting threads
         coreThread.Start();
     }
 
     //Bridges
-    private InputBridge[] inputBridges;
-    private RenderBridge[] renderBridges;
-    private ResourceBridge[] resourceBridges;
+    private IRenderBridge[] renderBridges;
 
     //Core Bridges
-    private AssetBridge coreAssetBridge;
+    private RenderBridge<WorldRenderBuffer> coreRenderBridge;
     private InputBridge coreInputBridge;
-    private RenderBridge coreRenderBridge;
     private ResourceBridge coreResourceBridge;
+    private AssetBridge coreAssetBridge;
 
     //UI bridges
+    private RenderBridge<UIRenderBuffer> uiRenderBridge;
     private InputBridge uiInputBridge;
-    private RenderBridge uiRenderBridge;
     private ResourceBridge uiResourceBridge;
 
     //RenderThread
@@ -176,8 +161,8 @@ public class Main : Microsoft.Xna.Framework.Game
             renderingSystem = new RenderingSystem(this, renderBridges);
 
             //handlers
-            inputHandler = new InputHandler(inputBridges);
-            assetRegistrationHandler = new AssetRegistrationHandler(coreAssetBridge, resourceBridges, resourceManager);
+            inputHandler = new InputHandler(coreInputBridge);
+            assetRegistrationHandler = new AssetRegistrationHandler(coreAssetBridge, coreResourceBridge, resourceManager);
             
             //threads
             coreThread.Priority = ThreadPriority.AboveNormal;
@@ -234,9 +219,8 @@ public class Main : Microsoft.Xna.Framework.Game
         inputHandler.Update(IsActive);
         assetRegistrationHandler.Run();
 
-        coreRenderBridge.WindowActive = IsActive;
-        uiRenderBridge.WindowActive = IsActive;
-
+        //TODO : add render settings and so on able to be access from other threads
+    
         var windowPos = Window.ClientBounds.Location;
         if(windowPos != windowPosition)
             OnWindowMove(windowPos);

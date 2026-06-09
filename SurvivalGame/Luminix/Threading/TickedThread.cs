@@ -8,11 +8,6 @@ namespace Luminix.Threading;
 public class TickedThread : BaseThread
 {
     //constructor
-    public TickedThread(Action init, Action update, uint tickRate = 60)
-    {
-        TickRate = tickRate;
-        threadAction = GetThreadAction(init, update);
-    }
     protected TickedThread(uint tickRate = 60) : base()
     {
         TickRate = tickRate;
@@ -22,59 +17,49 @@ public class TickedThread : BaseThread
     private Stopwatch stopwatch;
     private Stopwatch internalStopwatch;
 
+    private uint tickRate = 0;
     private long tickCount = 0;
     private long tickIntervalInTicks = 0;
     private long lastTickDate = 0;
     private double deltaTime = 0;
 
-    protected long TickIntervalInTicks => tickIntervalInTicks;
-    protected long CurrentElapsedTicks => internalStopwatch.ElapsedTicks;
-
-    public uint TickRate
-    {
-        get => (uint)(Stopwatch.Frequency / tickIntervalInTicks);
-        set => tickIntervalInTicks = (uint)(Stopwatch.Frequency / value);
-    }
-
-    protected long UnsafeTickCount => tickCount;
-    protected double UnsafeTickDeltaTime => deltaTime;
-
-    public long TickCount => Volatile.Read(ref tickCount);
-    public double TickDeltaTime => Volatile.Read(ref deltaTime);
-    public float PartialTick => (float)(stopwatch.ElapsedTicks - Volatile.Read(ref lastTickDate)) / tickIntervalInTicks;
-
-
-    private long initAllocated = 0;
     private long allocated = 0;
     private double tickTime = 0;
     private double[] tickTimesBuffer1 = new double[128];
     private double[] tickTimesBuffer2 = new double[128];
 
-    public long TickAllocatedAmount => Volatile.Read(ref allocated);
-    public double TickTime => Volatile.Read(ref tickTime);
-    public double[] TickTimes => tickTimesBuffer1;
+    protected long TickIntervalInTicks => tickIntervalInTicks;
+    protected long CurrentElapsedTicks => internalStopwatch.ElapsedTicks;
+
+    protected long TickCount => tickCount;
+    protected double TickDeltaTime => deltaTime;
+    
+    protected long TickAllocatedAmount => allocated;
+    protected double TickTime => tickTime;
+    protected double[] TickTimes => tickTimesBuffer1;
+
+    public uint TickRate
+    {
+        get { return Volatile.Read(ref tickRate); }
+        set { Volatile.Write(ref tickRate, tickRate); Interlocked.Exchange(ref tickIntervalInTicks, (uint)(Stopwatch.Frequency / value)); }
+    }
+    public float PartialTick => (float)(stopwatch.ElapsedTicks - Volatile.Read(ref lastTickDate)) / tickIntervalInTicks;
 
     protected virtual void Initialize() {}
-    protected virtual void OnTick() {}
-    protected virtual void OnDebugTick() {}
+    protected virtual void Tick() {}
 
-    private Action GetThreadAction(Action init, Action update)
-    {
-        if(Settings.Debug)
-            return DebugThreadAction(init, update);
-        else
-            return ThreadAction(init, update);
-    }
+    protected virtual void DebugInitialize() {}
+    protected virtual void DebugTick() {}
 
     private Action GetThreadAction()
     {
         if(Settings.Debug)
-            return DebugThreadAction(Initialize, OnDebugTick);
+            return DebugThreadAction();
         else
-            return ThreadAction(Initialize, OnTick);
+            return ThreadAction();
     }
 
-    private Action DebugThreadAction(Action init, Action update)
+    private Action DebugThreadAction()
     {
         return () =>
         {
@@ -86,16 +71,14 @@ public class TickedThread : BaseThread
             
             startBytes = GC.GetAllocatedBytesForCurrentThread();
 
-            init();
-
+            DebugInitialize();
+            
             endBytes = GC.GetAllocatedBytesForCurrentThread();
 
             Interlocked.Exchange(ref allocated, endBytes - startBytes);
 
             logger.Log($"{Name} initialized in {stopwatch.Elapsed.Milliseconds}ms");
             logger.Log($"{Name} allocated {allocated / 1024.0:F2} KB ({allocated:N0} bytes during initialization!");
-
-            initAllocated = endBytes;
 
             long nextTick = 0;
             int currentIndex = 0;
@@ -139,7 +122,7 @@ public class TickedThread : BaseThread
                 
                 internalStopwatch.Restart(); // NEW TICK
 
-                update();
+                DebugTick();
 
                 endBytes = GC.GetAllocatedBytesForCurrentThread();
 
@@ -151,11 +134,10 @@ public class TickedThread : BaseThread
 
                 currentIndex = Math.Clamp((int)(tickCount & 127), 0, tickTimesBuffer2.Length);
                 tickTimesBuffer2[currentIndex] = tickTime;
-
             }
         };
     }
-    private Action ThreadAction(Action init, Action update)
+    private Action ThreadAction()
     {
         return () =>
         {
@@ -167,7 +149,7 @@ public class TickedThread : BaseThread
             
             startBytes = GC.GetAllocatedBytesForCurrentThread();
 
-            init();
+            Initialize();
 
             endBytes = GC.GetAllocatedBytesForCurrentThread();
 
@@ -211,7 +193,7 @@ public class TickedThread : BaseThread
                 Interlocked.Exchange(ref deltaTime, internalStopwatch.Elapsed.TotalSeconds);
                 internalStopwatch.Restart();
 
-                update();
+                Tick();
             }
         };
     }

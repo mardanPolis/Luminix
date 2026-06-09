@@ -6,18 +6,18 @@ namespace Luminix.Core.InputHandlers;
 
 internal class InputHandler
 {
-    internal InputHandler(InputBridge[] inputBridges)
+    internal InputHandler(InputBridge inputBridge)
     {
         this.keyboardHandler = new KeyboardHandler();
         this.mouseHandler = new MouseHandler();
 
-        this.inputBridges = inputBridges;
+        this.inputBridge = inputBridge;
     }
 
     private KeyboardHandler keyboardHandler;
     private MouseHandler mouseHandler;
 
-    private InputBridge[] inputBridges;
+    private InputBridge inputBridge;
 
     public void Update(bool WindowActive)
     {
@@ -26,8 +26,7 @@ internal class InputHandler
             keyboardHandler.Update();
             mouseHandler.Update();
 
-            for(int i = 0; i < inputBridges.Length; i++)
-                inputBridges[i].WriteBuffer.Push(keyboardHandler.keyboardStates, mouseHandler.mousePosition, mouseHandler.mouseButtonStates);
+            inputBridge.WriteBuffer.Push(keyboardHandler.keyboardStates, mouseHandler.mousePosition, mouseHandler.mouseButtonStates);
         }
         else
         {
@@ -35,8 +34,7 @@ internal class InputHandler
 
             MouseState mouseState = Mouse.GetState();
             mouseHandler.MousePosition(ref mouseState);
-            for(int i = 0; i < inputBridges.Length; i++)
-                inputBridges[i].WriteBuffer.Push(keyboardHandler.keyboardStates, mouseHandler.mousePosition, 0);
+            inputBridge.WriteBuffer.Push(keyboardHandler.keyboardStates, mouseHandler.mousePosition, 0);
         }
     }
 }
