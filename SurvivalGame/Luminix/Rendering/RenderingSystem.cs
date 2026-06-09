@@ -2,7 +2,6 @@ using System;
 using System.Threading;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using Luminix.Workspaces;
 using Luminix.Resources;
 using Luminix.Simulation;
 using System.Collections.Generic;

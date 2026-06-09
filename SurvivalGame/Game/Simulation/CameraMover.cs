@@ -2,7 +2,6 @@ using System;
 using Microsoft.Xna.Framework.Input;
 using Luminix;
 using Luminix.Simulation;
-using Luminix.Workspaces;
 
 namespace Game.Simulation;
 

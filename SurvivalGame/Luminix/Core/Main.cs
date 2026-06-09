@@ -5,12 +5,10 @@ using System.Reflection;
 using System.Linq;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
-using Microsoft.Xna.Framework.Graphics;
 using Luminix.Rendering;
 using Luminix.Resources;
 using Luminix.Threading;
 using Luminix.Threading.Bridges;
-using Luminix.Workspaces;
 using Luminix.Core.InputHandlers;
 using Luminix.Resources.AssetHandlers;
 using Luminix.IO;
@@ -99,8 +97,6 @@ public class Main : Microsoft.Xna.Framework.Game
 
     //UI bridges
     private RenderBridge<UIRenderBuffer> uiRenderBridge;
-    private InputBridge uiInputBridge;
-    private ResourceBridge uiResourceBridge;
 
     //RenderThread
     private Thread mainThread = Thread.CurrentThread;

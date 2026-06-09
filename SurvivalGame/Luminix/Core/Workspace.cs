@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Threading;
 using Luminix.Threading;
 
-namespace Luminix.Workspaces;
+namespace Luminix;
 
 public sealed class Workspace
 {
@@ -33,19 +33,6 @@ public sealed class Workspace
         Stopped,
     }
 
-    public static string GetStateString(State value)
-    {
-        switch(value)
-        {
-            case State.Running:
-                return "Running";
-            case State.Initialize:
-                return "Initialize";
-            default:
-                return "Stopped";
-        }
-    }
-
     private static ThreadLocal<Workspace> instance = new ThreadLocal<Workspace>(true);
     public static Workspace Current => instance.Value;
 
@@ -73,6 +60,18 @@ public sealed class Workspace
         {
             Logger.Get().Err($"Critical failure creating workspace: {ex.Message}");
             return null; 
+        }
+    }
+    private static string GetStateString(State value)
+    {
+        switch(value)
+        {
+            case State.Running:
+                return "Running";
+            case State.Initialize:
+                return "Initialize";
+            default:
+                return "Stopped";
         }
     }
 

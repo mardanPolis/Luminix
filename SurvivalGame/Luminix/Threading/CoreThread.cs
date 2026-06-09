@@ -5,7 +5,6 @@ using System.Collections.Generic;
 using Microsoft.Xna.Framework.Input;
 using Microsoft.Xna.Framework;
 using Luminix.Simulation;
-using Luminix.Workspaces;
 using Luminix.IO;
 using Luminix.Resources;
 using Luminix.Resources.AssetHandlers;

@@ -1,5 +1,4 @@
 using Luminix.Resources;
-using Luminix.Workspaces;
 using Microsoft.Xna.Framework.Graphics;
 
 namespace Luminix.Rendering;

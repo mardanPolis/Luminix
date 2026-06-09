@@ -1,5 +1,3 @@
-using Luminix.Workspaces;
-
 namespace Luminix.Simulation;
 
 public abstract class WorldComponent

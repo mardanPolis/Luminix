@@ -1,6 +1,5 @@
 using System;
 using Microsoft.Xna.Framework;
-using Luminix.Workspaces;
 using Luminix.Collections;
 
 namespace Luminix.Simulation;

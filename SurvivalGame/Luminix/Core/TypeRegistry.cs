@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using Luminix.RegistryBuilders;
-using Luminix.Workspaces;
 
 namespace Luminix;
 

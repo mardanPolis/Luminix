@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Numerics;
 using Microsoft.Xna.Framework.Graphics;
 using Luminix.Threading;
-using Luminix.Workspaces;
 using Game.Simulation;
 
 namespace Luminix.Simulation;
