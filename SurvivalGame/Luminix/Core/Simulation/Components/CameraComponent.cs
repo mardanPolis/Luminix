@@ -1,4 +1,4 @@
-namespace Luminix.Simulation;
+namespace Luminix;
 
 public class CameraComponent
 {

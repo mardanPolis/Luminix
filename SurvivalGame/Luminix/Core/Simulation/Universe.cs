@@ -1,11 +1,9 @@
 using System;
 using System.Collections.Generic;
-using System.Numerics;
 using Microsoft.Xna.Framework.Graphics;
-using Luminix.Threading;
 using Game.Simulation;
 
-namespace Luminix.Simulation;
+namespace Luminix;
 
 public sealed class Universe : Workspace.Service
 {

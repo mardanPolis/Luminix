@@ -2,7 +2,7 @@ using System;
 using Microsoft.Xna.Framework;
 using Luminix.Collections;
 
-namespace Luminix.Simulation;
+namespace Luminix;
 
 public class Camera
 {

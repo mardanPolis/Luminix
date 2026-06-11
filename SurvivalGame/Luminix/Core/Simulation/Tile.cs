@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using Luminix.Identifiers;
 
-namespace SurvivalGame.Verse.Simulation;
+namespace Luminix;
 
 public sealed class Tile(string typeName, ID textureID, short movabilityCost, short supportLevel, Dictionary<string, int> intVariables, Dictionary<string, Tag> tags)
 {

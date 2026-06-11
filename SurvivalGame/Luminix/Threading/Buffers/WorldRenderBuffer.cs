@@ -36,57 +36,57 @@ internal sealed class WorldRenderBuffer : RenderBuffer
         cameraData = camera?.GetCameraSnapshot();
     }
 
-    public void PushSprite(TextureResource texture, Vector3 position, Vector2 size, float rotation)
+    public void PushSprite(TextureResource texture, Vector3 position, Vector2 scale, float rotation)
     {
         ulong key = BuildSpriteKey(texture);
  
         int dataIndex = instanceSprites.Count;
-        instanceSprites.Add(new InstanceSprite(null, texture, position, size, rotation));
+        instanceSprites.Add(new InstanceSprite(null, texture, position, scale, rotation));
         NewCommand(key, RenderObjectType.SpriteNonInterpolated, dataIndex);
     }
     
-    public void PushSprite(ShaderResource shader, TextureResource texture, Vector3 position, Vector2 size, float rotation)
+    public void PushSprite(ShaderResource shader, TextureResource texture, Vector3 position, Vector2 scale, float rotation)
     {
         ulong key = BuildSpriteKey(shader, texture);
  
         int dataIndex = instanceSprites.Count;
-        instanceSprites.Add(new InstanceSprite(shader, texture, position, size, rotation));
+        instanceSprites.Add(new InstanceSprite(shader, texture, position, scale, rotation));
         NewCommand(key, RenderObjectType.SpriteNonInterpolated, dataIndex);
     }
 
-    public void PushText(FontResource font, string text, Vector3 position, Vector2 size, float rotation)
+    public void PushText(FontResource font, string text, Vector3 position, Vector2 scale, float rotation)
     {
         uint key = BuildFontKey(font);
  
         int dataIndex = instanceTexts.Count;
-        instanceTexts.Add(new InstanceText(font, text, position, size, rotation));
+        instanceTexts.Add(new InstanceText(font, text, position, scale, rotation));
         NewCommand(key, RenderObjectType.TextNonInterpolated, dataIndex);
     }
 
-    public void PushInterpolatedSprite(TextureResource texture, Vector3 position0, Vector3 position, Vector2 size0, Vector2 size, float rotation0, float rotation)
+    public void PushInterpolatedSprite(TextureResource texture, Vector3 position0, Vector3 position, Vector2 scale0, Vector2 scale, float rotation0, float rotation)
     {
         ulong key = BuildSpriteKey(texture);
  
         int dataIndex = interpolatedInstanceSprites.Count;
-        interpolatedInstanceSprites.Add(new InterpolatedInstanceSprite(null, texture, position0, position, size0, size, rotation0, rotation));
+        interpolatedInstanceSprites.Add(new InterpolatedInstanceSprite(null, texture, position0, position, scale0, scale, rotation0, rotation));
         NewCommand(key, RenderObjectType.SpriteInterpolated, dataIndex);
     }
 
-    public void PushInterpolatedSprite(ShaderResource shader, TextureResource texture, Vector3 position0, Vector3 position, Vector2 size0, Vector2 size, float rotation0, float rotation)
+    public void PushInterpolatedSprite(ShaderResource shader, TextureResource texture, Vector3 position0, Vector3 position, Vector2 scale0, Vector2 scale, float rotation0, float rotation)
     {
         ulong key = BuildSpriteKey(shader, texture);
  
         int dataIndex = interpolatedInstanceSprites.Count;
-        interpolatedInstanceSprites.Add(new InterpolatedInstanceSprite(shader, texture, position0, position, size0, size, rotation0, rotation));
+        interpolatedInstanceSprites.Add(new InterpolatedInstanceSprite(shader, texture, position0, position, scale0, scale, rotation0, rotation));
         NewCommand(key, RenderObjectType.SpriteInterpolated, dataIndex);
     }
 
-    public void PushInterpolatedText(FontResource font, string text, Vector3 position0, Vector3 position, Vector2 size0, Vector2 size, float rotation0, float rotation)
+    public void PushInterpolatedText(FontResource font, string text, Vector3 position0, Vector3 position, Vector2 scale0, Vector2 scale, float rotation0, float rotation)
     {
         uint key = BuildFontKey(font);
  
         int dataIndex = interpolatedInstanceTexts.Count;
-        interpolatedInstanceTexts.Add(new InterpolatedInstanceText(font, text, position0, position, size0, size, rotation0, rotation));
+        interpolatedInstanceTexts.Add(new InterpolatedInstanceText(font, text, position0, position, scale0, scale, rotation0, rotation));
         NewCommand(key, RenderObjectType.TextInterpolated, dataIndex);
     }
 
