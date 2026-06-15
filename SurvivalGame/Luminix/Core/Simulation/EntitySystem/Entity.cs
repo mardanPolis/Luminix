@@ -4,43 +4,66 @@ using System;
 
 namespace Luminix;
 
-public struct Entity : IEquatable<Entity>
+public struct Entity
 {
-    public ID ID { get; }
-    public Variant Variant { get; }
-    public bool Enabled { get; set; }
-    public Transform Transform { get; set; }
-
-    //TODO : finish methods Create, GetTransform, Delete and Component Methods
-    public static ID Create(Variant variant)
+    public readonly record struct Type : IEquatable<Type>
     {
-        throw new NotImplementedException(nameof(Create));
+        private readonly uint value;
+
+        public Type(uint value)
+        {
+            this.value = value;
+        }
+
+        public uint Value => value;
+
+        public bool Equals(Type other) => value == other.value;
+
+        public override int GetHashCode() => (int)value;
+
+        public override string ToString() => $"[Type:{value}]";
     }
 
-    public static Transform GetTransform(ID entityID)
+    internal Entity(ID iD)
     {
-        throw new NotImplementedException(nameof(GetTransform));
+        ID = iD;
+    }
+
+    public ID ID { get; }
+    public bool Enabled { get; set; }
+
+    private static World world;
+
+    internal static void SetWorld(World world)
+    {
+        Entity.world = world;
+    }
+
+    internal static void RemWorld()
+    {
+        Entity.world = null;
     }
 
     public static bool HasComponent<T>(ID entityID) where T : struct
     {
-        throw new NotImplementedException(nameof(HasComponent));
+        return world.EntityHasComponent<T>(entityID);
     }
 
-    public static bool TryGetComponent<T>(ID entityID, out T _component) where T : struct
+    public static ref T GetComponent<T>(ID entityID) where T : struct
     {
-        throw new NotImplementedException(nameof(TryGetComponent));
+        return ref world.GetEntityComponent<T>(entityID);
+    }
+
+    public static ID Create(Entity.Type type)
+    {
+        return world.CreateEntity(type);
     }
 
     public static void Destroy(ID entityID)
     {
-        throw new NotImplementedException(nameof(Destroy));
+        world.DestroyEntity(entityID);
     }
 
-    public bool Equals(Entity other)
-    {
-        return ID.Value == other.ID.Value;
-    }
     public override int GetHashCode()
     {
         return ID.GetHashCode();

@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using Luminix.Rendering.RenderInstances;
 using Luminix.Resources;
-using Luminix.Simulation;
 using Microsoft.Xna.Framework;
 
 namespace Luminix.Threading.Buffers;

@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using Luminix.Collections;
 using Luminix.Identifiers;
@@ -14,47 +13,73 @@ public abstract class World
         this.logger = Logger.Get();
         this.worldCameras  = [];
 
-        this.entityIndexes = [];
-        this.entities      = new Entity[128];
-
         this.lastEntityID = 0;
         this.entityCount  = 0;
     }
     public readonly string Name;
     public Camera MainCamera { get; set; }
 
+    public int EntityCount => entityCount;
+
     protected readonly Logger logger;
     protected readonly DenseList<Camera> worldCameras;
 
+    private Dictionary<ID, (uint entry, int index)> entityLocations;
+    private TypeEntry[] typeEntries;
 
-    private readonly Dictionary<ID, int> entityIndexes;
-    private readonly Entity[] entities;
+    private int lastEntityID;
+    private int entityCount;
 
-    private uint lastEntityID;
-    private uint entityCount;
-
-    internal void CreateEntity(Variant variant)
+    public ID CreateEntity(Entity.Type type)
     {
-        var ID = new ID(lastEntityID++);
-        
-    }
+        entityCount++;
+        lastEntityID++;
 
-    internal void DestroyEntity(ID entityID)
-    {
-        if(!entityIndexes.TryGetValue(entityID, out int destroyedIndex))
-            return;
-
-        var lastIndex = entityCount - 1;
-
-        if (destroyedIndex != lastIndex)
+        if(type.Value >= typeEntries.Length)
         {
-            var lastEntity = entities[lastIndex];
-            entities[destroyedIndex] = lastEntity;
-            entityIndexes[lastEntity.ID] = destroyedIndex;
+            logger.Err($"Failed to create entity of {type}");
+            return new ID(0);
         }
 
-        entityIndexes.Remove(entityID);
-        entityCount--;
+        var id = (ID)lastEntityID;
+        var entryIndex = type.Value;
+        ref var typeEntry = ref typeEntries[entryIndex];
+
+        entityLocations.Add(id, (entryIndex, typeEntry.EntityCount));
+        typeEntry.CreateEntity(id);
+
+        return id;
+    }
+
+    public bool EntityExists(ID entityID)
+    {
+        return entityLocations.ContainsKey(entityID);
+    }
+
+    public bool EntityHasComponent<T>(ID entityID) where T : struct
+    {
+        if(!entityLocations.TryGetValue(entityID, out var entityLocation))
+            throw new KeyNotFoundException($"Entity with {entityID} not found!");
+        
+        return typeEntries[entityLocation.entry].HasComponent(typeof(T));
+    }
+
+    public ref T GetEntityComponent<T>(ID entityID) where T : struct
+    {
+        if(!entityLocations.TryGetValue(entityID, out var entityLocation))
+            throw new KeyNotFoundException($"Entity with {entityID} not found!");
+
+        return ref typeEntries[entityLocation.entry].GetEntityComponent<T>(entityLocation.index);
+    }
+
+    public void DestroyEntity(ID entityID)
+    {
+        if(!entityLocations.TryGetValue(entityID, out var entityLocation))
+            return;
+
+        ref TypeEntry typeEntry = ref typeEntries[entityLocation.entry];
+        typeEntry.DestroyEntity(entityLocation.index);
+        entityLocations.Remove(entityID);
     }
 
 
@@ -70,11 +95,6 @@ public abstract class World
         for(int i = 0; i < worldCameras.Count; i++)
         {
             worldCameras[i].Tick();
-        }
-
-        for(int i = 0; i < worldComponents.Count; i++)
-        {
-            worldComponents[i].Tick();
         }
 
         OnTick();

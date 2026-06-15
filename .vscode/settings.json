@@ -11,6 +11,8 @@
         "Rectpack",
         "rects",
         "Renderable",
-        "renderables"
+        "renderables",
+        "resizer",
+        "Resizers"
     ]
 }

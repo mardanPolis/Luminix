@@ -5,5 +5,4 @@ namespace Luminix;
 
 public abstract class EntitySystem
 {
-    
 }

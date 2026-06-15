@@ -4,7 +4,6 @@ using System.Threading;
 using System.Collections.Generic;
 using Microsoft.Xna.Framework.Input;
 using Microsoft.Xna.Framework;
-using Luminix.Simulation;
 using Luminix.IO;
 using Luminix.Resources;
 using Luminix.Resources.AssetHandlers;

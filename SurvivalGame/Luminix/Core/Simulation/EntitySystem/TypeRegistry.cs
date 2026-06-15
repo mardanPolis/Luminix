@@ -56,4 +56,14 @@ public sealed class TypeRegistry : Workspace.Service
 
         finalized = true;
     }
+
+    static Func<Array, int, Array> Resizer<T>() where T : struct
+    {
+        return (src, newSize) =>
+        {
+            T[] newArr = new T[newSize];
+            Array.Copy(src, newArr, Math.Min(src.Length, newSize));
+            return newArr;
+        };
+    }
 }
