@@ -9,6 +9,7 @@ internal interface IComponentContainer
     public void Resize(int newLength);
     public void Default(int index);
     public void Set(int index, int otherIndex);
+    public void Reset(int capacity);
 }
 
 internal class ComponentContainers<T> : IComponentContainer where T : struct
@@ -32,5 +33,9 @@ internal class ComponentContainers<T> : IComponentContainer where T : struct
     public void Set(int index, int otherIndex)
     {
         components[index] = components[otherIndex];
+    }
+    public void Reset(int capacity)
+    {
+        components = new T[capacity];
     }
 }

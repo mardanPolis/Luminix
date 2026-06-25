@@ -13,9 +13,20 @@ public abstract class World
         this.logger = Logger.Get();
         this.worldCameras  = [];
 
+        this.destroyedEntities = [];
+
         this.lastEntityID = 0;
         this.entityCount  = 0;
+
+        this.universe = Workspace.Current.GetService<Universe>();
+        this.typeRegistry = Workspace.Current.GetService<EntityTypeRegistry>();
+        this.entityTypes = typeRegistry.GetEntityTypes();
+        
     }
+    protected Universe universe;
+    protected EntityTypeRegistry typeRegistry;
+
+
     public readonly string Name;
     public Camera MainCamera { get; set; }
 
@@ -25,17 +36,19 @@ public abstract class World
     protected readonly DenseList<Camera> worldCameras;
 
     private Dictionary<ID, (uint entry, int index)> entityLocations;
-    private TypeEntry[] typeEntries;
+    private EntityType[] entityTypes;
+
+    private DenseList<(ID id, uint entry, int index)> destroyedEntities;
 
     private int lastEntityID;
     private int entityCount;
 
-    public ID CreateEntity(Entity.Type type)
+    public ID CreateEntity(Entity.TypeID type)
     {
         entityCount++;
         lastEntityID++;
 
-        if(type.Value >= typeEntries.Length)
+        if(type.Value >= entityTypes.Length)
         {
             logger.Err($"Failed to create entity of {type}");
             return new ID(0);
@@ -43,7 +56,7 @@ public abstract class World
 
         var id = (ID)lastEntityID;
         var entryIndex = type.Value;
-        ref var typeEntry = ref typeEntries[entryIndex];
+        ref var typeEntry = ref entityTypes[entryIndex];
 
         entityLocations.Add(id, (entryIndex, typeEntry.EntityCount));
         typeEntry.CreateEntity(id);
@@ -61,7 +74,7 @@ public abstract class World
         if(!entityLocations.TryGetValue(entityID, out var entityLocation))
             throw new KeyNotFoundException($"Entity with {entityID} not found!");
         
-        return typeEntries[entityLocation.entry].HasComponent(typeof(T));
+        return entityTypes[entityLocation.entry].HasComponent(typeof(T));
     }
 
     public ref T GetEntityComponent<T>(ID entityID) where T : struct
@@ -69,25 +82,33 @@ public abstract class World
         if(!entityLocations.TryGetValue(entityID, out var entityLocation))
             throw new KeyNotFoundException($"Entity with {entityID} not found!");
 
-        return ref typeEntries[entityLocation.entry].GetEntityComponent<T>(entityLocation.index);
+        return ref entityTypes[entityLocation.entry].GetEntityComponent<T>(entityLocation.index);
     }
 
     public void DestroyEntity(ID entityID)
     {
         if(!entityLocations.TryGetValue(entityID, out var entityLocation))
             return;
-
-        ref TypeEntry typeEntry = ref typeEntries[entityLocation.entry];
-        typeEntry.DestroyEntity(entityLocation.index);
-        entityLocations.Remove(entityID);
+        
+        destroyedEntities.Add((entityID, entityLocation.entry, entityLocation.index));
     }
 
+    internal void CreateEntities()
+    {
+        
+    }
+    internal void DestroyEntities()
+    {
+        for(int i = 0; i < destroyedEntities.Count; i++)
+        {
+            var destroyedEntity = destroyedEntities[i];
+            ref EntityType typeEntry = ref entityTypes[destroyedEntity.entry];
+            typeEntry.DestroyEntity(destroyedEntity.index);
+            entityLocations.Remove(destroyedEntity.id);
+        }
 
-
-
-
-
-
+        destroyedEntities.Clear();
+    }
 
 
     public void Tick()
@@ -98,6 +119,13 @@ public abstract class World
         }
 
         OnTick();
+
+        for(int i = 0; i < entityTypes.Length; i++)
+        {
+            entityTypes[i].UpdateEntities();
+        }
+
+        DestroyEntities();
     }
 
     public virtual void OnTick()

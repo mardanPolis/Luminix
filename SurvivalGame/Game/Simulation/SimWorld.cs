@@ -1,7 +1,7 @@
 
-using Luminix.Simulation;
+using Luminix;
 
-namespace Game.Simulation;
+namespace Game;
 
 public class SimWorld : World
 {

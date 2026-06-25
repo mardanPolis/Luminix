@@ -45,7 +45,7 @@ public sealed class CoreThread : TickedThread
     private Universe universe;
     private Universe.Controller universeController;
     private ResourceProvider resources;
-    private TypeRegistry typeRegistry;
+    private EntityTypeRegistry entityTypeRegistry;
     private Input input;
     private WorkerThreadPool workerThreadPool;
     private AssetIO assetIO;
@@ -62,10 +62,10 @@ public sealed class CoreThread : TickedThread
         logger.Log($"Started initialization");
 
         Workspace.Create().SetSubState("bootstrap");
-        typeRegistry    = new TypeRegistry();
-        resources       = new ResourceProvider();
-        universe        = new Universe(out universeController);
-        input           = new Input();
+        entityTypeRegistry = new EntityTypeRegistry();
+        resources          = new ResourceProvider();
+        universe           = new Universe(out universeController);
+        input              = new Input();
         workerThreadPool = new WorkerThreadPool(workerThreadCount);
         assetIO          = new AssetIO();
 
@@ -75,6 +75,12 @@ public sealed class CoreThread : TickedThread
         var textureAtlasHandler = new TextureAssetAtlasHandler(workerThreadPool);
 
         var stopwatch = Stopwatch.StartNew();
+
+        
+
+        entityTypeRegistry.FinalizeRegistry();
+
+        stopwatch.Restart();
         LoadBootAssets(assetLoadingHandler);
         LoadAssets(assetLoadingHandler, textureAtlasHandler);
         logger.Log($"{Name} loaded assets in {stopwatch.Elapsed.Milliseconds}ms");

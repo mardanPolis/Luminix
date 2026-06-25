@@ -6,18 +6,18 @@ namespace Luminix;
 
 public struct Entity
 {
-    public readonly record struct Type : IEquatable<Type>
+    public readonly record struct TypeID : IEquatable<TypeID>
     {
         private readonly uint value;
 
-        public Type(uint value)
+        public TypeID(uint value)
         {
             this.value = value;
         }
 
         public uint Value => value;
 
-        public bool Equals(Type other) => value == other.value;
+        public bool Equals(TypeID other) => value == other.value;
 
         public override int GetHashCode() => (int)value;
 
@@ -54,7 +54,7 @@ public struct Entity
         return ref world.GetEntityComponent<T>(entityID);
     }
 
-    public static ID Create(Entity.Type type)
+    public static ID Create(Entity.TypeID type)
     {
         return world.CreateEntity(type);
     }

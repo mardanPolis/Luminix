@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Microsoft.Xna.Framework.Graphics;
-using Game.Simulation;
+using Game;
 
 namespace Luminix;
 
@@ -65,10 +65,5 @@ public sealed class Universe : Workspace.Service
             return World;
         }
         return null;
-    }
-
-    public void SaveWorld()
-    {
-        
     }
 }
