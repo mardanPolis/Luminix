@@ -21,7 +21,6 @@ public abstract class World
         this.universe = Workspace.Current.GetService<Universe>();
         this.typeRegistry = Workspace.Current.GetService<EntityTypeRegistry>();
         this.entityTypes = typeRegistry.GetEntityTypes();
-        
     }
     protected Universe universe;
     protected EntityTypeRegistry typeRegistry;

@@ -3,46 +3,11 @@ using Microsoft.Xna.Framework;
 
 namespace Luminix.Rendering.RenderInstances;
 
-internal readonly struct InstanceSprite(ShaderResource shader, TextureResource texture, Vector3 position, Vector2 scale, float rotation, int group = -1)
-{
-    public readonly ShaderResource Shader = shader;
-    public readonly TextureResource Texture = texture;
-    public readonly Vector3 Position = position;
-    public readonly Vector2 Scale = scale;
-    public readonly float Rotation = rotation;
-    public readonly int Group = group;
-}
+internal readonly record struct InstanceSprite(ShaderResource Shader, TextureResource Texture, Vector3 Position, Vector2 Scale, float Rotation, int Group = -1);
+internal readonly record struct InstanceText(FontResource Font, string Text, Vector3 Position, Vector2 Scale, float Rotation,  int Group = -1);
 
-internal readonly struct InstanceText(FontResource font, string text, Vector3 position, Vector2 scale, float rotation,  int group = -1)
-{
-    public readonly FontResource Font = font;
-    public readonly string Text = text;
-    public readonly Vector3 Position = position;
-    public readonly Vector2 Scale = scale;
-    public readonly float Rotation = rotation;
-    public readonly int Group = group;
-}
+internal readonly record struct InstanceImage(ShaderResource Shader, TextureResource Texture, int X, int Y, int Width, int Height, float Rotation);
+internal readonly record struct InstanceLabel(FontResource Font, string Text, int X, int Y, int Width, int Height, float Rotation);
 
-internal readonly struct InterpolatedInstanceSprite(ShaderResource shader, TextureResource texture,Vector3 position0, Vector3 position, Vector2 scale0, Vector2 scale, float rotation0, float rotation)
-{
-    public readonly ShaderResource Shader = shader;
-    public readonly TextureResource Texture = texture;
-    public readonly Vector3 Position0 = position0;
-    public readonly Vector3 Position = position;
-    public readonly Vector2 Scale0 = scale0;
-    public readonly Vector2 Scale = scale;
-    public readonly float Rotation0 = rotation0;
-    public readonly float Rotation = rotation;
-}
-
-internal readonly struct InterpolatedInstanceText(FontResource font, string text, Vector3 position0, Vector3 position, Vector2 scale0, Vector2 scale, float rotation0, float rotation)
-{
-    public readonly FontResource Font = font;
-    public readonly string Text = text;
-    public readonly Vector3 Position0 = position0;
-    public readonly Vector3 Position = position;
-    public readonly Vector2 Scale0 = scale0;
-    public readonly Vector2 Scale = scale;
-    public readonly float Rotation0 = rotation0;
-    public readonly float Rotation = rotation;
-}
+internal readonly record struct InterpolatedInstanceSprite(ShaderResource Shader, TextureResource Texture, Vector3 Position0, Vector3 Position, Vector2 Scale0, Vector2 Scale, float Rotation0, float Rotation);
+internal readonly record struct InterpolatedInstanceText(FontResource Font, string Text, Vector3 Position0, Vector3 Position, Vector2 Scale0, Vector2 Scale, float Rotation0, float Rotation);

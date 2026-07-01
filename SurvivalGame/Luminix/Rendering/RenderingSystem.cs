@@ -13,7 +13,7 @@ namespace Luminix.Rendering;
 
 public sealed class RenderingSystem : Workspace.Service
 {
-    internal RenderingSystem(Main main, IRenderBridge[] renderBridges)
+    internal RenderingSystem(Main main, RenderBridge<RenderBuffer> renderBridge)
     {
         ArgumentNullException.ThrowIfNull(main);
         ArgumentNullException.ThrowIfNull(main.GraphicsDeviceManager);
@@ -25,21 +25,17 @@ public sealed class RenderingSystem : Workspace.Service
 
         resolution = new Rectangle(0, 0, graphics.PreferredBackBufferWidth, graphics.PreferredBackBufferHeight);
 
-        coreRenderBridge = (RenderBridge<WorldRenderBuffer>)renderBridges[0];
-        uiRenderBridge = (RenderBridge<UIRenderBuffer>)renderBridges[1];
+        this.renderBridge = renderBridge;
     }
 
     private Main main;
-    private WorldRenderer worldRenderer;
+    private Renderer renderer;
     private GraphicsDeviceManager graphics;
     private GameWindow window;
     private ResourceManager resourceManager;
 
-    private RenderBridge<WorldRenderBuffer> coreRenderBridge;
-    private RenderBridge<UIRenderBuffer> uiRenderBridge;
-
-    private WorldRenderBuffer worldRenderBuffer;
-    private UIRenderBuffer uiRenderBuffer;
+    private RenderBridge<RenderBuffer> renderBridge;
+    private RenderBuffer renderBuffer;
 
     private SpriteBatch spriteBatch;
     private RenderTarget2D renderTarget;
@@ -60,8 +56,6 @@ public sealed class RenderingSystem : Workspace.Service
 
     private bool changedResolution = false;
     private bool changedFullscreen = false;
-
-    private List<ImmediateRenderer> immediateRenderers;
 
     public bool IsFullScreen => graphics.IsFullScreen;
 
@@ -94,29 +88,20 @@ public sealed class RenderingSystem : Workspace.Service
         renderTarget = new RenderTarget2D(GraphicsDevice, ResolutionWidth, ResolutionHeight);
         unscaledRenderTarget = new RenderTarget2D(GraphicsDevice, ResolutionWidth, ResolutionHeight);
 
-        immediateRenderers = new List<ImmediateRenderer>();
-
-        worldRenderer = new WorldRenderer();
-        immediateRenderers.Add(worldRenderer);
+        renderer = new Renderer();
     }
 
     internal void NewFrame(float partialTick)
     {
-        if (coreRenderBridge.CurrentReadBuffer != worldRenderBuffer)
+        if (renderBridge.CurrentReadBuffer != renderBuffer)
         {
-            worldRenderBuffer = coreRenderBridge.CurrentReadBuffer;
-            worldRenderBuffer.Sort();
-        }
-
-        if (uiRenderBridge.CurrentReadBuffer != uiRenderBuffer)
-        {
-            uiRenderBuffer = uiRenderBridge.CurrentReadBuffer;
-            uiRenderBuffer.Sort();
+            renderBuffer = renderBridge.CurrentReadBuffer;
+            renderBuffer.Sort();
         }
 
         partialTick = Math.Clamp(partialTick, 0f, 1f);
 
-        var cameraData = worldRenderBuffer?.GetCameraData();
+        var cameraData = renderBuffer?.GetCameraData();
 
         GraphicsDevice.RasterizerState = RasterizerState.CullNone;
         GraphicsDevice.BlendState = BlendState.AlphaBlend;
@@ -124,28 +109,25 @@ public sealed class RenderingSystem : Workspace.Service
         if(GraphicsDevice.PresentationParameters.Bounds != screenBounds)
             CreateRenderTargetDestination();
 
+        renderer.SetData(renderBuffer, partialTick);
+
+        //scaled
         GraphicsDevice.SetRenderTarget(this.renderTarget);
         GraphicsDevice.Clear(Color.Black);
         projectionMatrix = GetProjectionMatrix(viewport, out viewport);
         viewMatrix = GetViewMatrix(cameraData, viewport, partialTick);
         
-        worldRenderer.SetData(worldRenderBuffer, partialTick);
+        renderer.Render();
 
-        for(int i = 0; i < immediateRenderers.Count; i++)
-        {
-            immediateRenderers[i].Render();
-        }
-
+        //unscaled
         GraphicsDevice.SetRenderTarget(this.unscaledRenderTarget);
         GraphicsDevice.Clear(Color.Transparent);
         projectionMatrix = GetProjectionMatrix(viewport, out viewport);
         viewMatrix = GetViewMatrix(cameraData, viewport, partialTick);
     
-        for(int i = 0; i < immediateRenderers.Count; i++)
-        {
-            immediateRenderers[i].UnscaledRender();
-        }
+        renderer.UnscaledRender();
 
+        //final
         GraphicsDevice.SetRenderTarget(null);
         spriteBatch.Begin();
         spriteBatch.Draw(this.renderTarget, renderTargetDestination, Color.White);

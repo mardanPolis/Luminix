@@ -9,78 +9,84 @@ namespace Luminix;
 
 internal struct EntityType
 {
-    public class UpdateMethod
+    public class Method
     {
-        
-        public UpdateMethod(MethodInfo info, EntitySystem entitySystem, IComponentContainer[] componentContainers)
-        {
-            this.Info = info;
-            this.Parameters = info.GetParameters();
-            this.ParameterTypes = new DenseList<Type>();
+        public MethodInfo Info { get; init; }
+        public ParameterInfo[] Parameters { get; init;}
 
-            this.elementTypes = new Type[Parameters.Length];
-            this.boundContainers = new IComponentContainer[Parameters.Length];
+        protected Type[] elementTypes { get; init; }
+        protected Expression[] elementAccesses { get; init; }
+        protected ConstantExpression instanceConst { get; init; }
+        protected ParameterExpression indexParam { get; init; }
+
+        protected IComponentContainer[] boundContainers { get; init; } // parallel to Parameters, resolved once
+
+        protected bool IsIndexParam(ParameterInfo parameterInfo)
+        {
+            return parameterInfo.ParameterType == typeof(int) && parameterInfo.Name == "entityIndex";
+        }
+        protected bool IsRenderParam(ParameterInfo parameterInfo)
+        {
+            return parameterInfo.ParameterType == typeof(int) && parameterInfo.Name == "entityIndex";
+        }
+    }
+    public class UpdateMethod : Method
+    {
+        public UpdateMethod(MethodInfo info, EntitySystem entitySystem, Dictionary<Type, IComponentContainer> componentContainerMap)
+        {
+            Info = info;
+            Parameters = info.GetParameters();
+            var parameterTypes = new DenseList<Type>();
+
+            elementTypes = new Type[Parameters.Length];
+            boundContainers = new IComponentContainer[Parameters.Length];
 
             bool indexParameterExists = false;
-
-            var componentTypeMap = new Dictionary<Type, IComponentContainer>();
-            for (int i = 0; i < componentContainers.Length; i++)
-                componentTypeMap[componentContainers[i].ComponentType] = componentContainers[i];
 
             for (int i = 0; i < Parameters.Length; i++)
             {
                 ParameterInfo parameter = Parameters[i];
                 Type parameterType = parameter.ParameterType;
 
-                // entity index parameter
-                if (!parameterType.IsByRef && parameterType == typeof(int) && parameter.Name == "entityIndex")
+                if (!parameterType.IsByRef)
                 {
-                    if(indexParameterExists)
-                        throw new InvalidOperationException($"Repeating index parameters!");
-                    
-                    indexParameterExists = true;
-                    elementTypes[i] = typeof(int);
-                    continue;
+                    // entity index parameter
+                    if(IsIndexParam(parameter))
+                    {
+                        if(indexParameterExists)
+                            throw new InvalidOperationException($"Repeating index parameters!");
+                        
+                        indexParameterExists = true;
+                        elementTypes[i] = typeof(int);
+                        continue;
+                    }
+
+                    throw new InvalidOperationException($"Parameter '{Parameters[i].Name}' on '{info.DeclaringType?.Name}.{info.Name}' must be passed by ref!");
                 }
 
-                var elementType = parameterType.GetElementType()
-                    ?? throw new InvalidOperationException(
-                        $"Parameter '{Parameters[i].Name}' on '{info.DeclaringType?.Name}.{info.Name}' must be passed by ref!");
-
-                if(ParameterTypes.Contains(elementType))
+                var elementType = parameterType.GetElementType();
+                if(parameterTypes.Contains(elementType))
                     throw new InvalidOperationException($"Repeating parameters with the same type {elementType.Name}!");
+
+                parameterTypes.Add(elementType); 
+                elementTypes[i] = elementType;
 
                 // entity parameter
                 if (elementType == typeof(Entity))
-                {
-                    elementTypes[i] = elementType;
                     continue;
-                }
 
                 // component parameter
-                if (!componentTypeMap.TryGetValue(elementType, out var container))
+                if (!componentContainerMap.TryGetValue(elementType, out var container))
                     throw new InvalidOperationException($"EntityType has no component with Type {elementType.Name}!");
 
-                ParameterTypes.Add(elementType); 
-                elementTypes[i] = elementType;
                 boundContainers[i] = container;
             }
 
-            this.instanceConst = Expression.Constant(entitySystem);
-            this.indexParam = Expression.Parameter(typeof(int), "i");
-            this.elementAccesses = new Expression[elementTypes.Length];
+            instanceConst = Expression.Constant(entitySystem);
+            indexParam = Expression.Parameter(typeof(int), "i");
+            elementAccesses = new Expression[elementTypes.Length];
         }
 
-        public MethodInfo Info { get; }
-        public ParameterInfo[] Parameters { get; }
-        public DenseList<Type> ParameterTypes { get; }
-
-        private readonly Type[] elementTypes;
-        private readonly Expression[] elementAccesses;
-        private readonly ConstantExpression instanceConst;
-        private readonly ParameterExpression indexParam;
-
-        private readonly IComponentContainer[] boundContainers; // parallel to Parameters, resolved once
         private Action<int> compiledPerIndex;
 
         public void Invoke(int entityCount)
@@ -122,6 +128,91 @@ internal struct EntityType
         }
     }
 
+    public class RenderMethod : Method
+    {
+        public RenderMethod(MethodInfo info, EntitySystem entitySystem, Dictionary<Type, IComponentContainer> componentContainerMap)
+        {
+            Info = info;
+            Parameters = info.GetParameters();
+            var parameterTypes = new DenseList<Type>();
+
+            elementTypes = new Type[Parameters.Length];
+            boundContainers = new IComponentContainer[Parameters.Length];
+
+            bool renderParameterExists = false;
+
+            for (int i = 0; i < Parameters.Length; i++)
+            {
+                ParameterInfo parameter = Parameters[i];
+                Type parameterType = parameter.ParameterType;
+
+                if (!parameterType.IsByRef)
+                    throw new InvalidOperationException($"Parameter '{Parameters[i].Name}' on '{info.DeclaringType?.Name}.{info.Name}' must be passed by ref!");
+
+                var elementType = parameterType.GetElementType();
+                
+                if(!renderParameterExists)
+                {
+                    
+                    throw new InvalidOperationException($"");
+                }
+
+                if(parameterTypes.Contains(elementType))
+                    throw new InvalidOperationException($"Repeating parameters with the same type {elementType.Name}!");
+
+                parameterTypes.Add(elementType); 
+                elementTypes[i] = elementType;
+
+                // entity parameter
+                if (elementType == typeof(Entity))
+                    continue;
+
+                // component parameter
+                if (!componentContainerMap.TryGetValue(elementType, out var container))
+                    throw new InvalidOperationException($"EntityType has no component with Type {elementType.Name}!");
+
+                boundContainers[i] = container;
+            }
+
+            instanceConst = Expression.Constant(entitySystem);
+            indexParam = Expression.Parameter(typeof(int), "i");
+            elementAccesses = new Expression[elementTypes.Length];
+        }
+
+        private Action<int> compiledPerIndex;
+
+        public void Invoke(int entityCount)
+        {
+            for (int i = 0; i < entityCount; i++)
+                compiledPerIndex(i);
+        }
+
+        public void Compile(Entity[] entities)
+        {
+            var entitiesConst = Expression.Constant(entities, typeof(Entity[]));
+
+            for (int i = 1; i < elementTypes.Length; i++)
+            {
+                var elemType = elementTypes[i];
+                var parameter = Parameters[i];
+
+                if(elemType == typeof(Entity))
+                {
+                    elementAccesses[i] = Expression.ArrayAccess(entitiesConst, indexParam);
+                    continue;
+                }
+
+                Array array = boundContainers[i].GetArray();
+                var arrType = elemType.MakeArrayType();
+                var arrConst = Expression.Constant(array, arrType);
+                elementAccesses[i] = Expression.ArrayAccess(arrConst, indexParam);
+            }
+
+            var call = Expression.Call(instanceConst, Info, elementAccesses);
+            var lambda = Expression.Lambda<Action<int>>(call, indexParam);
+            compiledPerIndex = lambda.Compile();
+        }
+    }
     public EntityType(string typeName, Entity.TypeID typeID, EntitySystem entitySystem, UpdateMethod[] updateMethods, IComponentContainer[] componentContainers)
     {
         int defaultEntityCount = 8;

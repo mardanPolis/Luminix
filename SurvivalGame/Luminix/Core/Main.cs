@@ -64,39 +64,27 @@ public class Main : Microsoft.Xna.Framework.Game
         resourceManager = new ResourceManager(this);
         IsMouseVisible = true;
 
-        renderBridges = new IRenderBridge[2];
-
         //initialize threads
         {
-            coreRenderBridge = new RenderBridge<WorldRenderBuffer>();
+            renderBridge = new RenderBridge<RenderBuffer>();
             coreInputBridge = new InputBridge();
             coreResourceBridge = new ResourceBridge();
             coreAssetBridge = new AssetBridge();
 
-            uiRenderBridge = new RenderBridge<UIRenderBuffer>();
-
-            renderBridges[0] = coreRenderBridge;
-            renderBridges[1] = uiRenderBridge;
-
             int workerThreadCount = Math.Max(Settings.MinWorkerThreadCount, Environment.ProcessorCount - 2);
-            coreThread = new CoreThread(renderBridges, coreAssetBridge, coreInputBridge, coreResourceBridge, workerThreadCount);
+            coreThread = new CoreThread(renderBridge, coreAssetBridge, coreInputBridge, coreResourceBridge, workerThreadCount);
 
         }
         //starting threads
         coreThread.Start();
     }
 
-    //Bridges
-    private IRenderBridge[] renderBridges;
 
     //Core Bridges
-    private RenderBridge<WorldRenderBuffer> coreRenderBridge;
+    private RenderBridge<RenderBuffer> renderBridge;
     private InputBridge coreInputBridge;
     private ResourceBridge coreResourceBridge;
     private AssetBridge coreAssetBridge;
-
-    //UI bridges
-    private RenderBridge<UIRenderBuffer> uiRenderBridge;
 
     //RenderThread
     private Thread mainThread = Thread.CurrentThread;
@@ -154,7 +142,7 @@ public class Main : Microsoft.Xna.Framework.Game
             ThreadPool.SetMaxThreads(3, 1);
 
             //systems
-            renderingSystem = new RenderingSystem(this, renderBridges);
+            renderingSystem = new RenderingSystem(this, renderBridge);
 
             //handlers
             inputHandler = new InputHandler(coreInputBridge);

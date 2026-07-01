@@ -16,6 +16,7 @@ public sealed class EntityTypeRegistry : Workspace.Service
 
     public void Register<TEntitySystem>(string typeName) where TEntitySystem : EntitySystem
     {
+        typeName = typeName.ToLower();
         try
         {
             if(isFinalized)
@@ -38,6 +39,7 @@ public sealed class EntityTypeRegistry : Workspace.Service
     }
     public void Override<TEntitySystem>(string typeName) where TEntitySystem : EntitySystem
     {
+        typeName = typeName.ToLower();
         try
         {
             if(isFinalized)
@@ -72,7 +74,6 @@ public sealed class EntityTypeRegistry : Workspace.Service
     }
 
 
-    
     //TODO : implement global component methods
     public void GlobalComponent<TComponent>() where TComponent : struct
     {
@@ -86,7 +87,7 @@ public sealed class EntityTypeRegistry : Workspace.Service
 
     internal void FinalizeRegistry()
     {
-        finalEntries = new FinalEntry[entries.Count];
+        List<FinalEntry> finalEntries = new List<FinalEntry>(entries.Count);
 
         var entryIndex = 0;
         foreach(Entry entry in entries.Values)
@@ -94,14 +95,39 @@ public sealed class EntityTypeRegistry : Workspace.Service
             EntitySystem entitySystem = (EntitySystem)Activator.CreateInstance(entry.EntitySystemType);
             Type[] componentTypes = entitySystem.GetComponentTypes();
 
-            MethodInfo[] methods = GetMethods(entitySystem.GetType());
             IComponentContainer[] componentContainersArray = GetComponentContainers(componentTypes);
-            EntityType.UpdateMethod[] updateMethods = GetUpdateMethods(methods, entitySystem, componentContainersArray);
 
-            finalEntries[entryIndex] = new FinalEntry(entry.TypeName, entitySystem, updateMethods, componentContainersArray);
+            MethodInfo[] updateMethodsInfos = null;
+            EntityType.UpdateMethod[] updateMethods = null;
+
+            MethodInfo renderMethodsInfo = null;
+            EntityType.UpdateMethod renderMethods = null;
+
+            try
+            {
+                updateMethodsInfos = GetUpdateMethods(entitySystem.GetType());
+                updateMethods = GetUpdateMethods(updateMethodsInfos, entitySystem, componentContainersArray);
+            }
+            catch(Exception ex)
+            {
+                Logger.Get().Err($"Failed to get Update methods of {entitySystem.GetType().Name}, reason: {ex.Message}");
+            }
+
+            try
+            {
+                updateMethodsInfos = GetUpdateMethods(entitySystem.GetType());
+                updateMethods = GetUpdateMethods(updateMethodsInfos, entitySystem, componentContainersArray);
+            }
+            catch(Exception ex)
+            {
+                Logger.Get().Err($"Failed to get Render method of {entitySystem.GetType().Name}, reason: {ex.Message}");
+            }
+
+            finalEntries.Add(new FinalEntry(entry.TypeName, entitySystem, updateMethods, componentContainersArray));
             entryIndex++;
         }
         
+        this.finalEntries = finalEntries.ToArray();
         isFinalized = true;
     }
 
@@ -117,7 +143,7 @@ public sealed class EntityTypeRegistry : Workspace.Service
         return entityTypes;
     }
 
-    private IComponentContainer[] GetComponentContainers(Type[] componentTypes)
+    private static IComponentContainer[] GetComponentContainers(Type[] componentTypes)
     {
         List<IComponentContainer> componentContainers = new List<IComponentContainer>(componentTypes.Length);
         Dictionary<Type, int> componentIndexes = new Dictionary<Type, int>();
@@ -141,7 +167,7 @@ public sealed class EntityTypeRegistry : Workspace.Service
 
         return componentContainers.ToArray();
     }
-    private MethodInfo[] GetMethods(Type systemType)
+    private static MethodInfo[] GetUpdateMethods(Type systemType)
     {
         var result = new List<MethodInfo>();
         var seenVirtualSlots = new HashSet<MethodInfo>();
@@ -155,7 +181,7 @@ public sealed class EntityTypeRegistry : Workspace.Service
                 BindingFlags.Public |
                 BindingFlags.NonPublic |
                 BindingFlags.DeclaredOnly)
-                .Where(m => m.Name == "ForEach");
+                .Where(m => m.Name == "Update");
 
             foreach(var method in methods)
             {
@@ -176,15 +202,45 @@ public sealed class EntityTypeRegistry : Workspace.Service
 
         return result.ToArray();
     }
-    private EntityType.UpdateMethod[] GetUpdateMethods(MethodInfo[] methods, EntitySystem entitySystem, IComponentContainer[] componentContainers)
+    private static MethodInfo GetRenderMethod(Type systemType)
+    {
+        Type current = systemType;
+        Type baseEntitySystemType = typeof(EntitySystem);
+
+        while(current != null && current != baseEntitySystemType)
+        {
+            var methods = current.GetMethods(
+                BindingFlags.Instance |
+                BindingFlags.Public |
+                BindingFlags.NonPublic |
+                BindingFlags.DeclaredOnly)
+                .Where(m => m.Name == "Render").ToArray();
+
+            if(methods.Length > 1)
+                throw new Exception("Multiple Render methods.");
+
+            if(methods.Length == 1)
+                return methods[0];
+
+            current = current.BaseType;
+        }
+
+        return null;
+    }
+    private static EntityType.UpdateMethod[] GetUpdateMethods(MethodInfo[] methods, EntitySystem entitySystem, IComponentContainer[] componentContainers)
     {
         List<EntityType.UpdateMethod> updateMethods = [];
+        Dictionary<Type, IComponentContainer> componentContainerMap = new Dictionary<Type, IComponentContainer>();
+        for(int i = 0; i < componentContainers.Length; i++)
+        {
+            componentContainerMap.Add(componentContainers[i].ComponentType, componentContainers[i]);
+        }
 
         for(int m = 0; m < methods.Length; m++)
         {
             try
             {
-                updateMethods.Add(new EntityType.UpdateMethod(methods[m], entitySystem, componentContainers));
+                updateMethods.Add(new EntityType.UpdateMethod(methods[m], entitySystem, componentContainerMap));
             }
             catch(Exception ex)
             {

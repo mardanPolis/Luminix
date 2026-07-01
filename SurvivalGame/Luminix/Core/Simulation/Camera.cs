@@ -16,7 +16,7 @@ public class Camera
         }
 
         var world = universe.World;
-        world.RegisterCamera(this);
+        //TODO : complete Constructor Method
     }
 
     protected Universe universe;
@@ -96,7 +96,7 @@ public class Camera
             throw new NullReferenceException("Unable to create a camera reason: a world instance was not found.");
         }
 
-        universe.World.DestroyCamera(this);
+        //TODO : complete Destroy Method
     }
 
     internal void Tick()

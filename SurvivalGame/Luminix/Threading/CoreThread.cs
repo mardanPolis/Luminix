@@ -8,21 +8,20 @@ using Luminix.IO;
 using Luminix.Resources;
 using Luminix.Resources.AssetHandlers;
 using Luminix.Threading.Bridges;
-using Game.Simulation;
 using Luminix.Threading.Buffers;
+using Game.Simulation;
 
 namespace Luminix.Threading;
 
 public sealed class CoreThread : TickedThread
 {
-    internal CoreThread(IRenderBridge[] renderBridges, AssetBridge assetBridge, InputBridge inputBridge, ResourceBridge resourceBridge, int workerThreadCount) : base(60)
+    internal CoreThread(RenderBridge<RenderBuffer> renderBridge, AssetBridge assetBridge, InputBridge inputBridge, ResourceBridge resourceBridge, int workerThreadCount) : base(60)
     {   
         this.Name = "CoreThread";
         this.IsBackground = false;
         this.workerThreadCount = workerThreadCount;
 
-        this.worldRenderBridge = (RenderBridge<WorldRenderBuffer>)renderBridges[0];
-        this.uiRenderBridge = (RenderBridge<UIRenderBuffer>)renderBridges[1];
+        this.renderBridge = renderBridge;
         this.inputBridge = inputBridge;
         this.resourceBridge = resourceBridge;
         this.assetBridge = assetBridge;
@@ -36,8 +35,7 @@ public sealed class CoreThread : TickedThread
 
     private int workerThreadCount;
 
-    private RenderBridge<WorldRenderBuffer> worldRenderBridge;
-    private RenderBridge<UIRenderBuffer> uiRenderBridge;
+    private RenderBridge<RenderBuffer> renderBridge;
     private InputBridge inputBridge;
     private ResourceBridge resourceBridge;
     private AssetBridge assetBridge;
@@ -109,6 +107,7 @@ public sealed class CoreThread : TickedThread
         Camera camera = new Camera();
         _ = new CameraMover(camera);
         
+
     }
 
     protected sealed override void DebugInitialize()
@@ -140,8 +139,7 @@ public sealed class CoreThread : TickedThread
 
     private void Update()
     {
-        worldRenderBridge.SwapBuffers();
-        uiRenderBridge.SwapBuffers();
+        renderBridge.SwapBuffers();
 
         input.ReadFrom(inputBridge.ReadBuffer);
         inputBridge.Swap();
@@ -165,13 +163,11 @@ public sealed class CoreThread : TickedThread
 
     private void Render()
     {
-        var worldRenderBuffer = worldRenderBridge.CurrentWriteBuffer ?? (WorldRenderBuffer)worldRenderBridge.CreateBuffer();
+        var worldRenderBuffer = renderBridge.CurrentWriteBuffer ?? (RenderBuffer)renderBridge.CreateBuffer();
         worldRenderBuffer.Reset();
         worldRenderBuffer.Set(universe.World?.MainCamera);
         worldRenderBuffer.PushSprite(circle, Vector3.Zero, Vector2.One, 0);
         worldRenderBuffer.PushSprite(circle, new Vector3(1, 2, 0), Vector2.One, rot += 0.5f);
-
-        var uiRenderBuffer = uiRenderBridge.CurrentWriteBuffer ?? (UIRenderBuffer)uiRenderBridge.CreateBuffer();
     }
 
     private void LoadBootAssets(AssetLoadingHandler assetLoadingHandler)

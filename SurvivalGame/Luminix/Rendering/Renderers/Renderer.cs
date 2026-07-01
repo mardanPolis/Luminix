@@ -1,16 +1,21 @@
 using System.Collections.Generic;
+using Luminix.Resources;
 using Luminix.Threading.Buffers;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 
 namespace Luminix.Rendering;
 
-internal sealed class WorldRenderer : ImmediateRenderer
+internal sealed class Renderer
 {
+    private const string MATRIX_PARAMETER = "MatrixTransform";
+    private const string TEXTURE_PARAMETER = "Texture";
+    private const string TEXTURE_SIZE_PARAMETER = "TextureSize";
+
     private struct Data : IVertexType
     {
         public Vector3 Position;
-        public Vector2 Size;
+        public Vector2 Scale;
         public float   Rotation;
         
         public Vector2 RectPos;
@@ -26,9 +31,18 @@ internal sealed class WorldRenderer : ImmediateRenderer
 
         VertexDeclaration IVertexType.VertexDeclaration => VertexDeclaration;
     }
-
-    public WorldRenderer()
+    public Renderer()
     {
+        renderingSystem = Workspace.Current.GetService<RenderingSystem>();
+        resourceProvider = renderingSystem.ResourceManager.ResourceProvider;
+        spriteBatch = renderingSystem.SpriteBatch;
+
+        defaultShader = resourceProvider.GetResource<ShaderResource>("GenericShader");
+        defaultTexture = resourceProvider.GetResource<TextureResource>("NullTexture");
+        defaultFontBold = resourceProvider.GetResource<FontResource>("IBMPlexMono-Bold");
+        defaultFontMedium = resourceProvider.GetResource<FontResource>("IBMPlexMono-Medium");
+        defaultFontRegular = resourceProvider.GetResource<FontResource>("IBMPlexMono-Regular");
+
         var vertices = new VertexPositionColorTexture[] {
             new (new Vector3(-0.5f, -0.5f, 0), Color.White, new Vector2(0, 0)),
             new (new Vector3(+0.5f, -0.5f, 0), Color.White, new Vector2(1, 0)),
@@ -55,6 +69,16 @@ internal sealed class WorldRenderer : ImmediateRenderer
         this.device = renderingSystem.GraphicsDevice;
     }
 
+    private readonly RenderingSystem  renderingSystem;
+    private readonly ResourceProvider resourceProvider;
+    private readonly SpriteBatch      spriteBatch;
+
+    private readonly ShaderResource  defaultShader;
+    private readonly TextureResource defaultTexture;
+    private readonly FontResource    defaultFontBold;
+    private readonly FontResource    defaultFontMedium;
+    private readonly FontResource    defaultFontRegular;
+
     private DynamicVertexBuffer dataBuffer;
     private IndexBuffer indexBuffer;
     private VertexBuffer quadBuffer;
@@ -64,20 +88,20 @@ internal sealed class WorldRenderer : ImmediateRenderer
 
     private GraphicsDevice device;
 
-    private WorldRenderBuffer renderBuffer;
+    private RenderBuffer renderBuffer;
 
     private float partialTick;
 
 
     private readonly HashSet<int> frustumCulledGroups = new();
 
-    public void SetData(WorldRenderBuffer buffer, float partialTick)
+    public void SetData(RenderBuffer buffer, float partialTick)
     {
         this.renderBuffer = buffer;
         this.partialTick = partialTick;
     }
 
-    public sealed override void Render()
+    public void Render()
     {
         Matrix? transformMatrix = renderingSystem.TransformMatrix;
 
@@ -128,7 +152,7 @@ internal sealed class WorldRenderer : ImmediateRenderer
 
                 switch (commandDataType)
                 {
-                    case RenderBuffer.RenderObjectType.SpriteNonInterpolated:
+                    case BaseRenderBuffer.RenderObjectType.SpriteNonInterpolated:
                     {
                         var instance = nonInterpolatedSprites[commandDataIndex];
  
@@ -165,7 +189,7 @@ internal sealed class WorldRenderer : ImmediateRenderer
                         dataArray[currentInstanceCount++] = new Data
                         {
                             Position = instance.Position,
-                            Size     = instance.Size,
+                            Scale     = instance.Scale,
                             Rotation = instance.Rotation,
                             RectPos  = new Vector2(textureRegion.X, textureRegion.Y),
                             RectSize = new Vector2(textureRegion.Width, textureRegion.Height)
@@ -179,7 +203,7 @@ internal sealed class WorldRenderer : ImmediateRenderer
                         break;
                     }
  
-                    case RenderBuffer.RenderObjectType.SpriteInterpolated:
+                    case BaseRenderBuffer.RenderObjectType.SpriteInterpolated:
                     {
                         var instance = interpolatedSprites[commandDataIndex];
  
@@ -207,7 +231,7 @@ internal sealed class WorldRenderer : ImmediateRenderer
                         prevTexture = textureSource;
  
                         Vector3 position = Vector3.Lerp(instance.Position0, instance.Position, partialTick);
-                        Vector2 size     = Vector2.Lerp(instance.Size0, instance.Size, partialTick);
+                        Vector2 size     = Vector2.Lerp(instance.Scale0, instance.Scale, partialTick);
                         float   rotation = MathHelper.Lerp(instance.Rotation0, instance.Rotation, partialTick);
  
                         float texW = textureSource.Width;
@@ -217,7 +241,7 @@ internal sealed class WorldRenderer : ImmediateRenderer
                         dataArray[currentInstanceCount++] = new Data
                         {
                             Position = position,
-                            Size     = size,
+                            Scale     = size,
                             Rotation = rotation,
                             RectPos  = new Vector2(textureRegion.X / texW, textureRegion.Y / texH),
                             RectSize = new Vector2(textureRegion.Width / texW, textureRegion.Height / texH)
@@ -229,7 +253,7 @@ internal sealed class WorldRenderer : ImmediateRenderer
                         break;
                     }
  
-                    case RenderBuffer.RenderObjectType.TextNonInterpolated:
+                    case BaseRenderBuffer.RenderObjectType.TextNonInterpolated:
                     {
                         var instance = nonInterpolatedTexts[commandDataIndex];
  
@@ -237,16 +261,16 @@ internal sealed class WorldRenderer : ImmediateRenderer
                             continue;
 
                         spriteBatch.DrawString(instance.Font.Source, instance.Text, new Vector2(instance.Position.X, instance.Position.Y), Color.White,
-                        instance.Rotation, new Vector2(0, 0), instance.Size, SpriteEffects.None, instance.Position.Z);
+                        instance.Rotation, new Vector2(0, 0), instance.Scale, SpriteEffects.None, instance.Position.Z);
                         break;
                     }
  
-                    case RenderBuffer.RenderObjectType.TextInterpolated:
+                    case BaseRenderBuffer.RenderObjectType.TextInterpolated:
                     {
                         var instance = interpolatedTexts[commandDataIndex];
 
                         var position = Vector3.Lerp(instance.Position0, instance.Position, partialTick);
-                        var size = Vector2.Lerp(instance.Size0, instance.Size, partialTick);
+                        var size = Vector2.Lerp(instance.Scale0, instance.Scale, partialTick);
                         var rotation = MathHelper.Lerp(instance.Rotation0, instance.Rotation, partialTick);
 
                         spriteBatch.DrawString(instance.Font.Source, instance.Text, new Vector2(position.X, position.Y), Color.White,
@@ -270,7 +294,7 @@ internal sealed class WorldRenderer : ImmediateRenderer
         spriteBatch.End();
     }
 
-    public override void UnscaledRender()
+    public void UnscaledRender()
     {
         if(renderingSystem.TransformMatrix.HasValue)
             return;
