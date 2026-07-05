@@ -1,11 +1,10 @@
 using System;
 using System.Threading;
+using System.IO;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using Luminix.Resources;
-using System.Collections.Generic;
-using System.IO;
 using Microsoft.Xna.Framework.Input;
+using Luminix.Resources;
 using Luminix.Threading.Buffers;
 using Luminix.Threading.Bridges;
 
@@ -13,7 +12,7 @@ namespace Luminix.Rendering;
 
 public sealed class RenderingSystem : Workspace.Service
 {
-    internal RenderingSystem(Main main, RenderBridge<RenderBuffer> renderBridge)
+    internal RenderingSystem(Main main, RenderBridge renderBridge)
     {
         ArgumentNullException.ThrowIfNull(main);
         ArgumentNullException.ThrowIfNull(main.GraphicsDeviceManager);
@@ -34,7 +33,7 @@ public sealed class RenderingSystem : Workspace.Service
     private GameWindow window;
     private ResourceManager resourceManager;
 
-    private RenderBridge<RenderBuffer> renderBridge;
+    private RenderBridge renderBridge;
     private RenderBuffer renderBuffer;
 
     private SpriteBatch spriteBatch;

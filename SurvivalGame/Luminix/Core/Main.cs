@@ -14,6 +14,7 @@ using Luminix.Resources.AssetHandlers;
 using Luminix.IO;
 using Luminix.Resources.BuiltIn;
 using Luminix.Threading.Buffers;
+using Microsoft.Xna.Framework.Graphics;
 
 namespace Luminix;
 public class Main : Microsoft.Xna.Framework.Game
@@ -53,6 +54,8 @@ public class Main : Microsoft.Xna.Framework.Game
         settingsController.MaxWorkerThreadCount = 5;
 
         stopwatch = Stopwatch.StartNew();
+
+        logger.Log($"Creating GraphicsDeviceManager");
         graphics = new GraphicsDeviceManager(this);
         graphics.SynchronizeWithVerticalRetrace = true;
         graphics.PreferredBackBufferWidth = 1920;
@@ -64,9 +67,10 @@ public class Main : Microsoft.Xna.Framework.Game
         resourceManager = new ResourceManager(this);
         IsMouseVisible = true;
 
+        logger.Log($"Initializing threads");
         //initialize threads
         {
-            renderBridge = new RenderBridge<RenderBuffer>();
+            renderBridge = new RenderBridge();
             coreInputBridge = new InputBridge();
             coreResourceBridge = new ResourceBridge();
             coreAssetBridge = new AssetBridge();
@@ -79,9 +83,8 @@ public class Main : Microsoft.Xna.Framework.Game
         coreThread.Start();
     }
 
-
     //Core Bridges
-    private RenderBridge<RenderBuffer> renderBridge;
+    private RenderBridge renderBridge;
     private InputBridge coreInputBridge;
     private ResourceBridge coreResourceBridge;
     private AssetBridge coreAssetBridge;
@@ -137,6 +140,7 @@ public class Main : Microsoft.Xna.Framework.Game
     {
         try
         {
+            logger.Log($"Initializing");
             startBytes = GC.GetAllocatedBytesForCurrentThread();
             
             ThreadPool.SetMaxThreads(3, 1);

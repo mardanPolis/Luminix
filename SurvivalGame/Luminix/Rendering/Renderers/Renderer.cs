@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Luminix.Resources;
 using Luminix.Threading.Buffers;
@@ -131,7 +132,7 @@ internal sealed class Renderer
  
         try
         {
-            var commands = renderBuffer.GetRenderCommands();
+            var commands = renderBuffer.GetWorldRenderCommands();
             commandCount = commands.Length;
  
             var nonInterpolatedSprites = renderBuffer.GetSprites();
@@ -152,7 +153,7 @@ internal sealed class Renderer
 
                 switch (commandDataType)
                 {
-                    case BaseRenderBuffer.RenderObjectType.SpriteNonInterpolated:
+                    case RenderBuffer.RenderObjectType.SpriteNonInterpolated:
                     {
                         var instance = nonInterpolatedSprites[commandDataIndex];
  
@@ -203,7 +204,7 @@ internal sealed class Renderer
                         break;
                     }
  
-                    case BaseRenderBuffer.RenderObjectType.SpriteInterpolated:
+                    case RenderBuffer.RenderObjectType.SpriteInterpolated:
                     {
                         var instance = interpolatedSprites[commandDataIndex];
  
@@ -253,7 +254,7 @@ internal sealed class Renderer
                         break;
                     }
  
-                    case BaseRenderBuffer.RenderObjectType.TextNonInterpolated:
+                    case RenderBuffer.RenderObjectType.TextNonInterpolated:
                     {
                         var instance = nonInterpolatedTexts[commandDataIndex];
  
@@ -265,7 +266,7 @@ internal sealed class Renderer
                         break;
                     }
  
-                    case BaseRenderBuffer.RenderObjectType.TextInterpolated:
+                    case RenderBuffer.RenderObjectType.TextInterpolated:
                     {
                         var instance = interpolatedTexts[commandDataIndex];
 
@@ -283,11 +284,9 @@ internal sealed class Renderer
             if (currentInstanceCount > 0 && prevEffect != null)
                 Flush(prevEffect, ref flushed, ref currentInstanceCount);
         }
-        catch
+        catch(Exception ex)
         {
-            Logger.Get().Err(
-                $"Exception happened during batch rendering: " +
-                $"(CommandIndex/CommandCount : {commandIndex}/{commandCount})");
+            Logger.Get().Err($"Exception happened during rendering (CommandIndex/CommandCount : {commandIndex}/{commandCount}), reason: {ex}");
             throw;
         }
 
@@ -296,20 +295,79 @@ internal sealed class Renderer
 
     public void UnscaledRender()
     {
-        if(renderingSystem.TransformMatrix.HasValue)
-            return;
         if(renderBuffer == null)
             return;
 
-        spriteBatch.Begin();
-        Vector2 textSize = defaultFontBold.Source.MeasureString("No camera detected!");
-        Vector2 Center = new Vector2(
-            renderingSystem.Viewport.Width / 2 - textSize.X / 2,
-            renderingSystem.Viewport.Height / 2 - textSize.Y / 2
-        );
+        int commandIndex = 0;
+        int commandCount = 0;
 
-        spriteBatch.DrawString(defaultFontBold.Source, "No camera detected!", Center, Color.White);
-        spriteBatch.End();
+        try
+        {
+            var commands = renderBuffer.GetUiRenderCommands();
+            commandCount = commands.Length;
+ 
+            var images    = renderBuffer.GetImages();
+            var labels    = renderBuffer.GetLabels();
+
+            Effect currentEffect = null;
+
+            spriteBatch.Begin(sortMode:SpriteSortMode.Deferred);
+            for (commandIndex = 0; commandIndex < commandCount; commandIndex++)
+            {
+                var command         = commands[commandIndex];
+                var commandDataType = command.Type;
+                var commandDataIndex = command.DataIndex;
+
+                switch(commandDataType)
+                {
+                    case RenderBuffer.UiRenderObjectType.Image:
+                        var image = images[commandDataIndex];
+
+                        if(image.Shader.Source != currentEffect)
+                        {
+                            currentEffect = image.Shader.Source;
+                            spriteBatch.End();
+                            spriteBatch.Begin(effect:currentEffect);
+                        }
+
+                        spriteBatch.Draw(image.Texture.Source, new Vector2(image.X, image.Y), image.Texture.Rectangle, image.Color, image.Rotation, Vector2.Zero, new Vector2(image.Width, image.Height), SpriteEffects.None, 0f);
+                    break;
+                    case RenderBuffer.UiRenderObjectType.Label:
+
+                        var label = labels[commandDataIndex];
+
+                        if(label.Shader.Source != currentEffect)
+                        {
+                            currentEffect = label.Shader.Source;
+                            spriteBatch.End();
+                            spriteBatch.Begin(effect:currentEffect);
+                        }
+
+                        spriteBatch.DrawString(label.Font.Source, label.Text, new Vector2(label.X, label.Y), label.Color, label.Rotation, Vector2.Zero, new Vector2(label.Width, label.Height), SpriteEffects.None, 0f);
+                    break;
+                }
+
+            }
+            spriteBatch.End();
+
+            if(!renderingSystem.TransformMatrix.HasValue)
+            {
+                spriteBatch.Begin();
+                Vector2 textSize = defaultFontBold.Source.MeasureString("No camera detected!");
+                Vector2 Center = new Vector2(
+                    renderingSystem.Viewport.Width / 2 - textSize.X / 2,
+                    renderingSystem.Viewport.Height / 2 - textSize.Y / 2
+                );
+
+                spriteBatch.DrawString(defaultFontBold.Source, "No camera detected!", Center, Color.White);
+                spriteBatch.End();
+            }
+        }
+        catch(Exception ex)
+        {
+            Logger.Get().Err($"Exception happened during rendering (CommandIndex/CommandCount : {commandIndex}/{commandCount}), reason: {ex}");
+            throw;
+        }
     }
 
     private void ComputeFrustumBounds(Matrix viewMatrix, out Vector2 topLeft, out Vector2 btmRight)
@@ -324,7 +382,9 @@ internal sealed class Renderer
         topLeft  = camPos - new Vector2(halfW, halfH);
         btmRight = camPos + new Vector2(halfW, halfH);
     }
- 
+    
+    //TODO : Complete Frustum Culling
+
     private bool FrustumCulled(Vector2 groupTopLeft, Vector2 groupBtmRight,
                                 Vector2 frustumTopLeft, Vector2 frustumBtmRight)
     {

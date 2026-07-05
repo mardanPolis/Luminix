@@ -75,7 +75,10 @@ public sealed class Workspace
         }
     }
 
-    private Workspace() { }
+    private Workspace()
+    {
+        services = new();
+    }
 
     private State state;
     private string subState;
@@ -91,13 +94,14 @@ public sealed class Workspace
         }
     }
     
-    private readonly Dictionary<Type, Service> services = new();
+    private readonly Dictionary<Type, Service> services;
     private void AddService(Service service)
     {
-        if(services.ContainsKey(service.GetType()))
-            throw new InvalidOperationException($"Cannot add {service.GetType().Name} to this workspace because '{this}' already contains '{service.Workspace}'.");
+        var serviceType = service.GetType();
+        if(services.ContainsKey(serviceType))
+            throw new InvalidOperationException($"Cannot add {serviceType.Name} to '{this}', reason: Service with the same type exists.");
 
-        services[service.GetType()] = service;
+        services[serviceType] = service;
     }
     public bool TryGetService<T>(out T _service) where T : Service 
     {

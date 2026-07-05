@@ -7,7 +7,7 @@ namespace Luminix;
 
 public sealed class Universe : Workspace.Service
 {
-    public readonly struct Controller
+    internal readonly struct Controller
     {
         public Controller(Universe universe)
         {
@@ -21,12 +21,20 @@ public sealed class Universe : Workspace.Service
 
         public uint TickRate { get => controlledUniverse.TickRate; set => controlledUniverse.TickRate = value; }
         public long TickCount { get => controlledUniverse.TickCount; set => controlledUniverse.TickCount = value; }
-        public double DeltaTime { get => controlledUniverse.DeltaTime; set => controlledUniverse.DeltaTime = value; }
+        public double TickTime { get => controlledUniverse.TickTime; set => controlledUniverse.TickTime = value; }
+        public double TickDeltaTime { get => controlledUniverse.TickDeltaTime; set => controlledUniverse.TickDeltaTime = value; }
+        public long TickAllocated { get => controlledUniverse.TickAllocated; set => controlledUniverse.TickAllocated = value; }
+  
+        public uint FrameRate { get => controlledUniverse.FrameRate; set => controlledUniverse.FrameRate = value; }
+        public long FrameCount { get => controlledUniverse.FrameCount; set => controlledUniverse.FrameCount = value; }
+        public double FrameTime { get => controlledUniverse.FrameTime; set => controlledUniverse.FrameTime = value; }
+        public double FrameDeltaTime { get => controlledUniverse.FrameDeltaTime; set => controlledUniverse.FrameDeltaTime = value; }
+        public long FrameAllocated { get => controlledUniverse.FrameAllocated; set => controlledUniverse.FrameAllocated = value; }
 
         public Viewport Viewport { get => controlledUniverse.Viewport; set => controlledUniverse.Viewport = value; }
     }
 
-    public Universe(out Controller controller)
+    internal Universe(out Controller controller)
     {
         this.logger = Logger.Get();
         this.initialized = false;
@@ -46,7 +54,15 @@ public sealed class Universe : Workspace.Service
     //Global Variables
     public uint TickRate { get; private set; }
     public long TickCount { get; private set; }
-    public double DeltaTime { get; private set; }
+    public double TickTime { get; private set; }
+    public double TickDeltaTime { get; private set; }
+    public long TickAllocated { get; private set; }
+
+    public uint FrameRate { get; private set; }
+    public long FrameCount { get; private set; }
+    public double FrameTime { get; private set; }
+    public double FrameDeltaTime { get; private set; }
+    public long FrameAllocated { get; private set; }
 
     public Viewport Viewport { get; private set; } // TODO: create a way to get the viewport over the bridge
 

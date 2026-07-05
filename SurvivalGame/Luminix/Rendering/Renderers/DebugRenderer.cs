@@ -1,282 +1,177 @@
-// using System;
-// using System.Text;
-// using Microsoft.Xna.Framework;
-// using Microsoft.Xna.Framework.Graphics;
-// using Luminix.Threading;
-// using Luminix.Resources;
-// using System.Diagnostics;
+using System;
+using System.Text;
+using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
+using Luminix.Resources;
+using Luminix.Threading.Buffers;
+using Luminix.Extensions;
 
-// namespace Luminix.Rendering;
+namespace Luminix.Rendering;
 
-// public abstract class DebugRenderer : ImmediateRenderer
-// {
-//     public DebugRenderer()
-//     {
-//         if(!Settings.Debug)
-//             throw new InvalidOperationException($"Debug mode is not enabled. '{GetType().Name}' cannot be instantiated.");
+public abstract class DebugRenderer
+{
+    public DebugRenderer()
+    {
+        universe = Workspace.Current.GetService<Universe>();
+        resourceProvider = Workspace.Current.GetService<ResourceProvider>();
+        pixel = resourceProvider.GetResource<TextureResource>("Pixel");
+    }
+    protected readonly Universe universe;
+    protected readonly ResourceProvider resourceProvider;
+    protected readonly TextureResource pixel;
+    
+    // protected void DrawGraph(Vector2 position, float height, double[] data, double maxValue, int valueLineThickness, int valueMargin, int lastIndex, bool invertedWidth)
+    // {
+    //     float graphAreaWidth = data.Length * valueLineThickness;
+    //     Vector2 size = new Vector2(graphAreaWidth + (valueMargin * 2), height);
         
-//         pixel = resourceProvider.GetResource<TextureResource>("Pixel").Source;
-//     }
-//     protected Texture2D pixel;
+    //     // Draw the background
+    //     if(invertedWidth)
+    //         position = new Vector2(position.X - size.X, position.Y);
 
-//     protected void DrawLine(Vector2 start, Vector2 end, Color color, int thickness = 1)
-//     {
-//         Vector2 edge = end - start;
-//         float angle = (float)Math.Atan2(edge.Y, edge.X);
+    //     DrawPanel(position, size, Color.Black * 0.5f);
 
-//         thickness = Math.Max(thickness, 1);
+    //     Vector2 leftUpper  = position + new Vector2(valueMargin, valueMargin);
+    //     Vector2 leftLower  = position + new Vector2(valueMargin, size.Y - valueMargin);
+    //     Vector2 rightUpper = position + new Vector2(size.X - valueMargin, valueMargin);
+    //     Vector2 rightLower = position + new Vector2(size.X - valueMargin, size.Y - valueMargin);
 
-//         spriteBatch.Draw(pixel,
-//             new Rectangle((int)start.X, (int)start.Y, (int)edge.Length(), thickness),
-//             null, 
-//             color, 
-//             angle, 
-//             new Vector2(0, thickness / 2),
-//             SpriteEffects.None, 
-//             0);
-//     }
+    //     // 3. Graphing Constants
+    //     float availableHeight = size.Y - (valueMargin * 2) - 5;
+    //     float graphBottomY = leftLower.Y;
 
-//     protected void DrawPanel(Vector2 start, Vector2 size, Color color)
-//     {
-//         Rectangle rect = new Rectangle(
-//             (int)start.X, 
-//             (int)start.Y, 
-//             (int)size.X, 
-//             (int)size.Y
-//         );
-//         spriteBatch.Draw(pixel, rect, color);
-//     }
-//     protected void DrawGraph(Vector2 position, float height, double[] data, double maxValue, int valueLineThickness, int valueMargin, int lastIndex, bool invertedWidth)
-//     {
-//         float graphAreaWidth = data.Length * valueLineThickness;
-//         Vector2 size = new Vector2(graphAreaWidth + (valueMargin * 2), height);
+    //     for (int i = 0; i < data.Length; i++)
+    //     {
+    //         float xPos = leftLower.X + (i * valueLineThickness);
+
+    //         float ratio = (float)(data[i] / maxValue);
+
+    //         float barHeight = ratio * availableHeight;
+
+    //         Vector2 startPoint = new Vector2(xPos, graphBottomY);
+
+    //         int distance = (i <= lastIndex) 
+    //             ? (lastIndex - i) 
+    //             : (lastIndex + (data.Length - i));
+
+    //         float fade = 1.0f - ((float)distance / data.Length);
+    //         fade = MathF.Pow(fade, 1.5f); 
+
+    //         float r = ratio;
+    //         float g = 1.0f - ratio * 0.5f;
+    //         float b = 0.2f;
+
+    //         Color barColor = new Color(r, g, b) * fade;
+
+    //         DrawVerticalLine(startPoint, -(int)(barHeight + 5), barColor, valueLineThickness);
+    //     }
+
+    //     DrawLine(leftUpper, rightUpper, Color.White, 1);
+    //     DrawLine(rightUpper, rightLower, Color.White, 1);
+    //     DrawLine(rightLower, leftLower, Color.White, 1);
+    //     DrawLine(leftLower, leftUpper, Color.White, 1);
+    // }
+    public abstract void Render(RenderBuffer renderBuffer);
+}
+
+internal sealed class SystemDebugRenderer : DebugRenderer
+{
+    public SystemDebugRenderer()
+    {
+        graphics = GraphicsAdapter.DefaultAdapter.Description.Split('/')[0];
+
+        tickTimes = new double[128];
+        frameTimes = new double[128];
+        managedMemoryAmounts = new double[128];
+    }
+
+    private string graphics;
+
+    private readonly double[] tickTimes;
+    private readonly double[] frameTimes;
+    private readonly double[] managedMemoryAmounts;
+    private StringBuilder sb = new StringBuilder();
+
+    private double elapsed = 0;
+
+    public override void Render(RenderBuffer renderBuffer)
+    {
+        if(!Settings.DebugInfo)
+            return;
+
+        Viewport viewport = universe.Viewport;
+
+        float gHeight = 200f;
+
+        var currentIndex = (int)((universe.TickCount - 1) & 127);
+
+        uint tickRate = universe.TickRate;
+        long tickCount = universe.TickCount;
+        double tickTime = universe.TickTime;
+        double tickDeltaTime = universe.TickDeltaTime;
+        long tickAllocated = universe.TickAllocated;
+
+        uint frameRate = universe.FrameRate;
+        long frameCount = universe.FrameCount;
+        double frameTime = universe.FrameTime;
+        double frameDeltaTime = universe.FrameDeltaTime; 
+        long frameAllocated = universe.FrameAllocated;
+
+        double budgetUs = 1000000.0 / universe.TickRate;
+
+        long usedMemory = GC.GetTotalMemory(false);
+        managedMemoryAmounts[currentIndex] = usedMemory / 1024.0 / 1024.0;
         
-//         // Draw the background
-//         if(invertedWidth)
-//             position = new Vector2(position.X - size.X, position.Y);
+        elapsed += frameDeltaTime; // Assuming this is in seconds
 
-//         DrawPanel(position, size, Color.Black * 0.5f);
+        sb.Clear();
+        sb.Append("Build-Version:").Append(Main.Version).Append(" | Build-Date:").Append(Main.BuildDate).Append('\n');
+        // sb.Append(graphics).Append($" | ").Append(renderingSystem.ResolutionWidth).Append(':').Append(renderingSystem.ResolutionHeight).Append('\n');
+        sb.AppendDouble(frameDeltaTime > 0 ? MathF.Round(1.0f / (float)frameDeltaTime) : 0, 0, 3);
+        sb.Append(":FPS | ");
+        sb.AppendDouble(tickDeltaTime > 0 ? MathF.Round(1.0f / (float)tickDeltaTime) : 0, 0, 3);
+        sb.Append(":TPS\n");
 
-//         Vector2 leftUpper  = position + new Vector2(valueMargin, valueMargin);
-//         Vector2 leftLower  = position + new Vector2(valueMargin, size.Y - valueMargin);
-//         Vector2 rightUpper = position + new Vector2(size.X - valueMargin, valueMargin);
-//         Vector2 rightLower = position + new Vector2(size.X - valueMargin, size.Y - valueMargin);
+        sb.Append("FrameTime : ");
+        sb.AppendDouble(frameTime / 1000000.0, 4, 2);
+        sb.Append("ms\n");
 
-//         // 3. Graphing Constants
-//         float availableHeight = size.Y - (valueMargin * 2) - 5;
-//         float graphBottomY = leftLower.Y;
+        sb.Append("TickTime  : ");
+        sb.AppendDouble(tickTime / 1000.0, 4, 2);
+        sb.Append("ms\n");
 
-//         for (int i = 0; i < data.Length; i++)
-//         {
-//             float xPos = leftLower.X + (i * valueLineThickness);
+        sb.Append("FrameDeltaTime : ");
+        sb.AppendDouble(frameDeltaTime * 1000.0, 4, 2);
+        sb.Append("ms\n");
 
-//             float ratio = (float)(data[i] / maxValue);
+        sb.Append("TickDeltaTime  : ");
+        sb.AppendDouble(tickDeltaTime * 1000.0, 4, 2);
+        sb.Append("ms\n");
 
-//             float barHeight = ratio * availableHeight;
+        sb.Append("Managed Memory : ");
+        sb.AppendDouble(usedMemory / 1024.0 / 1024.0, 4, 2);
+        sb.Append(" MB\n");
 
-//             Vector2 startPoint = new Vector2(xPos, graphBottomY);
+        sb.Append("RenderThread allocated: ");
+        sb.AppendLong(frameAllocated, 3);
+        sb.Append(" bytes\n");
 
-//             int distance = (i <= lastIndex) 
-//                 ? (lastIndex - i) 
-//                 : (lastIndex + (data.Length - i));
+        sb.Append("CoreThread allocated: ");
+        sb.AppendLong(tickAllocated, 3);
+        sb.Append(" bytes\n");
 
-//             float fade = 1.0f - ((float)distance / data.Length);
-//             fade = MathF.Pow(fade, 1.5f); 
+        // sb.Append("DrawCalls : ");
+        // sb.Append(renderingSystem.DrawCount);
 
-//             float r = ratio;
-//             float g = 1.0f - ratio * 0.5f;
-//             float b = 0.2f;
+        // spriteBatch.Begin();
+        // spriteBatch.DrawString(defaultFontRegular.Source, sb,
+        //     new Vector2(15, 15), Color.White);
 
-//             Color barColor = new Color(r, g, b) * fade;
+        // Vector2 graphPos = new Vector2(viewport.Width - 20, viewport.Height - gHeight - 20);
+        // DrawGraph(graphPos, gHeight, managedMemoryAmounts, 128, 5, 5, currentIndex, true);
 
-//             DrawVerticalLine(startPoint, -(int)(barHeight + 5), barColor, valueLineThickness);
-//         }
-
-//         DrawLine(leftUpper, rightUpper, Color.White, 1);
-//         DrawLine(rightUpper, rightLower, Color.White, 1);
-//         DrawLine(rightLower, leftLower, Color.White, 1);
-//         DrawLine(leftLower, leftUpper, Color.White, 1);
-//     }
-//     protected void DrawVerticalLine(Vector2 position, int height, Color color, int lineThickness)
-//     {
-//         lineThickness = Math.Max(lineThickness, 1);
-
-//         spriteBatch.Draw(pixel,
-//             new Rectangle((int)position.X, (int)position.Y + height, lineThickness, -height),
-//             null, 
-//             color, 
-//             0, 
-//             new Vector2(0, 0),
-//             SpriteEffects.None, 
-//             0);
-//     }
-//     protected void AppendLong(StringBuilder sb, long value, int minDigits = 1)
-//     {
-//         if (value < 0)
-//         {
-//             sb.Append('-');
-//             value = -value;
-//         }
-
-//         long temp = value;
-//         int digitsFound = 0;
-//         do { digitsFound++; temp /= 10; } while (temp > 0);
-
-//         for (int i = digitsFound; i < minDigits; i++)
-//         {
-//             sb.Append('0');
-//         }
-
-//         Span<char> buffer = stackalloc char[20]; 
-//         int pos = 0;
-        
-//         temp = value;
-//         do
-//         {
-//             buffer[pos++] = (char)('0' + (temp % 10));
-//             temp /= 10;
-//         } while (temp > 0);
-
-//         for (int i = pos - 1; i >= 0; i--)
-//         {
-//             sb.Append(buffer[i]);
-//         }
-//     }
-//     protected void AppendDouble(StringBuilder sb, double value, int decimalPlaces = 4, int minIntDigits = 1)
-//     {
-//         if (double.IsNaN(value)) { sb.Append("NaN"); return; }
-//         if (double.IsInfinity(value)) { sb.Append("INF"); return; }
-//         if (value < 0) { sb.Append('-'); value = -value; }
-
-//         double integral = Math.Floor(value);
-//         AppendLong(sb, (long)integral, minIntDigits);
-
-//         if (decimalPlaces > 0)
-//         {
-//             sb.Append('.');
-//             double remainder = value - integral;
-//             for (int i = 0; i < decimalPlaces; i++)
-//             {
-//                 remainder *= 10;
-//                 int digit = (int)remainder;
-//                 sb.Append((char)('0' + digit));
-//                 remainder -= digit;
-//             }
-//         }
-//     }
-// }
-
-// internal sealed class SystemDebugRenderer : DebugRenderer
-// {
-//     public SystemDebugRenderer(Main main, CoreThread coreThread)
-//     {
-//         this.main = main;
-//         this.coreThread = coreThread;
-
-//         graphics = GraphicsAdapter.DefaultAdapter.Description.Split('/')[0];
-//     }
-
-//     private Main main;
-//     private CoreThread coreThread;
-
-//     private string graphics;
-
-//     private double[] managedMemoryAmounts = new double[128];
-//     private StringBuilder sb = new StringBuilder();
-
-//     private double frameTime = 0;
-//     private double elapsed = 0;
-//     private double fps = 0;
-
-//     public override void UnscaledRender()
-//     {
-//         if(!Settings.DebugInfo)
-//             return;
-
-//         Viewport viewport = renderingSystem.GraphicsDevice.Viewport;
-
-//         float gHeight = 200f;
-
-//         var tickTimes = coreThread.TickTimes;
-//         var currentIndex = (int)((coreThread.TickCount - 1) & 127);
-
-//         double frameDeltaTime = main.FrameDeltaTime; 
-//         double tickTime = coreThread.TickTime;
-//         double tickDeltaTime = coreThread.TickDeltaTime;
-
-//         double tickUpdateTime = coreThread.TickUpdateTime; 
-//         double tickRenderTime = coreThread.TickRenderTime;
-
-//         double budgetUs = 1000000.0 / coreThread.TickRate;
-
-//         long usedMemory = GC.GetTotalMemory(false);
-//         managedMemoryAmounts[currentIndex] = usedMemory / 1024.0 / 1024.0;
-        
-//         elapsed += frameDeltaTime; // Assuming this is in seconds
-
-//         if (elapsed >= 0.05) 
-//         {
-//             fps = main.FPS;
-//             frameTime = main.FrameTime; 
-//             elapsed = 0;
-//         }
-        
-//         sb.Clear();
-//         sb.Append("Build-Version:").Append(Main.Version).Append(" | Build-Date:").Append(Main.BuildDate).Append("\n");
-//         sb.Append(graphics).Append($" : {renderingSystem.ResolutionWidth}x{renderingSystem.ResolutionHeight}").Append("\n");
-//         AppendDouble(sb, fps, 0, 3);
-//         sb.Append(":FPS | ");
-//         AppendDouble(sb, tickDeltaTime > 0 ? MathF.Round(1.0f / (float)tickDeltaTime) : 0, 0, 3);
-//         sb.Append(":TPS\n");
-
-//         sb.Append("FrameTime : ");
-//         AppendDouble(sb, frameTime / 1000000.0, 4, 2);
-//         sb.Append("ms\n");
-
-//         sb.Append("TickTime  : ");
-//         AppendDouble(sb, tickTime / 1000.0, 4, 2);
-//         sb.Append("ms\n");
-
-//         sb.Append("tickUpdateTime  : ");
-//         AppendDouble(sb, tickUpdateTime / 1000.0, 4, 2);
-//         sb.Append("ms\n");
-
-//         sb.Append("tickRenderTime  : ");
-//         AppendDouble(sb, tickRenderTime / 1000.0, 4, 2);
-//         sb.Append("ms\n");
-
-//         sb.Append("FrameDeltaTime : ");
-//         AppendDouble(sb, frameDeltaTime * 1000.0, 4, 2);
-//         sb.Append("ms\n");
-
-//         sb.Append("TickDeltaTime  : ");
-//         AppendDouble(sb, tickDeltaTime * 1000.0, 4, 2);
-//         sb.Append("ms\n");
-
-//         sb.Append("Managed Memory : ");
-//         AppendDouble(sb, usedMemory / 1024.0 / 1024.0, 4, 2);
-//         sb.Append(" MB\n");
-
-//         sb.Append("RenderThread allocated: ");
-//         AppendLong(sb, main.FrameAllocationAmount, 3);
-//         sb.Append(" bytes\n");
-
-//         sb.Append("CoreThread allocated: ");
-//         AppendLong(sb, coreThread.TickAllocatedAmount, 3);
-//         sb.Append(" bytes\n");
-
-//         sb.Append("DrawCalls : ");
-//         sb.Append(renderingSystem.DrawCount);
-
-//         spriteBatch.Begin();
-//         spriteBatch.DrawString(defaultFontRegular.Source, sb,
-//             new Vector2(15, 15), Color.White);
-
-//         Vector2 graphPos = new Vector2(viewport.Width - 20, viewport.Height - gHeight - 20);
-//         DrawGraph(graphPos, gHeight, managedMemoryAmounts, 128, 5, 5, currentIndex, true);
-
-//         graphPos = new Vector2(20, viewport.Height - gHeight - 20);
-//         DrawGraph(graphPos, gHeight, tickTimes, budgetUs, 5, 5, currentIndex, false);
-//         spriteBatch.End();
-//     }
-// }
+        // graphPos = new Vector2(20, viewport.Height - gHeight - 20);
+        // DrawGraph(graphPos, gHeight, tickTimes, budgetUs, 5, 5, currentIndex, false);
+        // spriteBatch.End();
+    }
+}

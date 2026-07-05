@@ -15,7 +15,7 @@ public class CameraMover : CameraComponent
 
     public override void Tick()
     {
-        float speed = (float)(5f * Universe.DeltaTime);
+        float speed = (float)(5f * Universe.TickDeltaTime);
 
         var cameraPos = camera.Position;
 

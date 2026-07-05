@@ -15,7 +15,7 @@ namespace Luminix.Threading;
 
 public sealed class CoreThread : TickedThread
 {
-    internal CoreThread(RenderBridge<RenderBuffer> renderBridge, AssetBridge assetBridge, InputBridge inputBridge, ResourceBridge resourceBridge, int workerThreadCount) : base(60)
+    internal CoreThread(RenderBridge renderBridge, AssetBridge assetBridge, InputBridge inputBridge, ResourceBridge resourceBridge, int workerThreadCount) : base(60)
     {   
         this.Name = "CoreThread";
         this.IsBackground = false;
@@ -35,7 +35,7 @@ public sealed class CoreThread : TickedThread
 
     private int workerThreadCount;
 
-    private RenderBridge<RenderBuffer> renderBridge;
+    private RenderBridge renderBridge;
     private InputBridge inputBridge;
     private ResourceBridge resourceBridge;
     private AssetBridge assetBridge;
@@ -110,31 +110,15 @@ public sealed class CoreThread : TickedThread
 
     }
 
-    protected sealed override void DebugInitialize()
+    protected override void DebugInitialize()
     {
-        Initialize();
 
     }
 
-    protected sealed override void Tick()
+    protected override void Tick()
     {
         Update();
         Render();
-    }
-
-    protected sealed override void DebugTick()
-    {
-        Update();
-        long updateTime = CurrentElapsedTicks;
-        Render();
-        long renderTime = CurrentElapsedTicks;
-        
-        //avg tick time
-        TimeSpan elapsedUpdateTime = Stopwatch.GetElapsedTime(0, updateTime);
-        TimeSpan elapsedRenderTime = Stopwatch.GetElapsedTime(updateTime, renderTime);
-
-        Interlocked.Exchange(ref tickUpdateTime, elapsedUpdateTime.TotalMicroseconds);
-        Interlocked.Exchange(ref tickRenderTime, elapsedRenderTime.TotalMicroseconds);
     }
 
     private void Update()
@@ -153,8 +137,8 @@ public sealed class CoreThread : TickedThread
         }
 
         universeController.TickRate = TickRate;
-        universeController.DeltaTime = TickDeltaTime;
         universeController.TickCount = TickCount;
+        universeController.TickDeltaTime = TickDeltaTime;
 
         universe.World?.Tick();
     }

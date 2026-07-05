@@ -1,23 +1,49 @@
 using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using Luminix.Rendering.RenderInstances;
 using Luminix.Resources;
 using Microsoft.Xna.Framework;
 
 namespace Luminix.Threading.Buffers;
 
-internal sealed class RenderBuffer : BaseRenderBuffer
+public sealed class RenderBuffer
 {
-    public readonly record struct RenderGroup(Vector2 topLeft, Vector2 btmRight);
+    internal enum RenderObjectType : byte
+    {
+        SpriteNonInterpolated,
+        SpriteInterpolated,
+        TextNonInterpolated,
+        TextInterpolated,
+    }
+    internal enum UiRenderObjectType : byte
+    {
+        Image,
+        Label,
+    }
 
-    public RenderBuffer()
+    internal readonly record struct RenderCommand(ulong SortKey, RenderObjectType Type, int DataIndex) : IComparable<RenderCommand>
+    {
+        public int CompareTo(RenderCommand other) => SortKey.CompareTo(other.SortKey);
+    }
+    internal readonly record struct UiRenderCommand(UiRenderObjectType Type, int DataIndex);
+   
+    internal readonly record struct RenderGroup(Vector2 topLeft, Vector2 btmRight);
+
+    internal RenderBuffer()
     {
         instanceSprites = new(2560);
         instanceTexts = new(128);
         interpolatedInstanceSprites = new(2560);
         interpolatedInstanceTexts = new(128);
 
+        instanceImages = new(128);
+        instanceLabels = new(128);
+
         renderGroups = new(512);
+
+        worldRenderCommands = new(4096);
+        uiRenderCommands = new(256);
     }
 
     private Camera.Data? cameraData;
@@ -35,7 +61,11 @@ internal sealed class RenderBuffer : BaseRenderBuffer
     private readonly List<InstanceImage> instanceImages;
     private readonly List<InstanceLabel> instanceLabels;
 
-    public void Set(Camera camera)
+    //Commands
+    private readonly List<RenderCommand> worldRenderCommands;
+    private readonly List<UiRenderCommand> uiRenderCommands;
+
+    internal void Set(Camera camera)
     {
         cameraData = camera?.GetCameraSnapshot();
     }
@@ -94,18 +124,24 @@ internal sealed class RenderBuffer : BaseRenderBuffer
         NewCommand(key, RenderObjectType.TextInterpolated, dataIndex);
     }
 
-    public void PushImage(TextureResource image, int x, int y, int width, int height, float rotation)
+    public void PushImage(TextureResource image, int x, int y, int width, int height, float rotation) => PushImage(null, image, Color.White, x, y, width, height, rotation);
+    public void PushImage(TextureResource image, Color color, int x, int y, int width, int height, float rotation) => PushImage(null, image, color, x, y, width, height, rotation);
+    public void PushImage(ShaderResource shader, TextureResource image, int x, int y, int width, int height, float rotation) => PushImage(shader, image, Color.White, x, y, width, height, rotation);
+    public void PushImage(ShaderResource shader, TextureResource image, Color color, int x, int y, int width, int height, float rotation)
     {
-        instanceImages.Add(new InstanceImage(null, image, x, y, width, height, rotation));
-    }
-    public void PushImage(ShaderResource shader, TextureResource image, int x, int y, int width, int height, float rotation)
-    {
-        instanceImages.Add(new InstanceImage(shader, image, x, y, width, height, rotation));
+        int dataIndex = instanceImages.Count;
+        NewCommand(UiRenderObjectType.Image, dataIndex);
+        instanceImages.Add(new InstanceImage(shader, image, color, x, y, width, height, rotation));
     }
 
-    public void PushLabel(FontResource font, string text, int x, int y, int width, int height, float rotation)
+    public void PushLabel(FontResource font, string text, int x, int y, int width, int height, float rotation) => PushLabel(null, font, Color.White, text, x, y, width, height, rotation);
+    public void PushLabel(FontResource font, Color color, string text, int x, int y, int width, int height, float rotation) => PushLabel(null, font, color, text, x, y, width, height, rotation);
+    public void PushLabel(ShaderResource shader, FontResource font, string text, int x, int y, int width, int height, float rotation) => PushLabel(shader, font, Color.White, text, x, y, width, height, rotation);
+    public void PushLabel(ShaderResource shader, FontResource font, Color color, string text, int x, int y, int width, int height, float rotation)
     {
-        instanceLabels.Add(new InstanceLabel(font, text, x, y, width, height, rotation));
+        int dataIndex = instanceLabels.Count;
+        NewCommand(UiRenderObjectType.Label, dataIndex);
+        instanceLabels.Add(new InstanceLabel(shader, font, text, color, x, y, width, height, rotation));
     }
 
 
@@ -117,33 +153,45 @@ internal sealed class RenderBuffer : BaseRenderBuffer
 
     //TODO : Add PushBatch, batched sprites only.
 
-    public Camera.Data? GetCameraData()
+    internal Camera.Data? GetCameraData()
         => cameraData;
 
-    public ReadOnlySpan<InstanceSprite> GetSprites() 
+    internal ReadOnlySpan<InstanceSprite> GetSprites() 
         => System.Runtime.InteropServices.CollectionsMarshal.AsSpan(instanceSprites);
 
-    public ReadOnlySpan<InstanceText> GetTexts() 
+    internal ReadOnlySpan<InstanceText> GetTexts() 
         => System.Runtime.InteropServices.CollectionsMarshal.AsSpan(instanceTexts);
 
-    public ReadOnlySpan<InterpolatedInstanceSprite> GetInterpolatedSprites() 
+    internal ReadOnlySpan<InterpolatedInstanceSprite> GetInterpolatedSprites() 
         => System.Runtime.InteropServices.CollectionsMarshal.AsSpan(interpolatedInstanceSprites);
 
-    public ReadOnlySpan<InterpolatedInstanceText> GetInterpolatedTexts() 
+    internal ReadOnlySpan<InterpolatedInstanceText> GetInterpolatedTexts() 
         => System.Runtime.InteropServices.CollectionsMarshal.AsSpan(interpolatedInstanceTexts);
 
-    public ReadOnlySpan<RenderGroup> GetGroups() 
+    internal ReadOnlySpan<RenderGroup> GetGroups() 
         => System.Runtime.InteropServices.CollectionsMarshal.AsSpan(renderGroups);
 
-    public ReadOnlySpan<InstanceImage> GetImages()
+    internal ReadOnlySpan<InstanceImage> GetImages()
         => System.Runtime.InteropServices.CollectionsMarshal.AsSpan(instanceImages);
 
-    public ReadOnlySpan<InstanceLabel> GetLabels()
+    internal ReadOnlySpan<InstanceLabel> GetLabels()
         => System.Runtime.InteropServices.CollectionsMarshal.AsSpan(instanceLabels);
 
-    public override void Reset()
+    internal ReadOnlySpan<RenderCommand> GetWorldRenderCommands() 
+        => System.Runtime.InteropServices.CollectionsMarshal.AsSpan(worldRenderCommands);
+
+    internal ReadOnlySpan<UiRenderCommand> GetUiRenderCommands() 
+        => System.Runtime.InteropServices.CollectionsMarshal.AsSpan(uiRenderCommands);
+
+    internal void Sort()
     {
-        base.Reset();
+        worldRenderCommands.Sort();
+    }
+
+    internal void Reset()
+    {
+        worldRenderCommands.Clear();
+        uiRenderCommands.Clear();
 
         instanceSprites.Clear();
         instanceTexts.Clear();
@@ -151,6 +199,41 @@ internal sealed class RenderBuffer : BaseRenderBuffer
         interpolatedInstanceTexts.Clear();
 
         renderGroups.Clear();
+    }
+
+    private void NewCommand(ulong SortKey, RenderObjectType Type, int DataIndex)
+    {
+        worldRenderCommands.Add(new RenderCommand(SortKey, Type, DataIndex));
+    }
+
+    private void NewCommand(UiRenderObjectType Type, int DataIndex)
+    {
+        uiRenderCommands.Add(new UiRenderCommand(Type, DataIndex));
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static ulong BuildSpriteKey(TextureResource texture)
+    {
+        return (ulong)RuntimeHelpers.GetHashCode(texture?.Source);
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static ulong BuildSpriteKey(ShaderResource shader, TextureResource texture)
+    {
+        int shaderHash = RuntimeHelpers.GetHashCode(shader?.Source);
+        int textureHash = RuntimeHelpers.GetHashCode(texture?.Source);
+
+        uint shaderCode = (uint)shaderHash;
+        uint textureCode = (uint)textureHash;
+
+        ulong combinedHash = ((ulong)shaderCode << 32) | (ulong)textureCode;
+        return combinedHash;
+    }
+ 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static uint BuildFontKey(FontResource font)
+    {
+        return (uint)RuntimeHelpers.GetHashCode(font.Source);
     }
 }
 
