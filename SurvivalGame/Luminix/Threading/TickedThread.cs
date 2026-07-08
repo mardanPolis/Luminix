@@ -98,11 +98,11 @@ public class TickedThread : BaseThread
                 Interlocked.Exchange(ref lastTickDate, nextTick);
                 nextTick += Interlocked.Read(ref tickIntervalInTicks);
 
-                startBytes = GC.GetAllocatedBytesForCurrentThread();
-
-                tickDeltaTime = internalStopwatch.Elapsed.TotalSeconds;
+                tickDeltaTime = internalStopwatch.Elapsed.TotalMilliseconds;
                 
                 internalStopwatch.Restart(); // NEW TICK
+
+                startBytes = GC.GetAllocatedBytesForCurrentThread();
 
                 Tick();
 

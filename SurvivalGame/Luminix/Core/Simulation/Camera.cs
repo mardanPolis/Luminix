@@ -10,6 +10,7 @@ public class Camera
     public Camera()
     {
         universe = Workspace.Current.GetService<Universe>();
+        graphics = Workspace.Current.GetService<Graphics>();
         if(universe.World == null)
         {
             throw new NullReferenceException("Unable to create a camera reason: a world instance was not found.");
@@ -19,7 +20,8 @@ public class Camera
         //TODO : complete Constructor Method
     }
 
-    protected Universe universe;
+    protected readonly Universe universe;
+    protected readonly Graphics graphics;
     protected readonly DenseList<CameraComponent> cameraComponents = [];
 
     private Vector2 position0 = Vector2.Zero;
@@ -34,11 +36,11 @@ public class Camera
     public float PosX { get { return position0.X; } set { position0.X = value; position.X = value; } }
     public float PosY { get { return position0.Y; } set { position0.Y = value; position.Y = value; } }
     public float ScaleX { get { return ScaleY; }}
-    public float ScaleY { get { return universe.Viewport.Height / orthoSize0; } }
+    public float ScaleY { get { return graphics.Viewport.Height / orthoSize0; } }
     public float Zoom
     {
-        get => universe.Viewport.Height / orthoSize0;
-        set => orthoSize0 = universe.Viewport.Height / MathF.Max(value, 0.01f);
+        get => graphics.Viewport.Height / orthoSize0;
+        set => orthoSize0 = graphics.Viewport.Height / MathF.Max(value, 0.01f);
     }
     public float OrthographicSize { get { return orthoSize0; } set { orthoSize0 = value > 0.01f ? value : 0.01f; orthoSize = orthoSize0;  } }
     internal float TOrthographicSize => orthoSize;
@@ -52,7 +54,7 @@ public class Camera
 
     public virtual Matrix GetViewMatrix()
     {
-        var viewport = universe.Viewport;
+        var viewport = graphics.Viewport;
 
         float scaleY = viewport.Height / orthoSize0;
         float scaleX = scaleY;

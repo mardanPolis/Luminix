@@ -70,83 +70,59 @@ public sealed class RenderBuffer
         cameraData = camera?.GetCameraSnapshot();
     }
 
-    public void PushSprite(TextureResource texture, Vector3 position, Vector2 scale, float rotation)
-    {
-        ulong key = BuildSpriteKey(texture);
- 
-        int dataIndex = instanceSprites.Count;
-        instanceSprites.Add(new InstanceSprite(null, texture, position, scale, rotation));
-        NewCommand(key, RenderObjectType.SpriteNonInterpolated, dataIndex);
-    }
-    
-    public void PushSprite(ShaderResource shader, TextureResource texture, Vector3 position, Vector2 scale, float rotation)
+    internal void PushSprite(ShaderResource shader, TextureResource texture, Color color, Vector3 position, Vector2 scale, float rotation)
     {
         ulong key = BuildSpriteKey(shader, texture);
  
         int dataIndex = instanceSprites.Count;
-        instanceSprites.Add(new InstanceSprite(shader, texture, position, scale, rotation));
+        instanceSprites.Add(new InstanceSprite(shader, texture, color, position, scale, rotation));
         NewCommand(key, RenderObjectType.SpriteNonInterpolated, dataIndex);
     }
-
-    public void PushText(FontResource font, string text, Vector3 position, Vector2 scale, float rotation)
+    internal void PushInterpolatedSprite(ShaderResource shader, TextureResource texture, Color color, Vector3 position0, Vector3 position, Vector2 scale0, Vector2 scale, float rotation0, float rotation)
     {
-        uint key = BuildFontKey(font);
+        ulong key = BuildSpriteKey(shader, texture);
+ 
+        int dataIndex = interpolatedInstanceSprites.Count;
+        interpolatedInstanceSprites.Add(new InterpolatedInstanceSprite(shader, texture, color, position0, position, scale0, scale, rotation0, rotation));
+        NewCommand(key, RenderObjectType.SpriteInterpolated, dataIndex);
+    }
+
+
+    internal void PushText(ShaderResource shader, FontResource font, Color color, string text, Vector3 position, Vector2 scale, float rotation)
+    {
+        ulong key = BuildFontKey(shader, font);
  
         int dataIndex = instanceTexts.Count;
-        instanceTexts.Add(new InstanceText(font, text, position, scale, rotation));
+        instanceTexts.Add(new InstanceText(shader, font, color, text, position, scale, rotation));
         NewCommand(key, RenderObjectType.TextNonInterpolated, dataIndex);
     }
 
-    public void PushInterpolatedSprite(TextureResource texture, Vector3 position0, Vector3 position, Vector2 scale0, Vector2 scale, float rotation0, float rotation)
+    internal void PushInterpolatedText(ShaderResource shader, FontResource font, Color color, string text, Vector3 position0, Vector3 position, Vector2 scale0, Vector2 scale, float rotation0, float rotation)
     {
-        ulong key = BuildSpriteKey(texture);
- 
-        int dataIndex = interpolatedInstanceSprites.Count;
-        interpolatedInstanceSprites.Add(new InterpolatedInstanceSprite(null, texture, position0, position, scale0, scale, rotation0, rotation));
-        NewCommand(key, RenderObjectType.SpriteInterpolated, dataIndex);
-    }
-
-    public void PushInterpolatedSprite(ShaderResource shader, TextureResource texture, Vector3 position0, Vector3 position, Vector2 scale0, Vector2 scale, float rotation0, float rotation)
-    {
-        ulong key = BuildSpriteKey(shader, texture);
- 
-        int dataIndex = interpolatedInstanceSprites.Count;
-        interpolatedInstanceSprites.Add(new InterpolatedInstanceSprite(shader, texture, position0, position, scale0, scale, rotation0, rotation));
-        NewCommand(key, RenderObjectType.SpriteInterpolated, dataIndex);
-    }
-
-    public void PushInterpolatedText(FontResource font, string text, Vector3 position0, Vector3 position, Vector2 scale0, Vector2 scale, float rotation0, float rotation)
-    {
-        uint key = BuildFontKey(font);
+        ulong key = BuildFontKey(shader, font);
  
         int dataIndex = interpolatedInstanceTexts.Count;
-        interpolatedInstanceTexts.Add(new InterpolatedInstanceText(font, text, position0, position, scale0, scale, rotation0, rotation));
+        interpolatedInstanceTexts.Add(new InterpolatedInstanceText(shader, font, color, text, position0, position, scale0, scale, rotation0, rotation));
         NewCommand(key, RenderObjectType.TextInterpolated, dataIndex);
     }
 
-    public void PushImage(TextureResource image, int x, int y, int width, int height, float rotation) => PushImage(null, image, Color.White, x, y, width, height, rotation);
-    public void PushImage(TextureResource image, Color color, int x, int y, int width, int height, float rotation) => PushImage(null, image, color, x, y, width, height, rotation);
-    public void PushImage(ShaderResource shader, TextureResource image, int x, int y, int width, int height, float rotation) => PushImage(shader, image, Color.White, x, y, width, height, rotation);
-    public void PushImage(ShaderResource shader, TextureResource image, Color color, int x, int y, int width, int height, float rotation)
+    internal void PushImage(ShaderResource shader, TextureResource image, Color color, int x, int y, int width, int height, float rotation)
     {
         int dataIndex = instanceImages.Count;
         NewCommand(UiRenderObjectType.Image, dataIndex);
         instanceImages.Add(new InstanceImage(shader, image, color, x, y, width, height, rotation));
     }
 
-    public void PushLabel(FontResource font, string text, int x, int y, int width, int height, float rotation) => PushLabel(null, font, Color.White, text, x, y, width, height, rotation);
-    public void PushLabel(FontResource font, Color color, string text, int x, int y, int width, int height, float rotation) => PushLabel(null, font, color, text, x, y, width, height, rotation);
-    public void PushLabel(ShaderResource shader, FontResource font, string text, int x, int y, int width, int height, float rotation) => PushLabel(shader, font, Color.White, text, x, y, width, height, rotation);
-    public void PushLabel(ShaderResource shader, FontResource font, Color color, string text, int x, int y, int width, int height, float rotation)
+    internal void PushLabel(ShaderResource shader, FontResource font, Color color, string text, int x, int y, int width, int height, float rotation)
     {
         int dataIndex = instanceLabels.Count;
         NewCommand(UiRenderObjectType.Label, dataIndex);
-        instanceLabels.Add(new InstanceLabel(shader, font, text, color, x, y, width, height, rotation));
+        instanceLabels.Add(new InstanceLabel(shader, font, color, text, x, y, width, height, rotation));
     }
 
 
     //TODO : Add RenderGroups, NonInterpolated only.
-    public void PushSpriteGroup()
+    internal void PushSpriteGroup()
     {
         
     }
@@ -198,6 +174,9 @@ public sealed class RenderBuffer
         interpolatedInstanceSprites.Clear();
         interpolatedInstanceTexts.Clear();
 
+        instanceLabels.Clear();
+        instanceImages.Clear();
+
         renderGroups.Clear();
     }
 
@@ -209,12 +188,6 @@ public sealed class RenderBuffer
     private void NewCommand(UiRenderObjectType Type, int DataIndex)
     {
         uiRenderCommands.Add(new UiRenderCommand(Type, DataIndex));
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static ulong BuildSpriteKey(TextureResource texture)
-    {
-        return (ulong)RuntimeHelpers.GetHashCode(texture?.Source);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -231,9 +204,16 @@ public sealed class RenderBuffer
     }
  
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static uint BuildFontKey(FontResource font)
+    private static ulong BuildFontKey(ShaderResource shader, FontResource font)
     {
-        return (uint)RuntimeHelpers.GetHashCode(font.Source);
+        int shaderHash = RuntimeHelpers.GetHashCode(shader?.Source);
+        int fontHash = RuntimeHelpers.GetHashCode(font?.Source);
+
+        uint shaderCode = (uint)shaderHash;
+        uint fontCode = (uint)fontHash;
+
+        ulong combinedHash = ((ulong)shaderCode << 32) | (ulong)fontCode;
+        return combinedHash;
     }
 }
 

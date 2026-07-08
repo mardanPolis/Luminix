@@ -61,8 +61,8 @@ public sealed class RenderingSystem : Workspace.Service
     public ResourceManager ResourceManager => resourceManager;
     public GraphicsDeviceManager GraphicsDeviceManager => graphics;
     public GraphicsDevice GraphicsDevice => graphics.GraphicsDevice;
-    public ulong FrameCount => Interlocked.Read(ref frameCount);
-    public long DrawCount => Interlocked.Read(ref drawCount);
+    public ulong FrameCount => frameCount;
+    public long DrawCount => drawCount;
     public Viewport Viewport => viewport;
 
     public int ResolutionWidth => resolution.Width;
@@ -133,9 +133,8 @@ public sealed class RenderingSystem : Workspace.Service
         spriteBatch.Draw(this.unscaledRenderTarget, unscaledRenderTargetDestination, Color.White);
         spriteBatch.End();
 
-        
-        Interlocked.Increment(ref frameCount);
-        Interlocked.Exchange(ref drawCount, GraphicsDevice.Metrics.DrawCount);
+        frameCount++;
+        drawCount = GraphicsDevice.Metrics.DrawCount;
     }
 
     public void TakeScreenshot(float partialTick)

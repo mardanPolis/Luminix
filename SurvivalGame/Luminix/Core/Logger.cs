@@ -6,6 +6,8 @@ using System.Threading;
 
 namespace Luminix;
 
+//FIXME : logger creates garbage, A LOT!
+
 public readonly struct Log
 {
     public enum Type
@@ -81,7 +83,7 @@ public sealed class Logger
 
     private Logger()
     {
-        logs = new();
+        logs = new(10000);
         logDir = Path.Combine(AppContext.BaseDirectory, "logs");
         Directory.CreateDirectory(logDir);
         

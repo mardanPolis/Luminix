@@ -2,7 +2,7 @@ using System;
 
 namespace Luminix.Threading.Buffers;
 
-internal class InputBuffer
+internal sealed class InputBuffer
 {
     private long[] keys = new long[4];
     private byte mouseButton = 0;

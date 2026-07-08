@@ -111,9 +111,17 @@ public class Main : Microsoft.Xna.Framework.Game
     private GraphicsDeviceManager graphics;
 
     private InputHandler inputHandler;
+    private AssetRegistrationHandler assetRegistrationHandler;
+
+    private RenderInfoBuffer renderInfoBuffer;
+
+    private bool takeScreenshot = false;
 
     public Thread MainSystemThread => mainThread;
     public CoreThread CoreThread => coreThread;
+
+    internal ResourceManager ResourceManager => resourceManager;
+    internal GraphicsDeviceManager GraphicsDeviceManager => graphics;
 
     public double FrameTime => frameTime;
     public double FrameDeltaTime => time != null ? time.ElapsedGameTime.TotalSeconds : 0;
@@ -127,14 +135,6 @@ public class Main : Microsoft.Xna.Framework.Game
     {
         init => base.Content = value;
     }
-
-
-
-    internal ResourceManager ResourceManager => resourceManager;
-    internal GraphicsDeviceManager GraphicsDeviceManager => graphics;
-    private AssetRegistrationHandler assetRegistrationHandler;
-
-    private bool takeScreenshot = false;
 
     protected override void Initialize()
     {
@@ -178,6 +178,15 @@ public class Main : Microsoft.Xna.Framework.Game
                 }
             }
 
+            foreach(var adapter in GraphicsAdapter.Adapters)
+            {
+                logger.Log($"Adapter: {adapter.DisplayName}");
+                foreach(var mode in adapter.SupportedDisplayModes)
+                {
+                    logger.Log($" - Mode: {mode.ToString()}");
+                }
+            }
+
             //Renderer initialization   
             renderingSystem.Initialize();
 
@@ -204,6 +213,8 @@ public class Main : Microsoft.Xna.Framework.Game
     protected override void Update(GameTime gameTime)
     {
         stopwatch.Restart();
+        renderInfoBuffer = renderBridge.CurrentWriteInfoBuffer ?? renderBridge.CreateInfoBuffer();
+
         inputHandler.Update(IsActive);
         assetRegistrationHandler.Run();
 
@@ -222,23 +233,25 @@ public class Main : Microsoft.Xna.Framework.Game
     {
         float partialTick = coreThread.PartialTick;
 
-        if(takeScreenshot)
-        {
-            renderingSystem.TakeScreenshot(partialTick);
-            takeScreenshot = false;
-        }
-        else
-        {
-            renderingSystem.NewFrame(partialTick);
-        }
+        renderingSystem.NewFrame(partialTick);
 
         base.Draw(gameTime);
 
         frameTime = stopwatch.Elapsed.TotalNanoseconds;
         time = gameTime;
-        long endBytes = GC.GetAllocatedBytesForCurrentThread();
-        allocated = endBytes - startBytes;
+        
+        renderInfoBuffer.Allocated += allocated;
+        renderInfoBuffer.DrawCalls = renderingSystem.DrawCount;
 
+        renderInfoBuffer.FrameCount = renderingSystem.FrameCount;
+        renderInfoBuffer.AccumulatedFrameCount++;
+        // TODO : renderInfoBuffer.FrameRate;
+        renderInfoBuffer.FrameDeltaTime += time.ElapsedGameTime.TotalMilliseconds;
+        renderInfoBuffer.FrameTime += frameTime;
+
+        renderInfoBuffer.updated = true;
+        
+        allocated = GC.GetAllocatedBytesForCurrentThread() - startBytes;
         startBytes = GC.GetAllocatedBytesForCurrentThread();
     }
 

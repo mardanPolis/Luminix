@@ -10,6 +10,7 @@ using Luminix.Resources.AssetHandlers;
 using Luminix.Threading.Bridges;
 using Luminix.Threading.Buffers;
 using Game.Simulation;
+using Luminix.Rendering;
 
 namespace Luminix.Threading;
 
@@ -42,6 +43,8 @@ public sealed class CoreThread : TickedThread
 
     private Universe universe;
     private Universe.Controller universeController;
+    private Graphics graphics;
+    private Graphics.Controller graphicsController;
     private ResourceProvider resources;
     private EntityTypeRegistry entityTypeRegistry;
     private Input input;
@@ -53,6 +56,8 @@ public sealed class CoreThread : TickedThread
     
     private TextureResource circle;
 
+    private SystemDebugRenderer systemDebugRenderer;
+
     protected sealed override void Initialize()
     {
         IsBackground = true;
@@ -60,9 +65,10 @@ public sealed class CoreThread : TickedThread
         logger.Log($"Started initialization");
 
         Workspace.Create().SetSubState("bootstrap");
-        entityTypeRegistry = new EntityTypeRegistry();
-        resources          = new ResourceProvider();
         universe           = new Universe(out universeController);
+        graphics           = new Graphics(renderBridge, out graphicsController);
+        resources          = new ResourceProvider();
+        entityTypeRegistry = new EntityTypeRegistry();
         input              = new Input();
         workerThreadPool = new WorkerThreadPool(workerThreadCount);
         assetIO          = new AssetIO();
@@ -74,7 +80,7 @@ public sealed class CoreThread : TickedThread
 
         var stopwatch = Stopwatch.StartNew();
 
-        
+        //TODO : Add entityType registration.
 
         entityTypeRegistry.FinalizeRegistry();
 
@@ -83,8 +89,6 @@ public sealed class CoreThread : TickedThread
         LoadAssets(assetLoadingHandler, textureAtlasHandler);
         logger.Log($"{Name} loaded assets in {stopwatch.Elapsed.Milliseconds}ms");
 
-        Workspace.Current.SetSubState("renderers");
-        
         Workspace.Current.SetSubState("types");
 
         var process = Process.GetCurrentProcess();
@@ -103,11 +107,11 @@ public sealed class CoreThread : TickedThread
         //TODO : Remove
         circle = resources.GetResource<TextureResource>("circle");
 
+        systemDebugRenderer = new SystemDebugRenderer();
+
         universe.LoadWorld("SimWorld");
         Camera camera = new Camera();
         _ = new CameraMover(camera);
-        
-
     }
 
     protected override void DebugInitialize()
@@ -123,7 +127,7 @@ public sealed class CoreThread : TickedThread
 
     private void Update()
     {
-        renderBridge.SwapBuffers();
+        graphicsController.SwapBuffers();
 
         input.ReadFrom(inputBridge.ReadBuffer);
         inputBridge.Swap();
@@ -137,21 +141,19 @@ public sealed class CoreThread : TickedThread
         }
 
         universeController.TickRate = TickRate;
+        universeController.TickTime = TickTime;
         universeController.TickCount = TickCount;
         universeController.TickDeltaTime = TickDeltaTime;
+        universeController.TickAllocated = TickAllocated;
 
         universe.World?.Tick();
     }
     
-    float rot;
-
     private void Render()
     {
-        var worldRenderBuffer = renderBridge.CurrentWriteBuffer ?? (RenderBuffer)renderBridge.CreateBuffer();
-        worldRenderBuffer.Reset();
-        worldRenderBuffer.Set(universe.World?.MainCamera);
-        worldRenderBuffer.PushSprite(circle, Vector3.Zero, Vector2.One, 0);
-        worldRenderBuffer.PushSprite(circle, new Vector3(1, 2, 0), Vector2.One, rot += 0.5f);
+        graphicsController.BeginRender();
+        systemDebugRenderer.Render();
+        graphicsController.StopRender();
     }
 
     private void LoadBootAssets(AssetLoadingHandler assetLoadingHandler)

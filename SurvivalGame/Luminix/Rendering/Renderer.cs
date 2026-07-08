@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
+using Luminix.Rendering.RenderInstances;
 using Luminix.Resources;
 using Luminix.Threading.Buffers;
 using Microsoft.Xna.Framework;
@@ -256,6 +258,8 @@ internal sealed class Renderer
  
                     case RenderBuffer.RenderObjectType.TextNonInterpolated:
                     {
+                        //FIXME : Shader ignored
+
                         var instance = nonInterpolatedTexts[commandDataIndex];
  
                         if (frustumCulledGroups.Contains(instance.Group))
@@ -268,6 +272,8 @@ internal sealed class Renderer
  
                     case RenderBuffer.RenderObjectType.TextInterpolated:
                     {
+                        //FIXME : Shader ignored
+
                         var instance = interpolatedTexts[commandDataIndex];
 
                         var position = Vector3.Lerp(instance.Position0, instance.Position, partialTick);
@@ -301,33 +307,40 @@ internal sealed class Renderer
         int commandIndex = 0;
         int commandCount = 0;
 
+        int imageCount = 0;
+        int labelCount = 0;
+
+        RenderBuffer.UiRenderObjectType commandDataType = RenderBuffer.UiRenderObjectType.Image;
+
         try
         {
             var commands = renderBuffer.GetUiRenderCommands();
             commandCount = commands.Length;
  
-            var images    = renderBuffer.GetImages();
-            var labels    = renderBuffer.GetLabels();
-
-            Effect currentEffect = null;
+            var images = renderBuffer.GetImages();
+            var labels = renderBuffer.GetLabels();
+            imageCount = images.Length;
+            labelCount = labels.Length;
+            
+            ShaderResource currentShader = null;
 
             spriteBatch.Begin(sortMode:SpriteSortMode.Deferred);
             for (commandIndex = 0; commandIndex < commandCount; commandIndex++)
             {
                 var command         = commands[commandIndex];
-                var commandDataType = command.Type;
                 var commandDataIndex = command.DataIndex;
+                commandDataType = command.Type;
 
                 switch(commandDataType)
                 {
                     case RenderBuffer.UiRenderObjectType.Image:
                         var image = images[commandDataIndex];
 
-                        if(image.Shader.Source != currentEffect)
+                        if(image.Shader != currentShader)
                         {
-                            currentEffect = image.Shader.Source;
+                            currentShader = image.Shader;
                             spriteBatch.End();
-                            spriteBatch.Begin(effect:currentEffect);
+                            spriteBatch.Begin(effect:currentShader?.Source);
                         }
 
                         spriteBatch.Draw(image.Texture.Source, new Vector2(image.X, image.Y), image.Texture.Rectangle, image.Color, image.Rotation, Vector2.Zero, new Vector2(image.Width, image.Height), SpriteEffects.None, 0f);
@@ -336,14 +349,14 @@ internal sealed class Renderer
 
                         var label = labels[commandDataIndex];
 
-                        if(label.Shader.Source != currentEffect)
+                        if(label.Shader != currentShader)
                         {
-                            currentEffect = label.Shader.Source;
+                            currentShader = label.Shader;
                             spriteBatch.End();
-                            spriteBatch.Begin(effect:currentEffect);
+                            spriteBatch.Begin(effect:currentShader?.Source);
                         }
 
-                        spriteBatch.DrawString(label.Font.Source, label.Text, new Vector2(label.X, label.Y), label.Color, label.Rotation, Vector2.Zero, new Vector2(label.Width, label.Height), SpriteEffects.None, 0f);
+                        spriteBatch.DrawString(label.Font.Source, label.Text, new Vector2(label.X, label.Y), label.Color);
                     break;
                 }
 
@@ -363,9 +376,17 @@ internal sealed class Renderer
                 spriteBatch.End();
             }
         }
-        catch(Exception ex)
+        catch
         {
-            Logger.Get().Err($"Exception happened during rendering (CommandIndex/CommandCount : {commandIndex}/{commandCount}), reason: {ex}");
+            switch(commandDataType)
+            {
+                case RenderBuffer.UiRenderObjectType.Image:
+                    Logger.Get().Err($"Exception happened during rendering (CommandIndex/CommandCount/ImageCount : {commandIndex}/{commandCount}/{imageCount})");
+                break;
+                case RenderBuffer.UiRenderObjectType.Label:
+                    Logger.Get().Err($"Exception happened during rendering (CommandIndex/CommandCount/LabelCount : {commandIndex}/{commandCount}/{labelCount})");
+                break;
+            }
             throw;
         }
     }

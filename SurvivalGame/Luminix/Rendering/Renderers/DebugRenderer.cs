@@ -1,6 +1,5 @@
 using System;
 using System.Text;
-using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Luminix.Resources;
 using Luminix.Threading.Buffers;
@@ -13,12 +12,16 @@ public abstract class DebugRenderer
     public DebugRenderer()
     {
         universe = Workspace.Current.GetService<Universe>();
+        graphics = Workspace.Current.GetService<Graphics>();
         resourceProvider = Workspace.Current.GetService<ResourceProvider>();
         pixel = resourceProvider.GetResource<TextureResource>("Pixel");
+        defaultFont = resourceProvider.GetResource<FontResource>("IBMPlexMono-Medium");
     }
     protected readonly Universe universe;
+    protected readonly Graphics graphics;
     protected readonly ResourceProvider resourceProvider;
     protected readonly TextureResource pixel;
+    protected readonly FontResource defaultFont;
     
     // protected void DrawGraph(Vector2 position, float height, double[] data, double maxValue, int valueLineThickness, int valueMargin, int lastIndex, bool invertedWidth)
     // {
@@ -71,39 +74,49 @@ public abstract class DebugRenderer
     //     DrawLine(rightLower, leftLower, Color.White, 1);
     //     DrawLine(leftLower, leftUpper, Color.White, 1);
     // }
-    public abstract void Render(RenderBuffer renderBuffer);
+    public abstract void Render();
 }
 
 internal sealed class SystemDebugRenderer : DebugRenderer
 {
     public SystemDebugRenderer()
     {
-        graphics = GraphicsAdapter.DefaultAdapter.Description.Split('/')[0];
-
         tickTimes = new double[128];
         frameTimes = new double[128];
         managedMemoryAmounts = new double[128];
     }
-
-    private string graphics;
 
     private readonly double[] tickTimes;
     private readonly double[] frameTimes;
     private readonly double[] managedMemoryAmounts;
     private StringBuilder sb = new StringBuilder();
 
-    private double elapsed = 0;
+    private double tickTimeAccumulated;
+    private double tickTimeAvg;
 
-    public override void Render(RenderBuffer renderBuffer)
+    private double tickDeltaTimeAccumulated;
+    private double tickDeltaTimeAvg;
+
+    private double frameTimeAccumulated;
+    private double frameTimeAvg;
+
+    private double frameDeltaTimeAccumulated;
+    private double frameDeltaTimeAvg;
+
+    private int tickSkipped;
+
+    public override void Render()
     {
         if(!Settings.DebugInfo)
             return;
 
-        Viewport viewport = universe.Viewport;
+        Viewport viewport = graphics.Viewport;
 
         float gHeight = 200f;
 
         var currentIndex = (int)((universe.TickCount - 1) & 127);
+
+        double tickBudget = 1000000.0 / universe.TickRate;
 
         uint tickRate = universe.TickRate;
         long tickCount = universe.TickCount;
@@ -111,42 +124,65 @@ internal sealed class SystemDebugRenderer : DebugRenderer
         double tickDeltaTime = universe.TickDeltaTime;
         long tickAllocated = universe.TickAllocated;
 
-        uint frameRate = universe.FrameRate;
-        long frameCount = universe.FrameCount;
-        double frameTime = universe.FrameTime;
-        double frameDeltaTime = universe.FrameDeltaTime; 
-        long frameAllocated = universe.FrameAllocated;
-
-        double budgetUs = 1000000.0 / universe.TickRate;
+        uint frameRate = graphics.FrameRate;
+        ulong frameCount = graphics.FrameCount;
+        double frameTime = graphics.FrameTime;
+        double frameDeltaTime = graphics.FrameDeltaTime; 
+        long frameAllocated = graphics.FrameAllocated;
 
         long usedMemory = GC.GetTotalMemory(false);
+
+        tickTimeAccumulated += universe.TickTime;
+        tickDeltaTimeAccumulated += universe.TickDeltaTime;
+        frameTimeAccumulated += graphics.FrameTime;
+        frameDeltaTimeAccumulated += graphics.FrameDeltaTime;
+
+        int interval = (int)tickRate / 2;
+
+        if(universe.TickCount % interval == 0)
+        {
+            tickTimeAvg       = tickTimeAccumulated       / interval;
+            tickDeltaTimeAvg  = tickDeltaTimeAccumulated  / interval;
+            frameTimeAvg      = frameTimeAccumulated      / interval;
+            frameDeltaTimeAvg = frameDeltaTimeAccumulated / interval;
+
+            tickTimeAccumulated       = 0;
+            tickDeltaTimeAccumulated  = 0;
+            frameTimeAccumulated      = 0;
+            frameDeltaTimeAccumulated = 0;
+        }
+
+        tickTimes[currentIndex] = tickTime;
+        frameTimes[currentIndex] = frameTime;
         managedMemoryAmounts[currentIndex] = usedMemory / 1024.0 / 1024.0;
         
-        elapsed += frameDeltaTime; // Assuming this is in seconds
-
         sb.Clear();
         sb.Append("Build-Version:").Append(Main.Version).Append(" | Build-Date:").Append(Main.BuildDate).Append('\n');
-        // sb.Append(graphics).Append($" | ").Append(renderingSystem.ResolutionWidth).Append(':').Append(renderingSystem.ResolutionHeight).Append('\n');
-        sb.AppendDouble(frameDeltaTime > 0 ? MathF.Round(1.0f / (float)frameDeltaTime) : 0, 0, 3);
+        sb.Append(graphics.Resolution.X).Append('x').Append(graphics.Resolution.Y).Append(" @ ").Append(graphics.RefreshRate).Append('\n');
+        sb.AppendDouble(frameDeltaTime > 0 ? double.Round(1.0 / (frameDeltaTime / 1000)) : 0, 0, 3);
         sb.Append(":FPS | ");
-        sb.AppendDouble(tickDeltaTime > 0 ? MathF.Round(1.0f / (float)tickDeltaTime) : 0, 0, 3);
+        sb.AppendDouble(tickDeltaTime > 0 ? double.Round(1.0 / (tickDeltaTime / 1000)) : 0, 0, 3);
         sb.Append(":TPS\n");
 
-        sb.Append("FrameTime : ");
-        sb.AppendDouble(frameTime / 1000000.0, 4, 2);
-        sb.Append("ms\n");
+        sb.Append("DrawCalls : ");
+        sb.Append(graphics.DrawCalls);
+        sb.Append('\n');
 
-        sb.Append("TickTime  : ");
-        sb.AppendDouble(tickTime / 1000.0, 4, 2);
-        sb.Append("ms\n");
+        sb.Append("FrameTime : ");
+        sb.AppendDouble(frameTimeAvg / 1000000.0, 4, 2);
+        sb.Append('\n');
 
         sb.Append("FrameDeltaTime : ");
-        sb.AppendDouble(frameDeltaTime * 1000.0, 4, 2);
-        sb.Append("ms\n");
+        sb.AppendDouble(frameDeltaTimeAvg, 4, 2);
+        sb.Append('\n');
+
+        sb.Append("TickTime  : ");
+        sb.AppendDouble(tickTimeAvg / 1000.0, 4, 2);
+        sb.Append('\n');
 
         sb.Append("TickDeltaTime  : ");
-        sb.AppendDouble(tickDeltaTime * 1000.0, 4, 2);
-        sb.Append("ms\n");
+        sb.AppendDouble(tickDeltaTimeAvg, 4, 2);
+        sb.Append('\n');
 
         sb.Append("Managed Memory : ");
         sb.AppendDouble(usedMemory / 1024.0 / 1024.0, 4, 2);
@@ -160,18 +196,8 @@ internal sealed class SystemDebugRenderer : DebugRenderer
         sb.AppendLong(tickAllocated, 3);
         sb.Append(" bytes\n");
 
-        // sb.Append("DrawCalls : ");
-        // sb.Append(renderingSystem.DrawCount);
+        string builtString = sb.ToString();
 
-        // spriteBatch.Begin();
-        // spriteBatch.DrawString(defaultFontRegular.Source, sb,
-        //     new Vector2(15, 15), Color.White);
-
-        // Vector2 graphPos = new Vector2(viewport.Width - 20, viewport.Height - gHeight - 20);
-        // DrawGraph(graphPos, gHeight, managedMemoryAmounts, 128, 5, 5, currentIndex, true);
-
-        // graphPos = new Vector2(20, viewport.Height - gHeight - 20);
-        // DrawGraph(graphPos, gHeight, tickTimes, budgetUs, 5, 5, currentIndex, false);
-        // spriteBatch.End();
+        graphics.DrawLabel(defaultFont, builtString, 0, 0);
     }
 }
