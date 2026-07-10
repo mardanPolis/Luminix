@@ -7,102 +7,87 @@ namespace Luminix;
 
 public sealed class Workspace
 {
+    internal readonly struct Controller
+    {
+        internal Controller(Workspace controlled)
+        {
+            if(controlled.controllerIssued)
+                throw new ArgumentException("Cant create a UIManager.Controller, the provided UI manager is already initialized!");
+            
+            this.controlled = controlled;
+        }
+
+        private readonly Workspace controlled;
+
+        public void Start()
+        {
+            var startMethods = controlled.startMethods;
+            controlled.startMethods = null;
+            foreach(var method in startMethods)
+            {
+                method();
+            }
+        }
+    }
+
     public abstract class Service
     {
         public Workspace Workspace { get; private set; }
+        protected Logger logger { get; private init; }
 
         public Service()
         {
-            if (Workspace.Current == null)
-                throw new InvalidOperationException(
-                    $"Service '{GetType().Name}' cannot be created: No active Workspace found.");
+            Workspace = Workspace.Current ?? throw new InvalidOperationException($"Service '{GetType().Name}' cannot be created: No active Workspace found.");
+            logger = Logger.Get();
+                
+            var serviceType = GetType();
+            if(Workspace.startMethods == null)
+                throw new InvalidOperationException($"Cannot add {serviceType.Name} to '{this}', reason: Workspace has been already started.");
+            if(Workspace.services.ContainsKey(serviceType))
+                throw new InvalidOperationException($"Cannot add {serviceType.Name} to '{this}', reason: Service with the same type exists.");
 
-            Workspace = Workspace.Current;
-            Workspace.AddService(this);
+            Workspace.services[serviceType] = this;
+            Workspace.startMethods.Add(Start);
         }
+
+        protected virtual void Start() {}
 
         public override string ToString()
         {
             return $"Service {this.GetType().Name}";
         }
     }
-    public enum State
-    {
-        Initialize,
-        Running,
-        Stopped,
-    }
 
     private static ThreadLocal<Workspace> instance = new ThreadLocal<Workspace>(true);
     public static Workspace Current => instance.Value;
 
-    public static Workspace Create()
+    internal Workspace(out Controller controller)
     {
-        var existing = instance.Value;
-        
-        if (existing != null)
-        {
-            instance.Value = existing;
-            Logger.Get().Wrn("Workspace already exists; returning existing instance.");
-            return existing;
-        }
-
         try
         {
-            var workspace = new Workspace();
+            var existing = instance.Value;
             
-            workspace.SetState(Workspace.State.Initialize);
+            if (existing != null)
+                throw new InvalidOperationException("Workspace already exists!");
 
-            instance.Value = workspace;
-            return workspace;
+            instance.Value = this;
+            services = new();
+            startMethods = new();
+
+            controller = new Controller(this);
+            controllerIssued = true;
         }
-        catch (Exception ex)
+        catch
         {
-            Logger.Get().Err($"Critical failure creating workspace: {ex.Message}");
-            return null; 
-        }
-    }
-    private static string GetStateString(State value)
-    {
-        switch(value)
-        {
-            case State.Running:
-                return "Running";
-            case State.Initialize:
-                return "Initialize";
-            default:
-                return "Stopped";
+            Logger.Get().Err($"Failed to create a workspace!");
+            throw;
         }
     }
 
-    private Workspace()
-    {
-        services = new();
-    }
-
-    private State state;
-    private string subState;
-
-    public string FullCurrentState
-    {
-        get
-        {
-            if(string.IsNullOrWhiteSpace(subState))
-                return GetStateString(state);
-
-            return GetStateString(state) + " | " + subState;
-        }
-    }
-    
+    private readonly bool controllerIssued;
     private readonly Dictionary<Type, Service> services;
-    private void AddService(Service service)
-    {
-        var serviceType = service.GetType();
-        if(services.ContainsKey(serviceType))
-            throw new InvalidOperationException($"Cannot add {serviceType.Name} to '{this}', reason: Service with the same type exists.");
-
-        services[serviceType] = service;
-    }
+    private List<Action> startMethods;
+    
     public bool TryGetService<T>(out T _service) where T : Service 
     {
         _service = null;
@@ -120,36 +105,7 @@ public sealed class Workspace
 
         return (T)service;
     }
-
-    internal void SetState(State value)
-    {
-        state = value;
-        subState = null;
-    }
-
-    public bool IsState(State value)
-    {
-        return state == value;
-    }
-
-    public State GetState()
-    {
-        return state;
-    }
-
-    public void SetSubState(string value)
-    {
-        subState = value;
-    }
-    public bool IsSubState(string value)
-    {
-        return subState == value;
-    }
-    public string GetSubState()
-    {
-        return subState;
-    }
-
+ 
     public override string ToString()
     {
         return $"{TickedThread.CurrentThread.Name} workspace";

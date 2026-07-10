@@ -16,6 +16,9 @@ public class TickedThread : BaseThread
     private Stopwatch stopwatch;
     private Stopwatch internalStopwatch;
 
+    private Workspace workspace;
+    private Workspace.Controller workspaceController;
+
     private long tickIntervalInTicks = 0;
     private long lastTickDate = 0;
 
@@ -62,19 +65,20 @@ public class TickedThread : BaseThread
     
             startBytes = GC.GetAllocatedBytesForCurrentThread();
 
+            workspace = new Workspace(out workspaceController);
+
             Initialize();
-            if(Settings.Debug)
-                DebugInitialize();
+            //TODO : only in debug – if(Settings.Debug)
+            DebugInitialize();
             
+            workspaceController.Start();
+
             endBytes = GC.GetAllocatedBytesForCurrentThread();
 
             Interlocked.Exchange(ref tickAllocated, endBytes - startBytes);
 
             logger.Log($"{Name} initialized in {stopwatch.Elapsed.Milliseconds}ms");
             logger.Log($"{Name} allocated {tickAllocated / 1024.0:F2} KB ({tickAllocated:N0} bytes during initialization!");
-
-            Workspace.Current?.SetState(Workspace.State.Running);
-
 
             while (running)
             {

@@ -81,9 +81,9 @@ internal sealed class SystemDebugRenderer : DebugRenderer
 {
     public SystemDebugRenderer()
     {
-        tickTimes = new double[128];
-        frameTimes = new double[128];
-        managedMemoryAmounts = new double[128];
+        tickTimes = new double[256];
+        frameTimes = new double[256];
+        managedMemoryAmounts = new double[256];
     }
 
     private readonly double[] tickTimes;
@@ -110,27 +110,21 @@ internal sealed class SystemDebugRenderer : DebugRenderer
         if(!Settings.DebugInfo)
             return;
 
-        Viewport viewport = graphics.Viewport;
-
         float gHeight = 200f;
-
-        var currentIndex = (int)((universe.TickCount - 1) & 127);
 
         double tickBudget = 1000000.0 / universe.TickRate;
 
         uint tickRate = universe.TickRate;
         long tickCount = universe.TickCount;
         double tickTime = universe.TickTime;
-        double tickDeltaTime = universe.TickDeltaTime;
         long tickAllocated = universe.TickAllocated;
 
-        uint frameRate = graphics.FrameRate;
-        ulong frameCount = graphics.FrameCount;
         double frameTime = graphics.FrameTime;
-        double frameDeltaTime = graphics.FrameDeltaTime; 
         long frameAllocated = graphics.FrameAllocated;
 
         long usedMemory = GC.GetTotalMemory(false);
+
+        var currentIndex = (int)((tickCount - 1) & 255);
 
         tickTimeAccumulated += universe.TickTime;
         tickDeltaTimeAccumulated += universe.TickDeltaTime;
@@ -139,7 +133,7 @@ internal sealed class SystemDebugRenderer : DebugRenderer
 
         int interval = (int)tickRate / 2;
 
-        if(universe.TickCount % interval == 0)
+        if(tickCount % interval == 0)
         {
             tickTimeAvg       = tickTimeAccumulated       / interval;
             tickDeltaTimeAvg  = tickDeltaTimeAccumulated  / interval;
@@ -159,9 +153,9 @@ internal sealed class SystemDebugRenderer : DebugRenderer
         sb.Clear();
         sb.Append("Build-Version:").Append(Main.Version).Append(" | Build-Date:").Append(Main.BuildDate).Append('\n');
         sb.Append(graphics.Resolution.X).Append('x').Append(graphics.Resolution.Y).Append(" @ ").Append(graphics.RefreshRate).Append('\n');
-        sb.AppendDouble(frameDeltaTime > 0 ? double.Round(1.0 / (frameDeltaTime / 1000)) : 0, 0, 3);
+        sb.AppendDouble(frameDeltaTimeAvg > 0 ? double.Round(1.0 / (frameDeltaTimeAvg / 1000)) : 0, 0, 3);
         sb.Append(":FPS | ");
-        sb.AppendDouble(tickDeltaTime > 0 ? double.Round(1.0 / (tickDeltaTime / 1000)) : 0, 0, 3);
+        sb.AppendDouble(tickDeltaTimeAvg > 0 ? double.Round(1.0 / (tickDeltaTimeAvg / 1000)) : 0, 0, 3);
         sb.Append(":TPS\n");
 
         sb.Append("DrawCalls : ");

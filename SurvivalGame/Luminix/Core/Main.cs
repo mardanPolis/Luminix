@@ -35,23 +35,13 @@ public class Main : Microsoft.Xna.Framework.Game
         Main.BuildDate = buildDate;
 
         //workspace
-        workspace = Workspace.Create();
+        workspace = new Workspace(out workspaceController);
         embeddedIO = new EmbeddedIO();
 
         logger = Logger.Get();
         logger.Log($"Started initialization");
         logger.Log($"Build-Vers: {version}");
         logger.Log($"Build-Date: {buildDate}");
-
-        Settings.Initialize(out Settings.Controller settingsController);
-        settingsController.Debug = true;
-        settingsController.DebugAssets = true;
-        settingsController.DebugInitialization = true;
-
-        Settings.DebugInfo = true;
-
-        settingsController.MinWorkerThreadCount = 2;
-        settingsController.MaxWorkerThreadCount = 5;
 
         stopwatch = Stopwatch.StartNew();
 
@@ -75,8 +65,7 @@ public class Main : Microsoft.Xna.Framework.Game
             coreResourceBridge = new ResourceBridge();
             coreAssetBridge = new AssetBridge();
 
-            int workerThreadCount = Math.Max(Settings.MinWorkerThreadCount, Environment.ProcessorCount - 2);
-            coreThread = new CoreThread(renderBridge, coreAssetBridge, coreInputBridge, coreResourceBridge, workerThreadCount);
+            coreThread = new CoreThread(renderBridge, coreAssetBridge, coreInputBridge, coreResourceBridge);
 
         }
         //starting threads
@@ -104,6 +93,7 @@ public class Main : Microsoft.Xna.Framework.Game
     private Logger logger;
 
     private Workspace workspace;
+    private Workspace.Controller workspaceController;
     private EmbeddedIO embeddedIO;
     private RenderingSystem renderingSystem;
 
@@ -168,8 +158,6 @@ public class Main : Microsoft.Xna.Framework.Game
             {
                 try
                 {
-                    if(Settings.DebugInitialization && Settings.DebugAssets)
-                        logger.Log($"Loading embedded asset: {asset.Name}");
                     resourceManager.CreateResource(asset);
                 }
                 catch(Exception ex)
@@ -200,7 +188,8 @@ public class Main : Microsoft.Xna.Framework.Game
             Logger.Get().Err($"Exception happened during initialization");
             throw;
         }
-        workspace.SetState(Workspace.State.Running);
+
+        workspaceController.Start();
 
         logger.Log($"RenderThread initialized in {stopwatch.Elapsed.Milliseconds}ms");
 

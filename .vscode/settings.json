@@ -2,6 +2,7 @@
     "dotnet.defaultSolution": "SurvivalGame.slnx",
     "cSpell.words": [
         "indegree",
+        "interactable",
         "Interp",
         "Lerp",
         "Luminix",

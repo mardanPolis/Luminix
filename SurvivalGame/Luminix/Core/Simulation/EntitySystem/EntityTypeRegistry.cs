@@ -101,7 +101,7 @@ public sealed class EntityTypeRegistry : Workspace.Service
             EntityType.UpdateMethod[] updateMethods = null;
 
             MethodInfo renderMethodsInfo = null;
-            EntityType.UpdateMethod renderMethods = null;
+            EntityType.RenderMethod renderMethods = null;
 
             try
             {
@@ -115,8 +115,8 @@ public sealed class EntityTypeRegistry : Workspace.Service
 
             try
             {
-                updateMethodsInfos = GetUpdateMethods(entitySystem.GetType());
-                updateMethods = GetUpdateMethods(updateMethodsInfos, entitySystem, componentContainersArray);
+                renderMethodsInfo = GetRenderMethod(entitySystem.GetType());
+                renderMethod = GetRenderMethod(updateMethodsInfos, entitySystem, componentContainersArray);
             }
             catch(Exception ex)
             {

@@ -12,59 +12,53 @@ public sealed class Graphics : Workspace.Service
 {
     internal readonly struct Controller
     {
-        public Controller(Graphics graphics, RenderBridge renderBridge)
+        internal Controller(Graphics controlled, RenderBridge renderBridge)
         {
-            if(graphics.initialized)
-                throw new ArgumentException("Cant create a Universe.Controller, the provided universe is already initialized!");
+            if(controlled.controllerIssued)
+                throw new ArgumentException("Cant create a Graphics.Controller, the provided graphics is already initialized!");
             
-            this.renderBridge = renderBridge;
-            this.controlledGraphics = graphics;
+            this.bridge = renderBridge;
+            this.controlled = controlled;
         }
 
-        private readonly RenderBridge renderBridge;
-        private readonly Graphics controlledGraphics;
-
-        public Viewport Viewport { get => controlledGraphics.Viewport; set => controlledGraphics.Viewport = value; }
+        private readonly RenderBridge bridge;
+        private readonly Graphics controlled;
 
         internal void SwapBuffers()
         {
-            this.renderBridge.SwapBuffers();
-            var renderInfoBuffer = this.renderBridge.CurrentReadInfoBuffer;
+            this.bridge.SwapBuffers();
+            var renderInfoBuffer = this.bridge.CurrentReadInfoBuffer;
             if(renderInfoBuffer == null || !renderInfoBuffer.updated)
                 return;
 
             var accumulatedFrameCount = renderInfoBuffer.AccumulatedFrameCount;
-            controlledGraphics.FrameRate = renderInfoBuffer.FrameRate;
-            controlledGraphics.FrameCount = renderInfoBuffer.FrameCount;
-            controlledGraphics.FrameTime = renderInfoBuffer.FrameTime / accumulatedFrameCount;
-            controlledGraphics.FrameDeltaTime = renderInfoBuffer.FrameDeltaTime / accumulatedFrameCount;
-            controlledGraphics.FrameAllocated = renderInfoBuffer.Allocated;
+            controlled.FrameRate = renderInfoBuffer.FrameRate;
+            controlled.FrameCount = renderInfoBuffer.FrameCount;
+            controlled.FrameTime = renderInfoBuffer.FrameTime / accumulatedFrameCount;
+            controlled.FrameDeltaTime = renderInfoBuffer.FrameDeltaTime / accumulatedFrameCount;
+            controlled.FrameAllocated = renderInfoBuffer.Allocated;
             renderInfoBuffer.Reset();
         }
 
         internal void BeginRender()
         {
-            controlledGraphics.renderBuffer = renderBridge.CurrentWriteBuffer ?? renderBridge.CreateBuffer();
-            controlledGraphics.renderBuffer.Reset();
+            controlled.renderBuffer = bridge.CurrentWriteBuffer ?? bridge.CreateBuffer();
+            controlled.renderBuffer.Reset();
         }
 
         internal void StopRender()
         {
-            controlledGraphics.renderBuffer = null;
+            controlled.renderBuffer = null;
         }
     }
 
     internal Graphics(RenderBridge renderBridge, out Controller controller)
     {
-        this.logger = Logger.Get();
-        this.initialized = false;
         controller = new Controller(this, renderBridge);
-
-        this.initialized = true;
+        this.controllerIssued = true;
     }
     
-    private readonly bool initialized;
-    private readonly Logger logger;
+    private readonly bool controllerIssued;
 
     private RenderBuffer renderBuffer;
 
@@ -121,8 +115,6 @@ public sealed class Graphics : Workspace.Service
         renderBuffer.PushInterpolatedText(shader, font, color, text, position0, position, scale0, scale, rotation0, rotation);
     }
 
-    public void DrawImage(TextureResource image, int x, int y)                                          => DrawImage(null, image, Color.White, x, y, 0, 0, 0);
-    public void DrawImage(TextureResource image, int x, int y, float rotation)                          => DrawImage(null, image, Color.White, x, y, 0, 0, 0);
     public void DrawImage(TextureResource image, int x, int y, int width, int height)                   => DrawImage(null, image, Color.White, x, y, width, height, 0);
     public void DrawImage(TextureResource image, int x, int y, int width, int height, float rotation)   => DrawImage(null, image, Color.White, x, y, width, height, rotation);
     public void DrawImage(ShaderResource shader, TextureResource image, Color color, int x, int y, int width, int height, float rotation)

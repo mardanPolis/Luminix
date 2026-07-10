@@ -127,7 +127,6 @@ internal struct EntityType
             compiledPerIndex = lambda.Compile();
         }
     }
-
     public class RenderMethod : Method
     {
         public RenderMethod(MethodInfo info, EntitySystem entitySystem, Dictionary<Type, IComponentContainer> componentContainerMap)
@@ -213,7 +212,7 @@ internal struct EntityType
             compiledPerIndex = lambda.Compile();
         }
     }
-    public EntityType(string typeName, Entity.TypeID typeID, EntitySystem entitySystem, UpdateMethod[] updateMethods, IComponentContainer[] componentContainers)
+    public EntityType(string typeName, Entity.TypeID typeID, EntitySystem entitySystem, UpdateMethod[] updateMethods, RenderMethod renderMethod, IComponentContainer[] componentContainers)
     {
         int defaultEntityCount = 8;
 
@@ -244,12 +243,14 @@ internal struct EntityType
     public Entity[] Entities => entities;
     public int EntityCount { get; private set; }
 
-    private Entity[] entities;
     private readonly Dictionary<Type, int> componentTypeMap;
     private readonly IComponentContainer[] componentContainers;
-
-    private UpdateMethod[] updateMethods;
+    private readonly UpdateMethod[] updateMethods;
+    private readonly RenderMethod renderMethod;
     private bool dirtyUpdateMethods = false;
+
+    private Entity[] entities;
+    private int currEntityCount;
 
     public void CreateEntity(ID entityID)
     {
@@ -299,16 +300,24 @@ internal struct EntityType
         EntityCount--;
     }
 
-    public void UpdateEntities()
+    public void Refresh()
     {
-        var entityCount = EntityCount;
-
         if (dirtyUpdateMethods)
         {
             for (int i = 0; i < updateMethods.Length; i++)
                 updateMethods[i].Compile(entities);
+
+            renderMethod.Compile(entities);
+
             dirtyUpdateMethods = false;
         }
+        
+        currEntityCount = EntityCount;
+    }
+
+    public void UpdateEntities()
+    {
+        var entityCount = currEntityCount;
 
         for (int i = 0; i < updateMethods.Length; i++)
             updateMethods[i].Invoke(entityCount);

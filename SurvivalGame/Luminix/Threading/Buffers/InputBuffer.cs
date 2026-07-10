@@ -11,8 +11,11 @@ internal sealed class InputBuffer
     public void Read(out long[] _keyboardData, out Input.MouseData _mouseData)
     {
         _keyboardData = keys;
-        _mouseData.buttons = mouseButton;
-        _mouseData.position = mousePosition;
+        _mouseData = new Input.MouseData
+        {
+            Buttons = mouseButton,
+            Position = mousePosition
+        };
     }
 
     public void Clear()

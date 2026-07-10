@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using Luminix.Rendering.RenderInstances;
 using Luminix.Resources;
 using Microsoft.Xna.Framework;
@@ -133,31 +134,31 @@ public sealed class RenderBuffer
         => cameraData;
 
     internal ReadOnlySpan<InstanceSprite> GetSprites() 
-        => System.Runtime.InteropServices.CollectionsMarshal.AsSpan(instanceSprites);
+        => CollectionsMarshal.AsSpan(instanceSprites);
 
     internal ReadOnlySpan<InstanceText> GetTexts() 
-        => System.Runtime.InteropServices.CollectionsMarshal.AsSpan(instanceTexts);
+        => CollectionsMarshal.AsSpan(instanceTexts);
 
     internal ReadOnlySpan<InterpolatedInstanceSprite> GetInterpolatedSprites() 
-        => System.Runtime.InteropServices.CollectionsMarshal.AsSpan(interpolatedInstanceSprites);
+        => CollectionsMarshal.AsSpan(interpolatedInstanceSprites);
 
     internal ReadOnlySpan<InterpolatedInstanceText> GetInterpolatedTexts() 
-        => System.Runtime.InteropServices.CollectionsMarshal.AsSpan(interpolatedInstanceTexts);
+        => CollectionsMarshal.AsSpan(interpolatedInstanceTexts);
 
     internal ReadOnlySpan<RenderGroup> GetGroups() 
-        => System.Runtime.InteropServices.CollectionsMarshal.AsSpan(renderGroups);
+        => CollectionsMarshal.AsSpan(renderGroups);
 
     internal ReadOnlySpan<InstanceImage> GetImages()
-        => System.Runtime.InteropServices.CollectionsMarshal.AsSpan(instanceImages);
+        => CollectionsMarshal.AsSpan(instanceImages);
 
     internal ReadOnlySpan<InstanceLabel> GetLabels()
-        => System.Runtime.InteropServices.CollectionsMarshal.AsSpan(instanceLabels);
+        => CollectionsMarshal.AsSpan(instanceLabels);
 
     internal ReadOnlySpan<RenderCommand> GetWorldRenderCommands() 
-        => System.Runtime.InteropServices.CollectionsMarshal.AsSpan(worldRenderCommands);
+        => CollectionsMarshal.AsSpan(worldRenderCommands);
 
     internal ReadOnlySpan<UiRenderCommand> GetUiRenderCommands() 
-        => System.Runtime.InteropServices.CollectionsMarshal.AsSpan(uiRenderCommands);
+        => CollectionsMarshal.AsSpan(uiRenderCommands);
 
     internal void Sort()
     {

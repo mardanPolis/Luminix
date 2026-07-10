@@ -10,7 +10,7 @@ public sealed class WorkerThreadPool : Workspace.Service
 {
     public WorkerThreadPool(int workerThreadCount)
     {
-        this.workerThreadCount = Math.Clamp(workerThreadCount, Settings.MinWorkerThreadCount, Settings.MaxWorkerThreadCount);
+        this.workerThreadCount = Math.Clamp(workerThreadCount, 2, 5); //TODO : customizable thread counts
         this.globalTasks = new BlockingCollection<Action>();
     }
 
@@ -22,7 +22,7 @@ public sealed class WorkerThreadPool : Workspace.Service
     public int WorkerThreadCount => workerThreadCount;
     public IReadOnlyList<WorkerThread> WorkerThreads => workerThreads;
 
-    public void Initialize()
+    protected override void Start()
     {
         workerThreads = new List<WorkerThread>(workerThreadCount);
         for (int i = 0; i < workerThreadCount; i++)
@@ -34,8 +34,8 @@ public sealed class WorkerThreadPool : Workspace.Service
             worker.Start();
         }
 
-        if(Settings.DebugInitialization)
-            Logger.Get().Log($"Initialized {workerThreads.Count} worker threads.");
+        //TODO : if(Settings.DebugInitialization)
+        Logger.Get().Log($"Initialized {workerThreads.Count} worker threads.");
     }
 
     public void Enqueue(Action work)
