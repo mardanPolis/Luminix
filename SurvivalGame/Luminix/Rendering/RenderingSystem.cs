@@ -148,8 +148,13 @@ public sealed class RenderingSystem : Workspace.Service
 
             using (var stream = new FileStream(screenshotPath, FileMode.Create))
             {
-                var screenShotRect = new Rectangle(0, 0, Settings.ScreenshotWidth, Settings.ScreenshotHeight);
-                var screenShotTarget = new RenderTarget2D(GraphicsDevice, Settings.ScreenshotWidth, Settings.ScreenshotHeight);
+                // var screenShotRect = new Rectangle(0, 0, Settings.ScreenshotWidth, Settings.ScreenshotHeight);
+                // var screenShotTarget = new RenderTarget2D(GraphicsDevice, Settings.ScreenshotWidth, Settings.ScreenshotHeight);
+
+                // TODO : add screenshot resolution settings
+
+                var screenShotRect = new Rectangle(0, 0, 1920, 1080);
+                var screenShotTarget = new RenderTarget2D(GraphicsDevice, 1920, 1080);
 
                 NewFrame(partialTick);
 
@@ -204,7 +209,7 @@ public sealed class RenderingSystem : Workspace.Service
         {
             Logger.Get().Err($"Failed to save screenshot. Error: {e.Message}");
         }
-    }
+    } 
 
     public void SetResolution(int width, int height)
     {

@@ -107,8 +107,8 @@ internal sealed class SystemDebugRenderer : DebugRenderer
 
     public override void Render()
     {
-        if(!Settings.DebugInfo)
-            return;
+        // if(!Settings.DebugInfo)
+        //     return;
 
         float gHeight = 200f;
 

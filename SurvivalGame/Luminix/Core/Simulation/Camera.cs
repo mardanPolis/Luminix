@@ -11,12 +11,6 @@ public class Camera
     {
         universe = Workspace.Current.GetService<Universe>();
         graphics = Workspace.Current.GetService<Graphics>();
-        if(universe.World == null)
-        {
-            throw new NullReferenceException("Unable to create a camera reason: a world instance was not found.");
-        }
-
-        var world = universe.World;
         //TODO : complete Constructor Method
     }
 
@@ -92,11 +86,6 @@ public class Camera
     public void Destroy()
     {
         isDestroyed = true;
-
-        if(universe.World == null)
-        {
-            throw new NullReferenceException("Unable to create a camera reason: a world instance was not found.");
-        }
 
         //TODO : complete Destroy Method
     }

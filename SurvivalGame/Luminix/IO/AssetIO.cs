@@ -362,8 +362,9 @@ public sealed class AssetIO : Workspace.Service
         ImageWriter writer = new ImageWriter();
         writer.WritePng(bytes, (int)size.X, (int)size.Y, StbImageWriteSharp.ColorComponents.RedGreenBlueAlpha, stream);
 
-        if(Settings.DebugAssets)
-            Logger.Get().Log($"Texture '{name}', saved to: '{path}'");
+        // TODO : only in debug
+        // if(Settings.DebugAssets)
+        //     Logger.Get().Log($"Texture '{name}', saved to: '{path}'");
     }
 
 }

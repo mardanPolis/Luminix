@@ -47,8 +47,9 @@ internal class AssetLoadingHandler
 
         workerThreadPool.ParallelFor(validAssetFiles, assetFile =>
         {
-            if(Settings.DebugInitialization && Settings.DebugAssets)
-                Logger.Get().Log($"Loading asset at path: {assetFile.FullPath}");
+            // TODO : only in debug
+            // if(Settings.DebugInitialization && Settings.DebugAssets)
+            //     Logger.Get().Log($"Loading asset at path: {assetFile.FullPath}");
 
             try
             {

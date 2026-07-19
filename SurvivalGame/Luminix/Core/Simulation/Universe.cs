@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using Game;
 using Luminix.Collections;
 using Luminix.Identifiers;
 
@@ -8,7 +7,7 @@ namespace Luminix;
 
 public sealed class Universe : Workspace.Service
 {
-    internal readonly struct Controller
+    internal readonly struct Controller 
     {
         internal Controller(Universe controlled)
         {
@@ -72,15 +71,6 @@ public sealed class Universe : Workspace.Service
         this.controllerIssued = true;
     }
 
-    protected override void Start()
-    {
-        this.lastEntityID = 0;
-        this.entityCount  = 0;
-
-        this.typeRegistry = Workspace.Current.GetService<EntityTypeRegistry>();
-        this.entityTypes = typeRegistry.GetEntityTypes();
-    }
-
     private readonly bool controllerIssued;
 
     //Global Variables
@@ -104,6 +94,15 @@ public sealed class Universe : Workspace.Service
 
     private int lastEntityID;
     private int entityCount;
+
+    protected override void Start()
+    {
+        this.lastEntityID = 0;
+        this.entityCount  = 0;
+
+        this.typeRegistry = Workspace.Current.GetService<EntityTypeRegistry>();
+        this.entityTypes = typeRegistry.GetEntityTypes();
+    }
 
     public ID CreateEntity(Entity.TypeID type)
     {
