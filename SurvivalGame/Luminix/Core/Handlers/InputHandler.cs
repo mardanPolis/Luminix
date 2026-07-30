@@ -2,9 +2,9 @@ using System;
 using Luminix.Threading.Bridges;
 using Microsoft.Xna.Framework.Input;
 
-namespace Luminix.Core.InputHandlers;
+namespace Luminix.Core.Handlers;
 
-internal class InputHandler
+internal sealed class InputHandler
 {
     internal InputHandler(InputBridge inputBridge)
     {

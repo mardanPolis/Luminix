@@ -1,17 +1,17 @@
-using Microsoft.Xna.Framework;
-using Luminix.Identifiers;
 using System;
 
 namespace Luminix;
 
 public abstract class EntitySystem
 {
-    internal EntitySystem(string entityTypeName, Entity.TypeID entityTypeID)
-    {
-        this.entityTypeName = entityTypeName;
-        this.entityTypeID = entityTypeID;
-    }
-    protected string entityTypeName;
-    protected Entity.TypeID entityTypeID;
     public abstract Type[] GetComponentTypes();
+    protected EntityType Type { get; private set; } = null!;
+
+    internal void Initialize(EntityType type)
+    {
+        if (Type != null)
+            throw new InvalidOperationException("EntitySystem has already been initialized.");
+            
+        Type = type;
+    }
 }

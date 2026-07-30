@@ -25,17 +25,17 @@ public sealed class Universe : Workspace.Service
         public double TickDeltaTime { get => controlled.TickDeltaTime; set => controlled.TickDeltaTime = value; }
         public long TickAllocated { get => controlled.TickAllocated; set => controlled.TickAllocated = value; }
 
-        internal void RefreshData()
-        {   
-            var entityTypes = controlled.entityTypes;
+        public void Tick()
+        {
+            var entityTypes = controlled.entityContainers;
             var destroyedEntities = controlled.destroyedEntities;
             var entityLocations = controlled.entityLocations;
 
             for(int d = 0; d < destroyedEntities.Count; d++)
             {
                 var destroyedEntity = destroyedEntities[d];
-                ref EntityType typeEntry = ref entityTypes[destroyedEntity.entry];
-                typeEntry.DestroyEntity(destroyedEntity.index);
+                ref EntityContainer entityContainer = ref entityTypes[destroyedEntity.entry];
+                entityContainer.DestroyEntity(destroyedEntity.index);
                 entityLocations.Remove(destroyedEntity.id);
             }
 
@@ -45,13 +45,8 @@ public sealed class Universe : Workspace.Service
             {
                 entityTypes[t].Refresh();
             }
-        }
 
-
-        public void Tick()
-        {
             var cameras = controlled.worldCameras;
-            var entityTypes = controlled.entityTypes;
 
             for(int i = 0; i < cameras.Count; i++)
             {
@@ -87,7 +82,7 @@ public sealed class Universe : Workspace.Service
     private readonly DenseList<Camera> worldCameras;
 
     private EntityTypeRegistry typeRegistry;
-    private EntityType[] entityTypes;
+    private EntityContainer[] entityContainers;
 
     private readonly Dictionary<ID, (uint entry, int index)> entityLocations;
     private readonly DenseList<(ID id, uint entry, int index)> destroyedEntities;
@@ -101,23 +96,22 @@ public sealed class Universe : Workspace.Service
         this.entityCount  = 0;
 
         this.typeRegistry = Workspace.Current.GetService<EntityTypeRegistry>();
-        this.entityTypes = typeRegistry.GetEntityTypes();
     }
 
-    public ID CreateEntity(Entity.TypeID type)
+    public ID CreateEntity(string typeName)
     {
         entityCount++;
         lastEntityID++;
 
-        if(type.Value >= entityTypes.Length)
+        if(type.ID >= entityContainers.Length)
         {
             logger.Err($"Failed to create entity of {type}");
             return new ID(0);
         }
 
         var id = (ID)lastEntityID;
-        var entryIndex = type.Value;
-        ref var typeEntry = ref entityTypes[entryIndex];
+        var entryIndex = type.ID;
+        ref var typeEntry = ref entityContainers[entryIndex];
 
         entityLocations.Add(id, (entryIndex, typeEntry.EntityCount));
         typeEntry.CreateEntity(id);
@@ -143,14 +137,14 @@ public sealed class Universe : Workspace.Service
         if(!entityLocations.TryGetValue(entityID, out var entityLocation))
             throw new KeyNotFoundException($"Entity with {entityID} not found!");
         
-        return entityTypes[entityLocation.entry].HasComponent(typeof(T));
+        return entityContainers[entityLocation.entry].HasComponent(typeof(T));
     }
     public ref T GetEntityComponent<T>(ID entityID) where T : struct
     {
         if(!entityLocations.TryGetValue(entityID, out var entityLocation))
             throw new KeyNotFoundException($"Entity with {entityID} not found!");
 
-        return ref entityTypes[entityLocation.entry].GetEntityComponent<T>(entityLocation.index);
+        return ref entityContainers[entityLocation.entry].GetEntityComponent<T>(entityLocation.index);
     }
 
 }

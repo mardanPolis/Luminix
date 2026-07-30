@@ -3,17 +3,18 @@ using System.Collections.Generic;
 using System.Linq.Expressions;
 using System.Reflection;
 using Luminix.Collections;
+using Luminix.Identifiers;
 
 namespace Luminix;
 
-internal partial struct EntityType
+internal partial struct EntityContainer
 {
     internal sealed class Method
     {
         private enum ParamType
         {
             NonRefParam,
-            EntityParam,
+            IDParam,
             OtherParam,
         };
 
@@ -26,9 +27,9 @@ internal partial struct EntityType
         private ConstantExpression instanceConst { get; init; }
         private ParameterExpression indexParam { get; init; }
 
-        private IComponentContainer[] boundContainers { get; init; } // parallel to Parameters, resolved once
+        private IStructContainer[] boundContainers { get; init; } // parallel to Parameters, resolved once
 
-        public Method(MethodInfo info, EntitySystem entitySystem, Dictionary<Type, IComponentContainer> componentContainerMap)
+        public Method(MethodInfo info, EntitySystem entitySystem, Dictionary<Type, IStructContainer> structContainerMap)
         {
             Info = info;
             Parameters = info.GetParameters();
@@ -40,7 +41,7 @@ internal partial struct EntityType
             elementTypes = new Type[Parameters.Length];
             elementParamTypes = new ParamType[Parameters.Length];
             elementAccesses = new Expression[Parameters.Length];
-            boundContainers = new IComponentContainer[Parameters.Length];
+            boundContainers = new IStructContainer[Parameters.Length];
 
             for (int i = 0; i < Parameters.Length; i++)
             {
@@ -58,12 +59,12 @@ internal partial struct EntityType
 
                 switch(paramType)
                 {
-                    case ParamType.EntityParam:
+                    case ParamType.IDParam:
                         elementParamTypes[i] = paramType;
                         elementTypes[i] = elementType;
                     break;
                     case ParamType.OtherParam:
-                        if (!componentContainerMap.TryGetValue(elementType, out var container))
+                        if (!structContainerMap.TryGetValue(elementType, out var container))
                             throw new InvalidOperationException($"EntityType has no component with Type {elementType.Name}!");
 
                         elementParamTypes[i] = paramType;
@@ -76,32 +77,25 @@ internal partial struct EntityType
 
         private Action<int> compiledPerIndex;
 
-        public void Invoke(int entityCount)
+        public void Invoke(int index)
+        {
+            compiledPerIndex(index);
+        }
+        public void InvokeFor(int entityCount)
         {
             for (int i = 0; i < entityCount; i++)
                 compiledPerIndex(i);
         }
 
-        public void Compile(Entity[] entities)
+        public void Compile()
         {
-            var entitiesConst = Expression.Constant(entities, typeof(Entity[]));
-
             for (int i = 0; i < elementTypes.Length; i++)
             {
                 var elemType = elementTypes[i];
-
-                switch(elementParamTypes[i])
-                {
-                    case ParamType.EntityParam:
-                        elementAccesses[i] = Expression.ArrayAccess(entitiesConst, indexParam);
-                    break;
-                    case ParamType.OtherParam:
-                        Array array = boundContainers[i].GetArray();
-                        var arrType = elemType.MakeArrayType();
-                        var arrConst = Expression.Constant(array, arrType);
-                        elementAccesses[i] = Expression.ArrayAccess(arrConst, indexParam);
-                    break;
-                }
+                Array array = boundContainers[i].GetArray();
+                var arrType = elemType.MakeArrayType();
+                var arrConst = Expression.Constant(array, arrType);
+                elementAccesses[i] = Expression.ArrayAccess(arrConst, indexParam);
             }
 
             var call = Expression.Call(instanceConst, Info, elementAccesses);
@@ -115,8 +109,8 @@ internal partial struct EntityType
             if(!parameterType.IsByRef)
                 return ParamType.NonRefParam;
 
-            if(parameterType.GetElementType() == typeof(Entity))
-                return ParamType.EntityParam;
+            if(parameterType.GetElementType() == typeof(ID))
+                return ParamType.IDParam;
             
             return ParamType.OtherParam;
         }

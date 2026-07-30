@@ -9,7 +9,7 @@ using Luminix.Rendering;
 using Luminix.Resources;
 using Luminix.Threading;
 using Luminix.Threading.Bridges;
-using Luminix.Core.InputHandlers;
+using Luminix.Core.Handlers;
 using Luminix.Resources.AssetHandlers;
 using Luminix.IO;
 using Luminix.Resources.BuiltIn;
@@ -104,8 +104,6 @@ public class Main : Microsoft.Xna.Framework.Game
     private AssetRegistrationHandler assetRegistrationHandler;
 
     private RenderInfoBuffer renderInfoBuffer;
-
-    private bool takeScreenshot = false;
 
     public Thread MainSystemThread => mainThread;
     public CoreThread CoreThread => coreThread;

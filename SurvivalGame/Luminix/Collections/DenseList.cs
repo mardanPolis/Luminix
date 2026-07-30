@@ -14,6 +14,11 @@ public sealed class DenseList<T> : ICollection<T>, IEnumerable<T>, IList<T>, IRe
         this.count = 0;
     }
 
+    public DenseList(IEnumerable<T> source)
+    {
+        items = source.ToArray();
+    }
+
     private T[] items;
     private int count;
     private readonly Dictionary<T, int> indexMap;
@@ -187,8 +192,7 @@ public sealed class DenseList<T> : ICollection<T>, IEnumerable<T>, IList<T>, IRe
 
     public List<T> ToList()
     {
-        var array = ToArray();
-        var result = new List<T>(array);
+        var result = new List<T>(this);
         return result;
     }
 

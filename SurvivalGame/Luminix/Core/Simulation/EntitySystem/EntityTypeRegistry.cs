@@ -1,263 +1,171 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Reflection;
+// using Luminix.RegistrySystem;
 
-namespace Luminix;
+// namespace Luminix;
 
-public sealed class EntityTypeRegistry : Workspace.Service
-{
-    private record struct Entry(string TypeName, Type EntitySystemType);
-    private record struct FinalEntry(string TypeName, Entity.TypeID TypeID, EntitySystem EntitySystem, EntityType.Method[] UpdateMethods, EntityType.Method RenderMethod, IComponentContainer[] ComponentContainers);
 
-    private Dictionary<string, Entry> entries = new();
-    private FinalEntry[] finalEntries = null;
-    private bool isFinalized => finalEntries != null;
+// internal void FinalizeRegistry()
+// {
+//     IStructContainer[] GetStructContainers(Type[] structTypes)
+//     {
+//         List<IStructContainer> structContainers = new List<IStructContainer>(structTypes.Length);
 
-    public void Register<TEntitySystem>(string typeName) where TEntitySystem : EntitySystem
-    {
-        typeName = typeName.ToLower();
-        try
-        {
-            if(isFinalized)
-                throw new Exception($"Registry has been already finalized!");
+//         IStructContainer idContainer = (IStructContainer)Activator.CreateInstance(typeof(StructContainer<ID>));
+//         structContainers.Add(idContainer);
 
-            if(string.IsNullOrWhiteSpace(typeName))
-                throw new Exception($"Provided type name is null, empty or consists only of white-space characters!");
+//         IStructContainer boolContainer = (IStructContainer)Activator.CreateInstance(typeof(StructContainer<bool>));
+//         structContainers.Add(boolContainer);
 
-            if(entries.ContainsKey(typeName))
-                throw new Exception($"Entry with the same name already exists!");
+//         foreach(Type structType in structTypes)
+//         {
+//             if(!structType.IsValueType)
+//             {
+//                 Logger.Get().Err($"Unable to create component container for type '{structType.FullName}', reason: Provided type is not a ValueType!");
+//                 continue;
+//             }
 
-            Type systemType = typeof(TEntitySystem);
-            if(!systemType.IsClass)
-                throw new Exception($"Provided EntitySystem '{systemType.Name}' type is not a class!");
+//             if(structType == typeof(ID))
+//             {
+//                 Logger.Get().Err($"Unable to create component container for type '{structType.FullName}', reason: Provided type is built in!");
+//                 continue;
+//             }
 
-            if(systemType.IsAbstract)
-                throw new Exception($"Provided EntitySystem '{systemType.Name}' type is an abstract class!");
-                
-            entries[typeName] = new Entry(typeName, systemType);
-        }
-        catch(Exception ex)
-        {
-            string errPrefix = $"Unable to register an EntityType '{typeName}', reason: ";
-            Logger.Get().Err(errPrefix + ex.Message);
-        }
-    }
-    public void Override<TEntitySystem>(string typeName) where TEntitySystem : EntitySystem
-    {
-        typeName = typeName.ToLower();
-        try
-        {
-            if(isFinalized)
-                throw new Exception($"Registry has been already finalized!");
+//             if(structType == typeof(bool))
+//             {
+//                 Logger.Get().Err($"Unable to create component container for type '{structType.FullName}', reason: Provided type is built in!");
+//                 continue;
+//             }
 
-            if(string.IsNullOrWhiteSpace(typeName))
-                throw new Exception($"Provided type name is null, empty or consists only of white-space characters!");
+//             Type closedType = typeof(StructContainer<>).MakeGenericType(structType);
+//             IStructContainer structContainer = (IStructContainer)Activator.CreateInstance(closedType);
 
-            if(!entries.ContainsKey(typeName))
-                throw new Exception($"Entry with name '{typeName}' doesn't exists!");
+//             structContainers.Add(structContainer);
+//         }
 
-            Type systemType = typeof(TEntitySystem);
-            if(!systemType.IsClass)
-                throw new Exception($"Provided EntitySystem '{systemType.Name}' type is not a class!");
+//         return structContainers.ToArray();
+//     }
+//     List<MethodInfo> GetMethodInfos(EntitySystem entitySystem, string methodName)
+//     {
+//         var result = new List<MethodInfo>();
+//         var seenVirtualSlots = new HashSet<MethodInfo>();
 
-            if(systemType.IsAbstract)
-                throw new Exception($"Provided EntitySystem '{systemType.Name}' type is an abstract class!");
+//         Type current = entitySystem.GetType();
+//         while(current != null && current != typeof(EntitySystem))
+//         {
+//             var methodInfos = current.GetMethods(
+//                 BindingFlags.Instance |
+//                 BindingFlags.Public |
+//                 BindingFlags.NonPublic |
+//                 BindingFlags.DeclaredOnly)
+//                 .Where(m => m.Name == methodName);
 
-            entries[typeName] = new Entry(typeName, systemType);
-        }
-        catch(Exception ex)
-        {
-            string errPrefix = $"Unable to register an EntityType '{typeName}', reason: ";
-            Logger.Get().Err(errPrefix + ex.Message);
-        }
-    }
-    
-    //TODO : implement global component methods
-    public void GlobalComponent<TComponent>() where TComponent : struct
-    {
-        throw new NotImplementedException(nameof(GlobalComponent));
-    }
-    public void GlobalComponent<TComponent, TEntitySystem>() where TComponent : struct where TEntitySystem : EntitySystem
-    {
-        throw new NotImplementedException(nameof(GlobalComponent));
-    }
+//             foreach(var method in methodInfos)
+//             {
+//                 if(method.IsVirtual)
+//                 {
+//                     var baseDef = method.GetBaseDefinition();
+//                     if (seenVirtualSlots.Contains(baseDef))
+//                         continue;
 
-    internal EntityType[] GetEntityTypes()
-    {
-        EntityType[] entityTypes = new EntityType[finalEntries.Length];
-        for(int i = 0; i < finalEntries.Length; i++)
-        {
-            FinalEntry finalEntry = finalEntries[i];
-            entityTypes[i] = new EntityType(finalEntry.TypeName, new Entity.TypeID((uint)i), finalEntry.EntitySystem, finalEntry.UpdateMethods, finalEntry.RenderMethod, finalEntry.ComponentContainers);
-        }
+//                     seenVirtualSlots.Add(baseDef);
+//                 }
 
-        return entityTypes;
-    }
+//                 result.Add(method);
+//             }
 
-    internal void FinalizeRegistry()
-    {
-        if(isFinalized)
-            throw new InvalidOperationException("Cannot Finalize EntityTypeRegistry, reason: It has already been finalized!");
+//             current = current.BaseType;
+//         }
 
-        IComponentContainer[] GetComponentContainers(Type[] componentTypes)
-        {
-            List<IComponentContainer> componentContainers = new List<IComponentContainer>(componentTypes.Length);
-            Dictionary<Type, int> componentIndexes = new Dictionary<Type, int>();
+//         return result;
+//     }
+//     List<EntityContainer.Method> GetMethods(EntitySystem entitySystem, string methodName, Dictionary<Type, IStructContainer> structContainerMap)
+//     {
+//         List<MethodInfo> methodInfos = GetMethodInfos(entitySystem, methodName);
+//         List<EntityContainer.Method> updateMethods = null;
 
-            var componentIndex = 0;
-            foreach(Type componentType in componentTypes)
-            {
-                if(!componentType.IsValueType)
-                {
-                    Logger.Get().Err($"Unable to create component of type '{componentType.Name}', reason: Provided type is not a ValueType!");
-                    continue;
-                }
+//         for(int m = 0; m < methodInfos.Count; m++)
+//         {
+//             try
+//             {
+//                 EntityContainer.Method method = new EntityContainer.Method(methodInfos[m], entitySystem, structContainerMap);
+//                 updateMethods ??= new List<EntityContainer.Method>(methodInfos.Count);
+//                 updateMethods.Add(method);
+//             }
+//             catch(Exception ex)
+//             {
+//                 var paramList = string.Join(", ", methodInfos[m].GetParameters()
+//                     .Select(p => $"{(p.ParameterType.IsByRef ? "ref " : "")}{(p.ParameterType.GetElementType() ?? p.ParameterType).Name} {p.Name}"));
 
-                Type closedType = typeof(ComponentContainers<>).MakeGenericType(componentType);
-                IComponentContainer componentContainer = (IComponentContainer)Activator.CreateInstance(closedType);
+//                 Logger.Get().Err($"Failed to bind method '{methodInfos[m].DeclaringType?.Name}.{methodInfos[m].Name}({paramList})': {ex.Message}");
+//             }
+//         }
 
-                componentIndexes.Add(componentType, componentIndex);
-                componentContainers.Add(componentContainer);
-                componentIndex++;
-            }
+//         return updateMethods;
+//     }
 
-            return componentContainers.ToArray();
-        }
-        List<EntityType.Method> GetUpdateMethods(EntitySystem entitySystem, Dictionary<Type, IComponentContainer> componentContainerMap)
-        {
-            var methodsInfoList = new List<MethodInfo>();
-            var seenVirtualSlots = new HashSet<MethodInfo>();
+//     List<EntityContainer> entityContainers = new List<EntityContainer>(entries.Count);
 
-            Type current = entitySystem.GetType();
-            Type baseEntitySystemType = typeof(EntitySystem);
-            while(current != null && current != baseEntitySystemType)
-            {
-                var methodInfos = current.GetMethods(
-                    BindingFlags.Instance |
-                    BindingFlags.Public |
-                    BindingFlags.NonPublic |
-                    BindingFlags.DeclaredOnly)
-                    .Where(m => m.Name == "Update");
+//     uint entryIndex = 0;
+//     foreach(Entry entry in entries.Values)
+//     {
+//         var entityType = new EntityType(entry.TypeName, (ID)entryIndex);
 
-                foreach(var method in methodInfos)
-                {
-                    if(method.IsVirtual)
-                    {
-                        var baseDef = method.GetBaseDefinition();
-                        if (seenVirtualSlots.Contains(baseDef))
-                            continue;
-                        
-                        seenVirtualSlots.Add(baseDef);
-                    }
+//         EntitySystem entitySystem = (EntitySystem)Activator.CreateInstance(entry.EntitySystemType, entityType);
+//         Type[] structTypes = entitySystem.GetComponentTypes();
 
-                    methodsInfoList.Add(method);
-                }
+//         IStructContainer[] structContainerArray = GetStructContainers(structTypes);
 
-                current = current.BaseType;
-            }
+//         Dictionary<Type, IStructContainer> structContainerMap = new Dictionary<Type, IStructContainer>();
+//         for(int i = 0; i < structContainerArray.Length; i++)
+//         {
+//             structContainerMap ??= [];
+//             structContainerMap.Add(structContainerArray[i].StructType, structContainerArray[i]);
+//         }
 
-            List<EntityType.Method> updateMethods = null;
+//         List<EntityContainer.Method> startMethods = null;
+//         List<EntityContainer.Method> updateMethods = null;
+//         List<EntityContainer.Method> renderMethods = null;
+//         List<EntityContainer.Method> destroyMethods = null;
 
-            for(int m = 0; m < methodsInfoList.Count; m++)
-            {
-                try
-                {
-                    EntityType.Method method = new EntityType.Method(methodsInfoList[m], entitySystem, componentContainerMap);
-                    updateMethods ??= new List<EntityType.Method>(methodsInfoList.Count);
-                    updateMethods.Add(method);
-                }
-                catch(Exception ex)
-                {
-                    var paramList = string.Join(", ", methodsInfoList[m].GetParameters()
-                        .Select(p => $"{(p.ParameterType.IsByRef ? "ref " : "")}{(p.ParameterType.GetElementType() ?? p.ParameterType).Name} {p.Name}"));
+//         try
+//         {
+//             startMethods = GetMethods(entitySystem, "Start", structContainerMap);
+//         }
+//         catch(Exception ex)
+//         {
+//             Logger.Get().Err($"Failed to get Start methods of {entitySystem.GetType().Name}, reason: {ex.Message}");
+//         }
 
-                    Logger.Get().Err($"Failed to bind method '{methodsInfoList[m].DeclaringType?.Name}.{methodsInfoList[m].Name}({paramList})': {ex.Message}");
-                }
-            }
+//         try
+//         {
+//             updateMethods = GetMethods(entitySystem, "Update", structContainerMap);
+//         }
+//         catch(Exception ex)
+//         {
+//             Logger.Get().Err($"Failed to get Update methods of {entitySystem.GetType().Name}, reason: {ex.Message}");
+//         }
 
-            return updateMethods;
-        }
-        EntityType.Method GetRenderMethod(EntitySystem entitySystem, Dictionary<Type, IComponentContainer> componentContainerMap)
-        {
-            Type current = entitySystem.GetType();
-            Type baseEntitySystemType = typeof(EntitySystem);
+//         try
+//         {
+//             renderMethods = GetMethods(entitySystem, "Render", structContainerMap);
+//         }
+//         catch(Exception ex)
+//         {
+//             Logger.Get().Err($"Failed to get Render methods of {entitySystem.GetType().Name}, reason: {ex.Message}");
+//         }
 
-            while(current != null && current != baseEntitySystemType)
-            {
-                var methods = current.GetMethods(
-                    BindingFlags.Instance |
-                    BindingFlags.Public |
-                    BindingFlags.NonPublic |
-                    BindingFlags.DeclaredOnly)
-                    .Where(m => m.Name == "Render").ToArray();
+//         try
+//         {
+//             destroyMethods = GetMethods(entitySystem, "OnDestroy", structContainerMap);
+//         }
+//         catch(Exception ex)
+//         {
+//             Logger.Get().Err($"Failed to get OnDestroy methods of {entitySystem.GetType().Name}, reason: {ex.Message}");
+//         }
 
-                if(methods.Length > 1)
-                    throw new Exception("Multiple Render methods.");
 
-                if(methods.Length == 1)
-                {
-                    var methodInfo = methods[0];
-                    try
-                    {
-                        return new EntityType.Method(methodInfo, entitySystem, componentContainerMap);
-                    }
-                    catch(Exception ex)
-                    {
-                        Logger.Get().Err($"Failed to bind render method '{methodInfo.DeclaringType?.Name}.{methodInfo.Name}': {ex.Message}");
-                    }
-                }
+//         entityContainers.Add(new EntityContainer(entityType, entitySystem, startMethods.ToArray(), updateMethods.ToArray(), renderMethods.ToArray(), destroyMethods.ToArray(), structContainerArray));
+//         entryIndex++;
+//     }
 
-                current = current.BaseType;
-            }
-            return null;
-        }
-
-        List<FinalEntry> finalizedEntries = new List<FinalEntry>(entries.Count);
-
-        uint entryIndex = 0;
-        foreach(Entry entry in entries.Values)
-        {
-            var entityTypeName = entry.TypeName;
-            var entityTypeID = new Entity.TypeID(entryIndex);
-
-            EntitySystem entitySystem = (EntitySystem)Activator.CreateInstance(entry.EntitySystemType, entityTypeName, entityTypeID);
-            Type[] componentTypes = entitySystem.GetComponentTypes();
-
-            IComponentContainer[] componentContainersArray = GetComponentContainers(componentTypes);
-
-            List<EntityType.Method> updateMethods = null;
-            EntityType.Method renderMethod = null;
-
-            Dictionary<Type, IComponentContainer> componentContainerMap = new Dictionary<Type, IComponentContainer>();
-            for(int i = 0; i < componentContainersArray.Length; i++)
-            {
-                componentContainerMap ??= [];
-                componentContainerMap.Add(componentContainersArray[i].ComponentType, componentContainersArray[i]);
-            }
-            
-            try
-            {
-                updateMethods = GetUpdateMethods(entitySystem, componentContainerMap);
-            }
-            catch(Exception ex)
-            {
-                Logger.Get().Err($"Failed to get Update methods of {entitySystem.GetType().Name}, reason: {ex.Message}");
-            }
-
-            try
-            {
-                renderMethod = GetRenderMethod(entitySystem, componentContainerMap);
-            }
-            catch(Exception ex)
-            {
-                Logger.Get().Err($"Failed to get Render method of {entitySystem.GetType().Name}, reason: {ex.Message}");
-            }
-
-            finalizedEntries.Add(new FinalEntry(entityTypeName, entityTypeID, entitySystem, updateMethods.ToArray(), renderMethod, componentContainersArray));
-            entryIndex++;
-        }
-        
-        this.finalEntries = finalizedEntries.ToArray();
-    }
-}
+//     finalizedEntityContainers = entityContainers.ToArray();
+// }

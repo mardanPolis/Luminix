@@ -2,9 +2,9 @@ using System;
 using Luminix.Threading.Bridges;
 using Microsoft.Xna.Framework.Input;
 
-namespace Luminix.Core.InputHandlers;
+namespace Luminix.Core.Handlers;
 
-internal class KeyboardHandler
+internal sealed class KeyboardHandler
 {
     public long[] keyboardStates = new long[4];
 

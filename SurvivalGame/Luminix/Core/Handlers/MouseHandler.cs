@@ -2,9 +2,9 @@ using System;
 using Luminix.Threading.Bridges;
 using Microsoft.Xna.Framework.Input;
 
-namespace Luminix.Core.InputHandlers;
+namespace Luminix.Core.Handlers;
 
-internal class MouseHandler
+internal sealed class MouseHandler
 {
     public int mousePosition = 0; // X, Y
     public byte mouseButtonStates = 0; 
