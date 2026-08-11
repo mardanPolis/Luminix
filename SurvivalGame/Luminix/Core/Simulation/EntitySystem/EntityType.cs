@@ -28,9 +28,6 @@ public sealed class EntityType : EntryItem<EntityType>
         // EntitySystem.Initialize(this);
     }
 
-    public EntitySystem EntitySystem { get; }
-
-
-
+    public Type EntitySystemType { get; }
 
 }

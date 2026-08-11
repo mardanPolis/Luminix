@@ -9,12 +9,10 @@ public sealed class RegistryManager : Workspace.Service
     public RegistryManager()
     {
         registries = new Dictionary<Type, IRegistry>();
-        registryTypes = [];
     }
 
     public bool IsFrozen => registries is FrozenDictionary<Type, IRegistry>;
 
-    private Dictionary<string, Type> registryTypes;
     private IDictionary<Type, IRegistry> registries;
 
     public void NewRegistry<TEntry>() where TEntry : EntryItem<TEntry>
@@ -34,7 +32,6 @@ public sealed class RegistryManager : Workspace.Service
         {
             Logger.Get().Err($"Unable to register 'Registry<{typeof(TEntry).Name}>', reason: {ex.Message}");
         }
-
     }
 
     public Registry<TEntry> GetRegistry<TEntry>() where TEntry : EntryItem<TEntry>

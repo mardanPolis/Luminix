@@ -86,10 +86,9 @@ public sealed class WorkerThreadPool : Workspace.Service
             throw new AggregateException(exceptions);
     }
     
-    public void ParallelFor<T>(IReadOnlyList<T> items, Action<T> work)
+    public void ParallelFor<T>(IReadOnlyCollection<T> items, Action<T> work)
     {
         if (items.Count == 0) return;
-        if (items.Count == 1) { work(items[0]); return; }
 
         using var countdown = new CountdownEvent(items.Count);
         var exceptions = new ConcurrentBag<Exception>();
@@ -132,7 +131,7 @@ public sealed class WorkerThreadPool : Workspace.Service
             throw new AggregateException(exceptions);
     }
 
-    public Task ParallelForAsync<T>(IReadOnlyList<T> items, Action<T> work)
+    public Task ParallelForAsync<T>(IReadOnlyCollection<T> items, Action<T> work)
     {
         if (items.Count == 0) return Task.CompletedTask;
 
@@ -162,7 +161,7 @@ public sealed class WorkerThreadPool : Workspace.Service
         return tcs.Task;
     }
     
-    public Task ParallelForAsync<T>(IReadOnlyList<T> items, Func<T, Task> work)
+    public Task ParallelForAsync<T>(IReadOnlyCollection<T> items, Func<T, Task> work)
     {
         if (items.Count == 0) return Task.CompletedTask;
 

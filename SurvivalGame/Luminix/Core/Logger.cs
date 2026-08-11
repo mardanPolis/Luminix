@@ -54,18 +54,31 @@ public readonly struct Log
         return $"[{name}]";
     }
 
-    public static Log New(object message, Log.Type type, bool timestamp)
+    private static string GetPrefixMessage(object prefix)
+    {
+        if(prefix == null)
+            return "";
+        string name = prefix.ToString();
+        if(string.IsNullOrWhiteSpace(name))
+            return "";
+        return $"{name}";
+    }
+
+    public static Log New(object message, Log.Type type, bool timestamp, object prefix = null)
     {
         if(message == null)
             message = "NULL";
 
         var entry = "";
 
+        string prefixMsg = GetPrefixMessage(prefix);
+        if(!string.IsNullOrEmpty(prefixMsg))
+            entry += $"{prefixMsg} ";
+
         if(type != Log.Type.Print)
         {
             if(timestamp)
                 entry += $"{GetTimestamp()} ";
-            
             entry += $"{GetThreadName()} ";
 
             entry += $"{GetTypeMessage(type)} ";
@@ -79,7 +92,56 @@ public readonly struct Log
 
 public sealed class Logger
 {
+    private sealed class PrefixScope : IDisposable
+    {
+        private readonly Logger owner;
+        private readonly object previous;
+        private bool disposed;
+
+        public PrefixScope(Logger owner, object previous)
+        {
+            this.owner = owner;
+            this.previous = previous;
+        }
+
+        public void Dispose()
+        {
+            if(disposed) return;
+            disposed = true;
+            owner.prefix = previous;
+        }
+    }
+
     private static readonly ThreadLocal<Logger> instance = new ThreadLocal<Logger>(true);
+
+    internal static Logger Initialize()
+    {
+        if(instance.IsValueCreated)
+            return instance.Value;
+
+        var logger = new Logger();
+        instance.Value = logger;
+        return logger;
+    }
+    public static Logger Get()
+    {
+        return instance.Value;
+    }
+    public static Logger[] GetAll()
+    {
+        return instance.Values.ToArray();
+    }
+
+    internal static void Shutdown()
+    {
+        var logger = instance.Value;
+        if(logger != null)
+        {
+            logger.Flush();
+            instance.Value = null;
+        }
+    }
+
 
     private Logger()
     {
@@ -91,10 +153,6 @@ public sealed class Logger
         File.WriteAllText(path, string.Empty);
     }
 
-    private readonly string logDir;
-    private readonly List<Log> logs;
-    private readonly string path;
-
     public Log[] Logs
     {
         get
@@ -103,32 +161,17 @@ public sealed class Logger
         }
     }
 
-    private string GetThreadLogPath()
-    {
-        string name = Thread.CurrentThread.Name;
-        return Path.Combine(
-            logDir,
-            $"thread_{name}.log"
-        );
-    }
+    private readonly string logDir;
+    private readonly List<Log> logs;
+    private readonly string path;
 
-    internal static Logger Initialize()
-    {
-        if(instance.IsValueCreated)
-            return instance.Value;
+    private object prefix;
 
-        var logger = new Logger();
-        instance.Value = logger;
-        return logger;
-    }
-    internal static void Shutdown()
+    public IDisposable WithPrefix(object prefix)
     {
-        var logger = instance.Value;
-        if(logger != null)
-        {
-            logger.Flush();
-            instance.Value = null;
-        }
+        var scope = new PrefixScope(this, this.prefix);
+        this.prefix = prefix;
+        return scope;
     }
 
     private void Print(Log log)
@@ -138,23 +181,42 @@ public sealed class Logger
     }
     public void Print(object message)
     {
-        Print(Luminix.Log.New(message, Luminix.Log.Type.Print, false));
+        Print(Luminix.Log.New(message, Luminix.Log.Type.Print, false, prefix));
     }
     public void Log(object message)
     {
-        Print(Luminix.Log.New(message, Luminix.Log.Type.Info, true));
+        Print(Luminix.Log.New(message, Luminix.Log.Type.Info, true, prefix));
     }
     public void Log(object variable, object value)
     {
-        Print(Luminix.Log.New($"{variable} : {value}", Luminix.Log.Type.Info, true));
+        Print(Luminix.Log.New($"{variable} : {value}", Luminix.Log.Type.Info, true, prefix));
     }
+    public bool LogIf(bool statement, object message)
+    {
+        if(statement)
+            Print(Luminix.Log.New(message, Luminix.Log.Type.Info, true, prefix));
+        return statement;
+    }
+
     public void Wrn(object message)
     {
-        Print(Luminix.Log.New(message, Luminix.Log.Type.Warning, true));
+        Print(Luminix.Log.New(message, Luminix.Log.Type.Warning, true, prefix));
+    }
+    public bool WrnIf(bool statement, object message)
+    {
+        if(statement)
+            Print(Luminix.Log.New(message, Luminix.Log.Type.Warning, true, prefix));
+        return statement;
     }
     public void Err(object message)
     {
-        Print(Luminix.Log.New(message, Luminix.Log.Type.Error, true));
+        Print(Luminix.Log.New(message, Luminix.Log.Type.Error, true, prefix));
+    }
+    public bool ErrIf(bool statement, object message)
+    {
+        if(statement)
+            Print(Luminix.Log.New(message, Luminix.Log.Type.Error, true, prefix));
+        return statement;
     }
 
     public void Flush()
@@ -173,12 +235,12 @@ public sealed class Logger
         logs.Clear();
     }
 
-    public static Logger Get()
+    private string GetThreadLogPath()
     {
-        return instance.Value;
-    }
-    public static Logger[] GetAll()
-    {
-        return instance.Values.ToArray();
+        string name = Thread.CurrentThread.Name;
+        return Path.Combine(
+            logDir,
+            $"thread_{name}.log"
+        );
     }
 }

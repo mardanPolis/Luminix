@@ -24,39 +24,13 @@ internal class AssetBridge
 
     private List<TaskCompletionSource> taskCompletionSources = new List<TaskCompletionSource>();
 
-    public void Register(Asset asset)
-    {
-        var task = new AssetTask(asset, null);
-        tasks.Enqueue(task);
-    }
-    public void Register(IList<Asset> assets)
-    {
-        var task = new AssetGroupTask(assets, null);
-        groupTasks.Enqueue(task);
-    }
-
-    // SYNC
-    public void RegisterSync(Asset asset)
-    {
-        var task = new AssetTask(asset, new TaskCompletionSource());
-        tasks.Enqueue(task);
-        task.Tcs.Task.Wait();
-    }
-    public void RegisterSync(IList<Asset> assets)
-    {
-        var task = new AssetGroupTask(assets, new TaskCompletionSource());
-        groupTasks.Enqueue(task);
-        task.Tcs.Task.Wait();
-    }
-    
-    // ASYNC
-    public Task RegisterAsync(Asset asset)
+    public Task Register(Asset asset)
     {
         var task = new AssetTask(asset, new TaskCompletionSource());
         tasks.Enqueue(task);
         return task.Tcs.Task;
     }
-    public Task RegisterAsync(IList<Asset> assets)
+    public Task Register(IList<Asset> assets)
     {
         var task = new AssetGroupTask(assets, new TaskCompletionSource());
         groupTasks.Enqueue(task);

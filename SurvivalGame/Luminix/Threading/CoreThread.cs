@@ -5,13 +5,12 @@ using System.Collections.Generic;
 using Microsoft.Xna.Framework.Input;
 using Microsoft.Xna.Framework;
 using Luminix.IO;
-using Luminix.Resources;
-using Luminix.Resources.AssetHandlers;
 using Luminix.Threading.Bridges;
 using Luminix.Threading.Buffers;
 using Game.Simulation;
 using Luminix.Rendering;
 using Luminix.UI;
+using Luminix.RegistrySystem;
 
 namespace Luminix.Threading;
 
@@ -50,8 +49,9 @@ public sealed class CoreThread : TickedThread
     private Input.Controller inputController;
     private UIManager uiManager;
     private UIManager.Controller uiManagerController;
-    private ResourceProvider resources;
-    private EntityTypeRegistry entityTypeRegistry;
+    private Assets assets;
+    private Resources resources;
+    private RegistryManager registryManager;
     private WorkerThreadPool workerThreadPool;
     private AssetIO assetIO;
 
@@ -68,16 +68,34 @@ public sealed class CoreThread : TickedThread
         graphics           = new Graphics(renderBridge, out graphicsController);
         input              = new Input(inputBridge, out inputController);
         uiManager          = new UIManager(graphics, out uiManagerController);
-        resources          = new ResourceProvider();
-        entityTypeRegistry = new EntityTypeRegistry();
-        workerThreadPool = new WorkerThreadPool(workerThreadCount);
-        assetIO          = new AssetIO();
+        resources          = new Resources();
+        assetIO            = new AssetIO();
+        registryManager    = new RegistryManager();
+        workerThreadPool   = new WorkerThreadPool(workerThreadCount);
 
         //TODO : Add entityType registration.
 
-        entityTypeRegistry.FinalizeRegistry();
+        registryManager.Freeze();
 
-        LoadAssets();
+        var stopwatch = Stopwatch.StartNew();
+
+        var bootAssetInfos = assetIO.EnumerateAssetInfos(boot: true);
+        assets.HandleAssets(bootAssetInfos);
+
+        assets.FinalizeAssets(false);
+
+        var nonBootAssetInfos = assetIO.EnumerateAssetInfos(boot: false);
+        assets.HandleAssets(nonBootAssetInfos);
+
+        assets.FinalizeAssets(true);
+
+        long before = GC.GetTotalMemory(false);
+        GC.Collect();
+        long after = GC.GetTotalMemory(true);
+
+        long cleared = before - after;
+        logger.Log($"GC cleared: {cleared / 1024.0:F2} KB ({cleared:N0} bytes)");
+        logger.Log($"Loaded assets in {stopwatch.Elapsed.Milliseconds}ms");
 
         logger.Log("Total threads at initialization: " + Process.GetCurrentProcess().Threads.Count);
 
@@ -137,78 +155,5 @@ public sealed class CoreThread : TickedThread
         graphicsController.BeginRender();
         uiManagerController.Render();
         graphicsController.StopRender();
-    }
-
-    private void LoadAssets()
-    {
-        var stopwatch = Stopwatch.StartNew();
-
-        var assetLoadingHandler = new AssetLoadingHandler(workerThreadPool, assetIO);
-        var textureAtlasHandler = new TextureAssetAtlasHandler(workerThreadPool);
-
-        //Boot
-        {
-            var loadedAssets = assetLoadingHandler.Run(true);
-
-            var task = assetBridge.RegisterAsync(loadedAssets);
-
-            task.Wait();
-            resources.Set(resourceBridge.Get());
-        }
-
-        //Non-Boot
-        {
-            var loadedAssets = assetLoadingHandler.Run(false);
-
-            List<Asset> assets = [];
-            List<TextureAsset> textureAssets = [];
-
-            foreach (var asset in loadedAssets)
-            {
-                if(asset is TextureAsset textureAsset)
-                    textureAssets.Add(textureAsset);
-                else
-                    assets.Add(asset);
-            }
-
-            foreach (AtlasAsset atlas in textureAtlasHandler.Run(textureAssets))
-            {
-                assets.Add(atlas);
-                
-                // if(Settings.DebugAssets && Settings.DebugInitialization)
-                //     assetIO.SaveTexture(atlas.Name, atlas.Colors, atlas.Size);
-            }
-
-            //TODO : Debug
-            if(true)
-            {
-                logger.Log($"Loaded Asset count: {assets.Count}");
-                foreach(var asset in assets)
-                {
-                    logger.Log($" - asset: {asset}");
-                    if(asset is AtlasAsset atlasAsset)
-                    {
-                        foreach(var texture in atlasAsset.Regions)
-                        {
-                            logger.Log($" - - asset: {texture}");
-                        }
-                    }
-                }
-            }
-            
-            var task = assetBridge.RegisterAsync(assets);
-
-            task.Wait();
-            resources.Set(resourceBridge.Get());
-
-            long before = GC.GetTotalMemory(false);
-            GC.Collect();
-            long after = GC.GetTotalMemory(true);
-
-            long cleared = before - after;
-            logger.Log($"GC cleared: {cleared / 1024.0:F2} KB ({cleared:N0} bytes)");
-        }
-
-        logger.Log($"Loaded assets in {stopwatch.Elapsed.Milliseconds}ms");
     }
 }

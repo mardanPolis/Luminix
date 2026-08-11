@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Luminix.Collections;
 using Luminix.Identifiers;
+using Luminix.RegistrySystem;
 
 namespace Luminix;
 
@@ -81,11 +82,9 @@ public sealed class Universe : Workspace.Service
 
     private readonly DenseList<Camera> worldCameras;
 
-    private EntityTypeRegistry typeRegistry;
-    private EntityContainer[] entityContainers;
+    private Registry<EntityType> typeRegistry;
 
-    private readonly Dictionary<ID, (uint entry, int index)> entityLocations;
-    private readonly DenseList<(ID id, uint entry, int index)> destroyedEntities;
+    
 
     private int lastEntityID;
     private int entityCount;
@@ -95,56 +94,26 @@ public sealed class Universe : Workspace.Service
         this.lastEntityID = 0;
         this.entityCount  = 0;
 
-        this.typeRegistry = Workspace.Current.GetService<EntityTypeRegistry>();
+        this.typeRegistry = Workspace.Current.GetService<RegistryManager>().GetRegistry<EntityType>();
     }
 
-    public ID CreateEntity(string typeName)
+    public ID CreateEntity(EntityType entityType)
     {
-        entityCount++;
-        lastEntityID++;
-
-        if(type.ID >= entityContainers.Length)
-        {
-            logger.Err($"Failed to create entity of {type}");
-            return new ID(0);
-        }
-
-        var id = (ID)lastEntityID;
-        var entryIndex = type.ID;
-        ref var typeEntry = ref entityContainers[entryIndex];
-
-        entityLocations.Add(id, (entryIndex, typeEntry.EntityCount));
-        typeEntry.CreateEntity(id);
-
-        return id;
     }
 
     public void DestroyEntity(ID entityID)
     {
-        if(!entityLocations.TryGetValue(entityID, out var entityLocation))
-            return;
-        
-        destroyedEntities.Add((entityID, entityLocation.entry, entityLocation.index));
     }
 
     public bool EntityExists(ID entityID)
     {
-        return entityLocations.ContainsKey(entityID);
     }
 
     public bool EntityHasComponent<T>(ID entityID) where T : struct
     {
-        if(!entityLocations.TryGetValue(entityID, out var entityLocation))
-            throw new KeyNotFoundException($"Entity with {entityID} not found!");
-        
-        return entityContainers[entityLocation.entry].HasComponent(typeof(T));
     }
     public ref T GetEntityComponent<T>(ID entityID) where T : struct
     {
-        if(!entityLocations.TryGetValue(entityID, out var entityLocation))
-            throw new KeyNotFoundException($"Entity with {entityID} not found!");
-
-        return ref entityContainers[entityLocation.entry].GetEntityComponent<T>(entityLocation.index);
     }
 
 }

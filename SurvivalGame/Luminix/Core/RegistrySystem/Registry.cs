@@ -36,17 +36,18 @@ public sealed class Registry<T> : IRegistry where T : EntryItem<T>
 
     public void Register(string entryID, Func<Token, string, T> factory)
     {
-        entryID = entryID.ToLower();
         try
         {
             if(IsFrozen)
-                throw new Exception($"Registry is frozen!");
+                throw new InvalidOperationException($"Registry is frozen!");
 
             if(string.IsNullOrWhiteSpace(entryID))
-                throw new Exception($"Provided type name is null, empty or consists only of white-space characters!");
+                throw new ArgumentException($"Provided type name is null, empty or consists only of white-space characters!");
 
+            entryID = entryID.ToLower();
+            
             if(entries.ContainsKey(entryID))
-                throw new Exception($"Entry with the same name already exists!");
+                throw new ArgumentException($"Entry with the same name already exists!");
 
             var token = new Token();
             var entry = factory(token, entryID);

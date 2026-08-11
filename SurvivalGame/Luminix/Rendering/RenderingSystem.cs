@@ -4,7 +4,6 @@ using System.IO;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
-using Luminix.Resources;
 using Luminix.Threading.Buffers;
 using Luminix.Threading.Bridges;
 

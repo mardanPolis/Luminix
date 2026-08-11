@@ -5,17 +5,17 @@ using Luminix.IO;
 using Microsoft.Xna.Framework;
 using RectpackSharp;
 
-namespace Luminix.Resources;
+namespace Luminix;
 
 public sealed class AtlasMaker
 {
-    private readonly record struct Entry(string Name, Color[] Colors, Vector2 Size);
+    private readonly record struct Entry(string Identifier, Color[] Colors, Vector2 Size);
     private readonly List<Entry> entries = new();
 
     public void Add(TextureAsset asset)
     {
         PadColors(asset.Colors, asset.Size, out Color[] paddedColors, out Vector2 paddedSize);
-        entries.Add(new Entry(asset.Name, paddedColors, paddedSize));
+        entries.Add(new Entry(asset.Identifier, paddedColors, paddedSize));
     }
 
     public AtlasAsset[] Pack(string atlasName)
@@ -57,7 +57,7 @@ public sealed class AtlasMaker
             if (fittingCount == 0)
                 throw new InvalidOperationException(
                     $"AtlasMaker: a single texture is too large to fit in a 4096x4096 atlas: " +
-                    $"'{remaining[0].entry.Name}' ({remaining[0].entry.Size.X}x{remaining[0].entry.Size.Y})");
+                    $"'{remaining[0].entry.Identifier}' ({remaining[0].entry.Size.X}x{remaining[0].entry.Size.Y})");
 
             results.Add(BuildAtlas(atlasName + "_" + atlasCount, fittingRects, fittingBounds, remaining));
             remaining.RemoveRange(0, fittingCount);
@@ -152,7 +152,7 @@ public sealed class AtlasMaker
             int height = (int)entry.Size.Y;
 
             regions[sliceIdx] = new(
-                entry.Name,
+                entry.Identifier,
                 new Rectangle((int)rect.X + 1, (int)rect.Y + 1,
                             width - 2,  height - 2));
 

@@ -1,4 +1,3 @@
-using Luminix.Resources;
 using Microsoft.Xna.Framework;
 
 namespace Luminix.Rendering.RenderInstances;

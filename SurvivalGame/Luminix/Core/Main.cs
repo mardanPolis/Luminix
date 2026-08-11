@@ -6,15 +6,14 @@ using System.Linq;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
 using Luminix.Rendering;
-using Luminix.Resources;
 using Luminix.Threading;
 using Luminix.Threading.Bridges;
 using Luminix.Core.Handlers;
-using Luminix.Resources.AssetHandlers;
 using Luminix.IO;
-using Luminix.Resources.BuiltIn;
 using Luminix.Threading.Buffers;
 using Microsoft.Xna.Framework.Graphics;
+using System.Threading.Tasks;
+using System.Collections.Generic;
 
 namespace Luminix;
 public class Main : Microsoft.Xna.Framework.Game
@@ -36,7 +35,6 @@ public class Main : Microsoft.Xna.Framework.Game
 
         //workspace
         workspace = new Workspace(out workspaceController);
-        embeddedIO = new EmbeddedIO();
 
         logger = Logger.Get();
         logger.Log($"Started initialization");
@@ -94,14 +92,12 @@ public class Main : Microsoft.Xna.Framework.Game
 
     private Workspace workspace;
     private Workspace.Controller workspaceController;
-    private EmbeddedIO embeddedIO;
     private RenderingSystem renderingSystem;
 
     private ResourceManager resourceManager;
     private GraphicsDeviceManager graphics;
 
     private InputHandler inputHandler;
-    private AssetRegistrationHandler assetRegistrationHandler;
 
     private RenderInfoBuffer renderInfoBuffer;
 
@@ -138,7 +134,6 @@ public class Main : Microsoft.Xna.Framework.Game
 
             //handlers
             inputHandler = new InputHandler(coreInputBridge);
-            assetRegistrationHandler = new AssetRegistrationHandler(coreAssetBridge, coreResourceBridge, resourceManager);
             
             //threads
             coreThread.Priority = ThreadPriority.AboveNormal;
@@ -146,23 +141,12 @@ public class Main : Microsoft.Xna.Framework.Game
             //base initialization
             base.Initialize();
 
-            TextureAsset nullTextureAsset = new ("NullTexture", BuiltInResources.NullTextureColor, new Vector2(32, 32));
-            TextureAsset pixelTextureAsset = new ("Pixel", BuiltInResources.PixelTextureColor, new Vector2(1, 1));
+            TextureAsset nullTextureAsset = new ("NullTexture", Resources.BuiltIn.NullTextureColor, new Vector2(32, 32));
+            TextureAsset pixelTextureAsset = new ("Pixel", Resources.BuiltIn.PixelTextureColor, new Vector2(1, 1));
             resourceManager.CreateResource(nullTextureAsset);
             resourceManager.CreateResource(pixelTextureAsset);
 
             //Loading Embedded assets
-            foreach(var asset in embeddedIO.EnumerateAssets(Assembly.GetExecutingAssembly(), silent:true))
-            {
-                try
-                {
-                    resourceManager.CreateResource(asset);
-                }
-                catch(Exception ex)
-                {
-                    logger.Err($"Failed to load embedded asset '{asset.Name}', reason: {ex}");
-                }
-            }
 
             foreach(var adapter in GraphicsAdapter.Adapters)
             {
@@ -203,7 +187,16 @@ public class Main : Microsoft.Xna.Framework.Game
         renderInfoBuffer = renderBridge.CurrentWriteInfoBuffer ?? renderBridge.CreateInfoBuffer();
 
         inputHandler.Update(IsActive);
-        assetRegistrationHandler.Run();
+
+        /*| Resources */
+        coreAssetBridge.ConsumeAssets(resourceManager.CreateResource, out List<TaskCompletionSource> tsks);
+        resourceManager.Resources.Set(resourceManager.TextureResources, resourceManager.AudioResources, resourceManager.FontResources, resourceManager.ShaderResources);
+        coreResourceBridge.Set(resourceManager.Resources.GetResources());
+
+        for(int i = 0; i < tsks.Count; i++)
+            tsks[i].SetResult();
+            
+        /* Resources END |*/
 
         //TODO : add render settings and so on able to be access from other threads
     

@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Luminix.Rendering.RenderInstances;
-using Luminix.Resources;
 using Microsoft.Xna.Framework;
 
 namespace Luminix.Threading.Buffers;

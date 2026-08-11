@@ -1,7 +1,6 @@
 using System;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework;
-using Luminix.Resources;
 using Luminix.Threading.Bridges;
 using Luminix.Threading.Buffers;
 using System.Runtime.CompilerServices;

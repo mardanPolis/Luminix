@@ -7,333 +7,351 @@ using StbImageSharp;
 using StbImageWriteSharp;
 using System.Threading.Tasks;
 using System.Linq;
-using System.Text.Json;
+using System.Reflection;
 
 namespace Luminix.IO;
 
-public sealed class AssetIO : Workspace.Service
+public sealed class AssetIO
 {
     public const string ASSET_DIRECTORY = "Assets";
     public const string ASSET_CACHE_DIRECTORY = "Cache";
 
-    private static Dictionary<(string, string), Type> dataAssetTypes = null;
 
-    private static readonly HashSet<string> packageExtensions = new(StringComparer.OrdinalIgnoreCase) { ".package" };
+    // private static readonly HashSet<string> packageExtensions = new(StringComparer.OrdinalIgnoreCase) { ".package" };
     private static readonly HashSet<string> textureExtensions = new(StringComparer.OrdinalIgnoreCase) { ".png", ".jpg", ".jpeg" };
     private static readonly HashSet<string> audioExtensions = new(StringComparer.OrdinalIgnoreCase) { ".wav", ".mp3", ".ogg" };
     private static readonly HashSet<string> dataExtensions = new(StringComparer.OrdinalIgnoreCase) { ".json" };
-    private static readonly HashSet<string> monoExtensions = new(StringComparer.OrdinalIgnoreCase) { ".xnb" };
+    private static readonly HashSet<string> xnbExtensions = new(StringComparer.OrdinalIgnoreCase) { ".xnb" };
 
-    private static readonly HashSet<string> allExtensions = new HashSet<string>(packageExtensions.Union(textureExtensions).Union(audioExtensions).Union(monoExtensions).Union(dataExtensions));
-    private static readonly List<string> extensions = allExtensions.ToList();
-
-    public struct AssetFile
+    public readonly struct AssetInfo
     {
-        public static AssetFile Generated => new AssetFile("Generated");
-
-        internal AssetFile(string assetRoot, string relativePath)
+        internal AssetInfo(string rootPath, string relativePath)
         {
-            AssetRoot = assetRoot;
-            RelativePath = relativePath;
-            Name = Path.GetFileNameWithoutExtension(Path.Combine(assetRoot, relativePath)).ToLower();
-        }
-        private AssetFile(string gen)
-        {
-            AssetRoot = null;
-            RelativePath = null;
-            Name = null;
+            Name = Path.GetFileNameWithoutExtension(relativePath).ToLower();
+            IsGenerated = false;
+            Size = new FileInfo(FullPath).Length;
 
-            IsGenerated = true;
+            RootPath = rootPath;
+            RelativePath = Path.ChangeExtension(relativePath, null);
+            Extension = Path.GetExtension(relativePath);
         }
 
+        public string Name { get; }
         public bool IsGenerated { get; }
 
-        public string AssetRoot { get; }
+        public long Size { get; }
+        public string RootPath { get; }
         public string RelativePath { get; }
-        public string Name { get; }
-
-        public string FullPath => Path.Combine(AssetRoot, RelativePath);
-        public long FileSize => IsGenerated ? 0 : new FileInfo(FullPath).Length;
+        public string Extension { get; }
+        
+        public readonly string FullPath => Path.Combine(RootPath, RelativePath) + Extension ?? null;
 
         public override string ToString() => FullPath;
     }
 
-    public IEnumerable<AssetFile> EnumerateAssets(string rootDirectory = "", bool? boot = null, string directory = "", bool includeDataAssets = false)
+    public IEnumerable<AssetInfo> EnumerateAssetInfos(string directory = "", bool? boot = null)
     {
-        string root = Path.Combine(AppContext.BaseDirectory, rootDirectory, ASSET_DIRECTORY);
+        if (Path.IsPathRooted(directory))
+            throw new ArgumentException($"'{directory}' must be a relative path.", nameof(directory));
 
-        if (!Path.Exists(root))
-            throw new DirectoryNotFoundException($"The specified asset path '{root}' does not exist.");
+        string[] segments = directory.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        if (segments.Any(s => s == ".."))
+            throw new ArgumentException($"'{directory}' must not contain parent directory references ('..').", nameof(directory));
 
-        var targetPath = Path.Combine(root, directory);
+        if (directory.IndexOfAny(Path.GetInvalidPathChars()) >= 0)
+            throw new ArgumentException($"'{directory}' contains invalid path characters.", nameof(directory));
 
-        if (!targetPath.StartsWith(root))
-            throw new ArgumentException("Invalid directory traversal.");
+        if (!string.IsNullOrEmpty(Path.GetExtension(directory)))
+            throw new ArgumentException($"'{directory}' must be a directory, not a file.", nameof(directory));
 
-        if (!Directory.Exists(targetPath)) yield break;
+        string basePath = Path.GetFullPath(AppContext.BaseDirectory);
+        string targetPath = Path.GetFullPath(Path.Combine(basePath, directory, ASSET_DIRECTORY));
 
+        if (!targetPath.StartsWith(basePath, StringComparison.OrdinalIgnoreCase))
+            throw new ArgumentException($"'{directory}' resolves outside the allowed base directory.", nameof(directory));
+            
         foreach (var path in Directory.EnumerateFiles(targetPath, "*.*", SearchOption.AllDirectories))
         {
-            string relativePath = Path.GetRelativePath(root, path);
-            bool isBoot = relativePath.StartsWith("Boot");
+            string relativePath = Path.GetRelativePath(targetPath, path);
 
+            bool isBoot = relativePath.StartsWith("boot", StringComparison.OrdinalIgnoreCase);
             if (boot.HasValue && boot.Value != isBoot) continue;
 
-            string extension = Path.GetExtension(relativePath);
+            string extension = Path.GetExtension(relativePath).ToLower();
             
-            if(!allExtensions.Contains(extension))
-            {
-                Logger.Get()?.Log($"Unsupported extension '{extension}' at location: '{path}'!");
-                continue;
-            }
+            if(textureExtensions.Contains(extension) || dataExtensions.Contains(extension) || audioExtensions.Contains(extension) || xnbExtensions.Contains(extension))
+                yield return new AssetInfo(targetPath, relativePath);
 
-            if(includeDataAssets && dataExtensions.Contains(extension))
-                continue;
 
-            yield return new AssetFile(root, relativePath);
+            Logger.Get()?.Log($"Unsupported extension '{extension}' at location: '{path}'!");
+            continue;
         }
-    } 
-
-    public bool Access(string rootDirectory, string directory, out AssetFile _assetFile)
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(rootDirectory, nameof(rootDirectory));
-        ArgumentException.ThrowIfNullOrWhiteSpace(directory, nameof(directory));
-
-        _assetFile = new AssetFile();
-
-        if (Path.IsPathFullyQualified(directory))
-        {
-            Logger.Get()?.Log("Not supported!");
-            return false;
-        }
-
-        string root = Path.Combine(AppContext.BaseDirectory, rootDirectory, ASSET_DIRECTORY);
-        if (!Path.Exists(root))
-            throw new DirectoryNotFoundException($"The specified asset path '{root}' does not exist.");
-
-        string fullPath = Path.Combine(root, directory);
-        if (!fullPath.StartsWith(root))
-            throw new ArgumentException("Invalid directory traversal.");
-
-        if (Path.HasExtension(fullPath))
-        {
-            string extension = Path.GetExtension(fullPath);
-            if (!allExtensions.Contains(extension))
-                throw new NotSupportedException($"Unsupported extension '{extension}' at location: '{fullPath}'!");
-
-            if (!File.Exists(fullPath))
-                throw new FileNotFoundException($"The specified asset path '{fullPath}' does not exist.");
-
-            _assetFile = new AssetFile(root, directory);
-        }
-        else
-        {
-            string extension = null;
-            for (int i = 0; i < extensions.Count; i++)
-            {
-                if (File.Exists(fullPath + extensions[i]))
-                {
-                    extension = extensions[i];
-                    break;
-                }
-            }
-
-            if (extension == null)
-                throw new FileNotFoundException($"The specified asset path '{directory}' does not exist.");
-
-            _assetFile = new AssetFile(root, directory + extension);
-        }
-
-        return true;
     }
 
-    public void LoadAsset(AssetFile assetFile, out Asset _asset)
+    public bool IsTextureAsset(AssetInfo assetInfo)
     {
-        _asset = null;
-        string extension = Path.GetExtension(assetFile.FullPath);
-        if(packageExtensions.Contains(extension))
-        {
-            LoadPackageAsset(assetFile, out PackageAsset asset);
-            _asset = asset; 
-            return;
-        }
+        string extension = assetInfo.Extension.ToLower();
+        return textureExtensions.Contains(extension);
+    }
+    public bool IsAudioAsset(AssetInfo assetInfo)
+    {
+        string extension = assetInfo.Extension.ToLower();
+        return audioExtensions.Contains(extension);
+    }
+    public bool IsXnbAsset(AssetInfo assetInfo)
+    {
+        string extension = assetInfo.Extension.ToLower();
+        return xnbExtensions.Contains(extension);
+    }
+    public bool IsDataAsset(AssetInfo assetInfo)
+    {
+        string extension = assetInfo.Extension.ToLower();
+        return dataExtensions.Contains(extension);
+    }
+
+
+    //Assembly
+
+    public Asset        LoadAsset(Assembly assembly, string identifier)
+    {
+        string extension = Path.GetExtension(identifier);
+
         if(textureExtensions.Contains(extension))
-        {
-            LoadTexture(assetFile, out TextureAsset asset);
-            _asset = asset; 
-            return;
-        }
+            return LoadTextureAsset(assembly, identifier);
+
         if(audioExtensions.Contains(extension))
-        {
-            LoadAudio(assetFile, out AudioAsset asset);
-            _asset = asset; 
-            return;
-        }
-        if(monoExtensions.Contains(extension))
-        {
-            LoadStreamAsset(assetFile, out StreamAsset asset);
-            _asset = asset; 
-            return;
-        }
-        if (dataExtensions.Contains(extension))
-        {
-            if(LoadDataAsset(assetFile, out DataAsset asset))
-                _asset = asset; 
+            return LoadAudioAsset(assembly, identifier);
 
-            return;
-        }
+        if(xnbExtensions.Contains(extension))
+            return LoadXnbAsset(assembly, identifier);
 
-        throw new ArgumentException($"Unsupported file extension: '{extension}'");
+        throw new ArgumentException($"Unsupported extension at '{identifier}'");
     }
-    public void LoadTexture(AssetFile assetFile, out TextureAsset _textureAsset)
+    public TextureAsset LoadTextureAsset(Assembly assembly, string identifier)
     {
-        using Stream stream = OpenStream(assetFile);
-        var result = ImageResult.FromStream(stream, StbImageSharp.ColorComponents.RedGreenBlueAlpha);
-
-        int pixelCount = result.Width * result.Height;
-        var colors = new Color[pixelCount];
-        var raw = result.Data;
-
-        for (int i = 0; i < pixelCount; i++)
-        {
-            int b = i * 4;
-            colors[i] = new Color(raw[b], raw[b + 1], raw[b + 2], raw[b + 3]);
-        }
-
-        var size = new Vector2(result.Width, result.Height);
-
-        _textureAsset = new TextureAsset(assetFile.Name, colors, size);
-    }
-    public void LoadAudio(AssetFile assetFile, out AudioAsset _audioAsset)
-    {
-        using Stream stream = OpenStream(assetFile);
-        var soundEffect = SoundEffect.FromStream(stream);
-        _audioAsset = new AudioAsset(assetFile.Name, soundEffect);
-    }
-    public void LoadStreamAsset(AssetFile assetFile, out StreamAsset _streamAsset)
-    {
-        _streamAsset = null;
-
-        using Stream fileStream = OpenStream(assetFile);
-        MemoryStream memStream = new MemoryStream();
-        fileStream.CopyTo(memStream);
-        memStream.Position = 0;
-
-        if(InputOutputUtils.DetectXMBAssetType(memStream, out var assetType))
-            _streamAsset = new StreamAsset(assetFile.Name, memStream, assetType);
-        else
-            Logger.Get()?.Err($"File '{assetFile.FullPath}' is not a valid XNB file or has an unrecognized format.");
-    }
-    public void LoadPackageAsset(AssetFile assetFile, out PackageAsset _assets)
-    {
-        throw new NotImplementedException(nameof(LoadPackageAsset));
-    }
-    public bool LoadDataAsset(AssetFile assetFile, out DataAsset _dataAsset)
-    {
-        _dataAsset = null;
-        if (dataAssetTypes == null || dataAssetTypes.Count == 0)
-        {
-            Logger.Get().Log("No DataAsset types found!");
-            return false;
-        }
-
-        var json = File.ReadAllText(assetFile.FullPath);
-        JsonDocument doc;
         try
         {
-            doc = JsonDocument.Parse(json);
-        }
-        catch (JsonException ex)
-        {
-            Logger.Get().Log($"Failed to parse JSON at line {ex.LineNumber}: {ex.Message}");
-            return false;
-        }
+            using Stream stream = assembly.GetManifestResourceStream(identifier);
+            var result = ImageResult.FromStream(stream, StbImageSharp.ColorComponents.RedGreenBlueAlpha);
 
-        var property = doc.RootElement.GetProperty("dataAsset");
-        string[] typeName = property.GetString().Split(".");
-        if (typeName.Length != 2)
-        {
-            Logger.Get().Log($"Incorrect formatting! Expected 'ModID.ClassName' but got '{property.GetString()}'");
-            return false;
-        }
+            int pixelCount = result.Width * result.Height;
+            var colors = new Color[pixelCount];
+            var raw = result.Data;
 
-        if (!dataAssetTypes.TryGetValue((typeName[0], typeName[1]), out Type type))
-        {
-            Logger.Get().Log($"DataAsset (modID '{typeName[0]}', type '{typeName[1]}') not found in registry!");
-            return false;
-        }
+            for (int i = 0; i < pixelCount; i++)
+            {
+                int b = i * 4;
+                colors[i] = new Color(raw[b], raw[b + 1], raw[b + 2], raw[b + 3]);
+            }
 
-        var dataElement = doc.RootElement.GetProperty("data").GetRawText();
-        object result = JsonSerializer.Deserialize(dataElement, type);
-        _dataAsset = (DataAsset)result;
-        return true;
+            var size = new Vector2(result.Width, result.Height);
+
+            return new TextureAsset(identifier, colors, size);
+        }
+        catch(Exception ex)
+        {
+            throw new InvalidDataException($"Failed to load texture '{identifier}' from '{assembly.FullName}', reason: {ex.Message}");
+        }
+    }
+    public AudioAsset   LoadAudioAsset(Assembly assembly, string identifier)
+    {
+        try
+        {
+            using Stream stream = assembly.GetManifestResourceStream(identifier);
+            var soundEffect = SoundEffect.FromStream(stream);
+            return new AudioAsset(identifier, soundEffect);
+        }
+        catch(Exception ex)
+        {
+            throw new InvalidDataException($"Failed to load texture '{identifier}' from '{assembly.FullName}', reason: {ex.Message}");
+        }
+    }
+    public XnbAsset     LoadXnbAsset(Assembly assembly, string identifier)
+    {
+        try
+        {
+            using Stream stream = assembly.GetManifestResourceStream(identifier);
+            MemoryStream memStream = new MemoryStream();
+            stream.CopyTo(memStream);
+            memStream.Position = 0;
+            return new XnbAsset(identifier, memStream);
+        }
+        catch(Exception ex)
+        {
+            throw new InvalidDataException($"Failed to load texture '{identifier}' from '{assembly.FullName}', reason: {ex.Message}");
+        }
     }
 
-    public async Task<Asset> LoadAssetAsync(AssetFile assetFile)
+
+    //Sync
+
+    public Asset        LoadAsset(AssetInfo assetInfo)
     {
-        string extension = Path.GetExtension(assetFile.FullPath);
-
-        if (packageExtensions.Contains(extension))
-            return await LoadPackageAssetAsync(assetFile);
-
-        if (textureExtensions.Contains(extension))
-            return await LoadTextureAsync(assetFile);
-
-        if (audioExtensions.Contains(extension))
-            return await LoadAudioAsync(assetFile);
-
-        if (monoExtensions.Contains(extension))
-            return await LoadStreamAssetAsync(assetFile);
-
-        return null;
-    }
-    public async Task<TextureAsset> LoadTextureAsync(AssetFile assetFile)
-    {
-        await using Stream stream = OpenStream(assetFile);
-        var result = ImageResult.FromStream(stream, StbImageSharp.ColorComponents.RedGreenBlueAlpha);
-
-        int pixelCount = result.Width * result.Height;
-        var colors = new Color[pixelCount];
-        var raw = result.Data;
-
-        for (int i = 0; i < pixelCount; i++)
-        {
-            int b = i * 4;
-            colors[i] = new Color(raw[b], raw[b + 1], raw[b + 2], raw[b + 3]);
-        }
-
-        var size = new Vector2(result.Width, result.Height);
-
-        return new TextureAsset(assetFile.Name, colors, size);
-    }
-    public async Task<AudioAsset> LoadAudioAsync(AssetFile assetFile)
-    {
-        await using Stream stream = OpenStream(assetFile);
-        var soundEffect = SoundEffect.FromStream(stream);
-        return new AudioAsset(assetFile.Name, soundEffect);
-    }
-    public async Task<StreamAsset> LoadStreamAssetAsync(AssetFile assetFile)
-    {
-        await using Stream fileStream = OpenStream(assetFile);
-        var memStream = new MemoryStream();
-        await fileStream.CopyToAsync(memStream);
-        memStream.Position = 0;
-
-        if(InputOutputUtils.DetectXMBAssetType(memStream, out var assetType))
-            return new StreamAsset(assetFile.Name, memStream, assetType);
-        else
-            Logger.Get()?.Err($"File '{assetFile.FullPath}' is not a valid XNB file or has an unrecognized format.");
+        string extension = assetInfo.Extension;
         
-        return null;
+        if(textureExtensions.Contains(extension))
+            return LoadTextureAsset(assetInfo);
+
+        if(audioExtensions.Contains(extension))
+            return LoadAudioAsset(assetInfo);
+
+        if (dataExtensions.Contains(extension))
+            return LoadDataAsset(assetInfo);
+
+        if(xnbExtensions.Contains(extension))
+            return LoadXnbAsset(assetInfo);
+
+        throw new ArgumentException($"Unsupported file extension at path '{assetInfo}'");
     }
-    public async Task<PackageAsset> LoadPackageAssetAsync(AssetFile assetFile)
+    public TextureAsset LoadTextureAsset(AssetInfo assetInfo)
     {
-        throw new NotImplementedException(nameof(LoadPackageAssetAsync));
+        try
+        {
+            using Stream stream = OpenStream(assetInfo, false);
+            var result = ImageResult.FromStream(stream, StbImageSharp.ColorComponents.RedGreenBlueAlpha);
+
+            int pixelCount = result.Width * result.Height;
+            var colors = new Color[pixelCount];
+            var raw = result.Data;
+
+            for (int i = 0; i < pixelCount; i++)
+            {
+                int b = i * 4;
+                colors[i] = new Color(raw[b], raw[b + 1], raw[b + 2], raw[b + 3]);
+            }
+
+            var size = new Vector2(result.Width, result.Height);
+
+            return new TextureAsset(assetInfo.RelativePath, colors, size);
+        }
+        catch(Exception ex)
+        {
+            throw new InvalidDataException($"Failed to load texture at '{assetInfo.FullPath}', reason: {ex.Message}");
+        }
+    }
+    public AudioAsset   LoadAudioAsset(AssetInfo assetInfo)
+    {
+        try
+        {
+            using Stream stream = OpenStream(assetInfo, false);
+            var soundEffect = SoundEffect.FromStream(stream);
+            return new AudioAsset(assetInfo.RelativePath, soundEffect);
+        }
+        catch(Exception ex)
+        {
+            throw new InvalidDataException($"Failed to load audio at '{assetInfo.FullPath}', reason: {ex.Message}");
+        }
+    }
+    public XnbAsset     LoadXnbAsset(AssetInfo assetInfo)
+    {
+        try
+        {
+            using Stream stream = OpenStream(assetInfo, false);
+            MemoryStream memStream = new MemoryStream();
+            stream.CopyTo(memStream);
+            memStream.Position = 0;
+
+            return new XnbAsset(assetInfo.RelativePath, memStream);
+        }
+        catch(Exception ex)
+        {
+            throw new InvalidDataException($"Failed to load xnb at '{assetInfo.FullPath}', reason: {ex.Message}");
+        }
+    }
+    public DataAsset    LoadDataAsset(AssetInfo assetInfo)
+    {
+        return LoadDataAssetAsync(assetInfo).GetAwaiter().GetResult();
     }
 
-    public Stream OpenStream(AssetFile assetFile)
+    //Async
+
+    public async Task<Asset>        LoadAssetAsync(AssetInfo assetInfo)
     {
-        return new FileStream(assetFile.FullPath, 
+        string extension = assetInfo.Extension;
+        if(textureExtensions.Contains(extension))
+            return await LoadTextureAssetAsync(assetInfo);
+
+        if(audioExtensions.Contains(extension))
+            return await LoadAudioAssetAsync(assetInfo);
+
+        if (dataExtensions.Contains(extension))
+            return await LoadDataAssetAsync(assetInfo);
+
+        if(xnbExtensions.Contains(extension))
+            return await LoadXnbAssetAsync(assetInfo);
+
+        throw new ArgumentException($"Unsupported file extension at path '{assetInfo}'");
+    }
+    public async Task<TextureAsset> LoadTextureAssetAsync(AssetInfo assetInfo)
+    {
+        try
+        {
+            using Stream stream = OpenStream(assetInfo, true);
+            MemoryStream memStream = new MemoryStream();
+            await stream.CopyToAsync(memStream);
+            memStream.Position = 0;
+
+            var result = ImageResult.FromStream(memStream, StbImageSharp.ColorComponents.RedGreenBlueAlpha);
+
+            int pixelCount = result.Width * result.Height;
+            var colors = new Color[pixelCount];
+            var raw = result.Data;
+
+            for (int i = 0; i < pixelCount; i++)
+            {
+                int b = i * 4;
+                colors[i] = new Color(raw[b], raw[b + 1], raw[b + 2], raw[b + 3]);
+            }
+
+            var size = new Vector2(result.Width, result.Height);
+
+            return new TextureAsset(assetInfo.RelativePath, colors, size);
+        }
+        catch(Exception ex)
+        {
+            throw new InvalidDataException($"Failed to load texture at '{assetInfo.FullPath}', reason: {ex.Message}");
+        }
+    }
+    public async Task<AudioAsset>   LoadAudioAssetAsync(AssetInfo assetInfo)
+    {
+        try
+        {
+            using Stream stream = OpenStream(assetInfo, true);
+            MemoryStream memStream = new MemoryStream();
+            await stream.CopyToAsync(memStream);
+            memStream.Position = 0;
+
+            var soundEffect = SoundEffect.FromStream(memStream);
+            return new AudioAsset(assetInfo.RelativePath, soundEffect);
+        }
+        catch(Exception ex)
+        {
+            throw new InvalidDataException($"Failed to load audio at '{assetInfo.FullPath}', reason: {ex.Message}");
+        }
+    }
+    public async Task<XnbAsset>     LoadXnbAssetAsync(AssetInfo assetInfo)
+    {
+        try
+        {
+            using Stream stream = OpenStream(assetInfo, true);
+            MemoryStream memStream = new MemoryStream();
+            await stream.CopyToAsync(memStream);
+            memStream.Position = 0;
+            return new XnbAsset(assetInfo.RelativePath, memStream);
+        }
+        catch(Exception ex)
+        {
+            throw new InvalidDataException($"Failed to load xnb at '{assetInfo.FullPath}', reason: {ex.Message}");
+        }
+    }
+    public async Task<DataAsset>    LoadDataAssetAsync(AssetInfo assetInfo)
+    {
+        throw new NotImplementedException(nameof(LoadDataAsset));
+    }
+
+    private Stream OpenStream(AssetInfo assetInfo, bool useAsync)
+    {
+        return new FileStream(assetInfo.FullPath, 
         FileMode.Open,
         FileAccess.Read,
         FileShare.Read,
@@ -341,30 +359,41 @@ public sealed class AssetIO : Workspace.Service
         useAsync: true);
     }
 
-    internal void SaveTexture(string name, Color[] colors, Vector2 size)
-    {
-        string directoryPath = Path.Combine(AppContext.BaseDirectory, ASSET_CACHE_DIRECTORY);
-        string path = Path.Combine(directoryPath, name + ".png");
 
-        if (!Directory.Exists(directoryPath))
-            Directory.CreateDirectory(directoryPath);
+    // public void LoadPackageAsset(AssetInfo assetInfo, out PackageAsset _asset)
+    // {
+    //     throw new NotImplementedException(nameof(LoadPackageAsset));
+    // }
 
-        byte[] bytes = new byte[colors.Length * 4];
-        for (int i = 0; i < colors.Length; i++)
-        {
-            bytes[i * 4 + 0] = colors[i].R;
-            bytes[i * 4 + 1] = colors[i].G;
-            bytes[i * 4 + 2] = colors[i].B;
-            bytes[i * 4 + 3] = colors[i].A;
-        }
+    // public async Task<PackageAsset> LoadPackageAssetAsync(AssetInfo assetInfo)
+    // {
+    //     throw new NotImplementedException(nameof(LoadPackageAssetAsync));
+    // }
 
-        using FileStream stream = File.OpenWrite(path);
-        ImageWriter writer = new ImageWriter();
-        writer.WritePng(bytes, (int)size.X, (int)size.Y, StbImageWriteSharp.ColorComponents.RedGreenBlueAlpha, stream);
+    // internal void SaveTexture(string name, Color[] colors, Vector2 size)
+    // {
+    //     string directoryPath = Path.Combine(AppContext.BaseDirectory, ASSET_CACHE_DIRECTORY);
+    //     string path = Path.Combine(directoryPath, name + ".png");
 
-        // TODO : only in debug
-        // if(Settings.DebugAssets)
-        //     Logger.Get().Log($"Texture '{name}', saved to: '{path}'");
-    }
+    //     if (!Directory.Exists(directoryPath))
+    //         Directory.CreateDirectory(directoryPath);
+
+    //     byte[] bytes = new byte[colors.Length * 4];
+    //     for (int i = 0; i < colors.Length; i++)
+    //     {
+    //         bytes[i * 4 + 0] = colors[i].R;
+    //         bytes[i * 4 + 1] = colors[i].G;
+    //         bytes[i * 4 + 2] = colors[i].B;
+    //         bytes[i * 4 + 3] = colors[i].A;
+    //     }
+
+    //     using FileStream stream = File.OpenWrite(path);
+    //     ImageWriter writer = new ImageWriter();
+    //     writer.WritePng(bytes, (int)size.X, (int)size.Y, StbImageWriteSharp.ColorComponents.RedGreenBlueAlpha, stream);
+
+    //     // TODO : only in debug
+    //     // if(Settings.DebugAssets)
+    //     //     Logger.Get().Log($"Texture '{name}', saved to: '{path}'");
+    // }
 
 }

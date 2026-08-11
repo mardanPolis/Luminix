@@ -1,8 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
-using Luminix.Rendering.RenderInstances;
-using Luminix.Resources;
 using Luminix.Threading.Buffers;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
@@ -37,14 +34,14 @@ internal sealed class Renderer
     public Renderer()
     {
         renderingSystem = Workspace.Current.GetService<RenderingSystem>();
-        resourceProvider = renderingSystem.ResourceManager.ResourceProvider;
+        resources = renderingSystem.ResourceManager.Resources;
         spriteBatch = renderingSystem.SpriteBatch;
 
-        defaultShader = resourceProvider.GetResource<ShaderResource>("GenericShader");
-        defaultTexture = resourceProvider.GetResource<TextureResource>("NullTexture");
-        defaultFontBold = resourceProvider.GetResource<FontResource>("IBMPlexMono-Bold");
-        defaultFontMedium = resourceProvider.GetResource<FontResource>("IBMPlexMono-Medium");
-        defaultFontRegular = resourceProvider.GetResource<FontResource>("IBMPlexMono-Regular");
+        defaultShader = resources.GetResource<ShaderResource>("GenericShader");
+        defaultTexture = resources.GetResource<TextureResource>("NullTexture");
+        defaultFontBold = resources.GetResource<FontResource>("IBMPlexMono-Bold");
+        defaultFontMedium = resources.GetResource<FontResource>("IBMPlexMono-Medium");
+        defaultFontRegular = resources.GetResource<FontResource>("IBMPlexMono-Regular");
 
         var vertices = new VertexPositionColorTexture[] {
             new (new Vector3(-0.5f, -0.5f, 0), Color.White, new Vector2(0, 0)),
@@ -73,7 +70,7 @@ internal sealed class Renderer
     }
 
     private readonly RenderingSystem  renderingSystem;
-    private readonly ResourceProvider resourceProvider;
+    private readonly Resources resources;
     private readonly SpriteBatch      spriteBatch;
 
     private readonly ShaderResource  defaultShader;

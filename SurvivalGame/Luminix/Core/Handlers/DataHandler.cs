@@ -1,13 +1,14 @@
 using System;
 using System.Reflection;
 using System.Text.Json;
+using Luminix.IO;
 using Luminix.RegistrySystem;
 
 namespace Luminix.Core.Handlers;
 
 internal interface IDataHandler
 {
-    void Parse(string data);
+    void Parse(DataAsset data);
 }
 
 internal class DataHandler<TEntry> : IDataHandler where TEntry : EntryItem<TEntry>
@@ -28,20 +29,7 @@ internal class DataHandler<TEntry> : IDataHandler where TEntry : EntryItem<TEntr
     private ConstructorInfo entryTypeCtor;
 
 
-    public void Parse(string data)
+    public void Parse(DataAsset data)
     {
-        using JsonDocument doc = JsonDocument.Parse(data);
-
-        foreach (JsonProperty entry in doc.RootElement.EnumerateObject())
-        {
-            string entryId = entry.Name;
-
-            JsonElement snapshot = entry.Value.Clone();
-
-            registry.Register(entryId, (token, id) =>
-            {
-                
-            });
-        }
     }
 }

@@ -1,8 +1,5 @@
 using System;
 using System.Text;
-using Microsoft.Xna.Framework.Graphics;
-using Luminix.Resources;
-using Luminix.Threading.Buffers;
 using Luminix.Extensions;
 
 namespace Luminix.Rendering;
@@ -13,13 +10,13 @@ public abstract class DebugRenderer
     {
         universe = Workspace.Current.GetService<Universe>();
         graphics = Workspace.Current.GetService<Graphics>();
-        resourceProvider = Workspace.Current.GetService<ResourceProvider>();
+        resourceProvider = Workspace.Current.GetService<Resources>();
         pixel = resourceProvider.GetResource<TextureResource>("Pixel");
         defaultFont = resourceProvider.GetResource<FontResource>("IBMPlexMono-Medium");
     }
     protected readonly Universe universe;
     protected readonly Graphics graphics;
-    protected readonly ResourceProvider resourceProvider;
+    protected readonly Resources resourceProvider;
     protected readonly TextureResource pixel;
     protected readonly FontResource defaultFont;
     
