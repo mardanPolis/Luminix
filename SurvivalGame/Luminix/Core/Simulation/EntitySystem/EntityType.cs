@@ -1,14 +1,12 @@
 using System;
-using System.Collections.Generic;
-using Luminix.Collections;
-using Luminix.Extensions;
+using System.Text.Json.Nodes;
 using Luminix.RegistrySystem;
 
 namespace Luminix;
 
 public sealed class EntityType : EntryItem<EntityType>
 {
-    internal EntityType(Registry<EntityType>.Token token, string id) : base(token, id)
+    internal EntityType(Registry<EntityType>.Token token, string id, JsonObject entitySystem, JsonObject components) : base(token, id)
     {
         // if (!typeof(EntitySystem).IsAssignableFrom(entitySystemType) || entitySystemType == typeof(EntitySystem))
         // {
@@ -29,5 +27,4 @@ public sealed class EntityType : EntryItem<EntityType>
     }
 
     public Type EntitySystemType { get; }
-
 }

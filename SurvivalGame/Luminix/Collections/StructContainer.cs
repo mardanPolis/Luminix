@@ -7,16 +7,16 @@ internal class StructContainer<T> : IStructContainer where T : struct
     public Type StructType => typeof(T);
     public int Length => data.Length;
 
+    public T[] Data => data;
     private T[] data;
 
-    public T this[int index] {
-        set => data[index] = value;
-        get => data[index];
+    public ref T this[int index] {
+        get => ref data[index];
     }
 
     public Array GetArray()
     {
-        return data;
+        return Data;
     }
     public void Resize(int newLength)
     {
@@ -26,9 +26,11 @@ internal class StructContainer<T> : IStructContainer where T : struct
     {
         data[index] = default;
     }
-    public void Set(int index, int otherIndex)
+    public void Swap(int index, int otherIndex)
     {
+        T temp = data[index];
         data[index] = data[otherIndex];
+        data[otherIndex] = temp;
     }
     public void Reset(int capacity)
     {

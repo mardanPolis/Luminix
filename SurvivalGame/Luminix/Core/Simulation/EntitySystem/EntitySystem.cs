@@ -17,4 +17,6 @@ public abstract class EntitySystem
         Graphics = Workspace.Current.GetService<Graphics>();
         Type = type;
     }
+
+    protected virtual void Tick() {}
 }

@@ -9,6 +9,6 @@ internal interface IStructContainer
     public Array GetArray();
     public void Resize(int newLength);
     public void Default(int index);
-    public void Set(int index, int otherIndex);
+    public void Swap(int index, int otherIndex);
     public void Reset(int capacity);
 }

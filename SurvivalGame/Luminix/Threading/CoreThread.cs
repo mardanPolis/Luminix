@@ -47,16 +47,10 @@ public sealed class CoreThread : TickedThread
     private Graphics.Controller graphicsController;
     private Input input;
     private Input.Controller inputController;
-    private UIManager uiManager;
-    private UIManager.Controller uiManagerController;
     private Assets assets;
     private Resources resources;
     private RegistryManager registryManager;
     private WorkerThreadPool workerThreadPool;
-    private AssetIO assetIO;
-
-    private Keys[] debugKeys = { Keys.F1, Keys.F2, Keys.F3, Keys.F4, Keys.F5, Keys.F11, Keys.F12 };
-    private Action[] debugKeyActions = new Action[7];
     
     protected sealed override void Initialize()
     {
@@ -67,11 +61,10 @@ public sealed class CoreThread : TickedThread
         universe           = new Universe(out universeController);
         graphics           = new Graphics(renderBridge, out graphicsController);
         input              = new Input(inputBridge, out inputController);
-        uiManager          = new UIManager(graphics, out uiManagerController);
-        resources          = new Resources();
-        assetIO            = new AssetIO();
         registryManager    = new RegistryManager();
         workerThreadPool   = new WorkerThreadPool(workerThreadCount);
+        assets             = new Assets(registryManager, workerThreadPool, assetBridge);
+        resources          = new Resources();
 
         //TODO : Add entityType registration.
 
@@ -79,12 +72,12 @@ public sealed class CoreThread : TickedThread
 
         var stopwatch = Stopwatch.StartNew();
 
-        var bootAssetInfos = assetIO.EnumerateAssetInfos(boot: true);
+        var bootAssetInfos = assets.GetAssetIO().EnumerateAssetInfos(boot: true);
         assets.HandleAssets(bootAssetInfos);
 
         assets.FinalizeAssets(false);
 
-        var nonBootAssetInfos = assetIO.EnumerateAssetInfos(boot: false);
+        var nonBootAssetInfos = assets.GetAssetIO().EnumerateAssetInfos(boot: false);
         assets.HandleAssets(nonBootAssetInfos);
 
         assets.FinalizeAssets(true);
@@ -106,8 +99,8 @@ public sealed class CoreThread : TickedThread
         // debugKeyActions[2] = () => Settings.DebugInspector = !Settings.DebugInspector;       //F3
         // debugKeyActions[3] = () => Settings.DebugGizmosPanel = !Settings.DebugGizmosPanel;   //F4
         // debugKeyActions[4] = () => Settings.DebugEventPanel = !Settings.DebugEventPanel;     //F5
-        debugKeyActions[5] = () => { logger.Wrn("Fullscreen not implemented!"); };           //F11
-        debugKeyActions[6] = () => { logger.Wrn("Screenshot not implemented!"); };           //F12
+        // debugKeyActions[5] = () => { logger.Wrn("Fullscreen not implemented!"); };           //F11
+        // debugKeyActions[6] = () => { logger.Wrn("Screenshot not implemented!"); };           //F12
 
         IsBackground = false;
     }
@@ -126,17 +119,10 @@ public sealed class CoreThread : TickedThread
     private void Update()
     {
         graphicsController.SwapBuffers();
-        uiManagerController.Clear();
 
         inputController.UpdateData();
 
         resources.Set(resourceBridge.Get());
-
-        for(int key = 0; key < debugKeys.Length; key++)
-        {
-            if(input.GetKeyUp(debugKeys[key]))
-                debugKeyActions[key]();
-        }
 
         universeController.TickRate = TickRate;
         universeController.TickTime = TickTime;
@@ -146,14 +132,16 @@ public sealed class CoreThread : TickedThread
 
         universeController.Tick();
 
-        var mousePosition = input.MousePosition;
-        inputController.IsMouseOverUI = uiManagerController.isMouseColliding((int)mousePosition.X, (int)mousePosition.Y);
+        // var mousePosition = input.MousePosition;
+        // inputController.IsMouseOverUI = uiManagerController.isMouseColliding((int)mousePosition.X, (int)mousePosition.Y);
     }
     
     private void Render()
     {
         graphicsController.BeginRender();
-        uiManagerController.Render();
+
+        // entity rendering
+
         graphicsController.StopRender();
     }
 }

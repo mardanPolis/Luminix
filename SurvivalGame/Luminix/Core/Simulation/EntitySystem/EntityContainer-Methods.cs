@@ -7,72 +7,62 @@ using Luminix.Identifiers;
 
 namespace Luminix;
 
-internal partial struct EntityContainer
+internal partial class EntityContainer
 {
     internal sealed class Method
     {
-        private enum ParamType
+        public MethodInfo Info { get; }
+        public ParameterInfo[] Parameters { get; }
+
+        private Type[] elementTypes { get; }
+
+        public Method(MethodInfo methodInfo, EntitySystem entitySystem, Dictionary<Type, IStructContainer> structContainers, bool isByInOnly)
         {
-            NonRefParam,
-            IDParam,
-            OtherParam,
-        };
-
-        public MethodInfo Info { get; init; }
-        public ParameterInfo[] Parameters { get; init;}
-
-        private Type[] elementTypes { get; init; }
-        private ParamType[] elementParamTypes { get; init; }
-        private Expression[] elementAccesses { get; init; }
-        private ConstantExpression instanceConst { get; init; }
-        private ParameterExpression indexParam { get; init; }
-
-        private IStructContainer[] boundContainers { get; init; } // parallel to Parameters, resolved once
-
-        public Method(MethodInfo info, EntitySystem entitySystem, Dictionary<Type, IStructContainer> structContainerMap)
-        {
-            Info = info;
-            Parameters = info.GetParameters();
+            Info = methodInfo;
+            Parameters = methodInfo.GetParameters();
             var parameterTypes = new DenseList<Type>();
 
-            instanceConst = Expression.Constant(entitySystem);
-            indexParam = Expression.Parameter(typeof(int), "i");
+            var instanceConst = Expression.Constant(entitySystem);
+
+            var indexParam = Expression.Parameter(typeof(int), "i");
+            var elementAccesses = new Expression[Parameters.Length];
 
             elementTypes = new Type[Parameters.Length];
-            elementParamTypes = new ParamType[Parameters.Length];
-            elementAccesses = new Expression[Parameters.Length];
-            boundContainers = new IStructContainer[Parameters.Length];
 
             for (int i = 0; i < Parameters.Length; i++)
             {
                 ParameterInfo parameterInfo = Parameters[i];
                 Type parameterType = parameterInfo.ParameterType;
+                Type elementType = parameterType.GetElementType();
 
-                ParamType paramType = GetParamType(parameterInfo);
-                var elementType = parameterType.GetElementType();
-                
-                if(paramType == ParamType.NonRefParam)
-                    throw new InvalidOperationException($"Parameter '{Parameters[i].Name}' on '{info.DeclaringType?.Name}.{info.Name}' must be passed by ref!");
-                
+                if(!parameterType.IsByRef)
+                {
+                    if(isByInOnly || elementType == typeof(ID))
+                        throw new InvalidOperationException($"Parameter '{parameterInfo.Name}' on '{methodInfo.DeclaringType?.Name}.{methodInfo.Name}' must be passed by 'in' parameter modifier!");
+
+                    throw new InvalidOperationException($"Parameter '{parameterInfo.Name}' on '{methodInfo.DeclaringType?.Name}.{methodInfo.Name}' must be passed by 'ref'/'in' parameter modifier!");
+                }
+
+                if((isByInOnly || elementType == typeof(ID)) && !parameterInfo.IsIn)
+                    throw new InvalidOperationException($"Parameter '{parameterInfo.Name}' on '{methodInfo.DeclaringType?.Name}.{methodInfo.Name}' must be passed by 'in' parameter modifier!");
+
                 if(!parameterTypes.TryAdd(elementType))
                     throw new InvalidOperationException($"Repeating parameters with the same type {elementType.Name}!");
 
-                switch(paramType)
-                {
-                    case ParamType.IDParam:
-                        elementParamTypes[i] = paramType;
-                        elementTypes[i] = elementType;
-                    break;
-                    case ParamType.OtherParam:
-                        if (!structContainerMap.TryGetValue(elementType, out var container))
-                            throw new InvalidOperationException($"EntityType has no component with Type {elementType.Name}!");
+                if (!structContainers.TryGetValue(elementType, out var container))
+                    throw new InvalidOperationException($"EntityType has no component with Type {elementType.Name}!");
 
-                        elementParamTypes[i] = paramType;
-                        elementTypes[i] = elementType;
-                        boundContainers[i] = container;
-                    break;
-                }
+                var elemType = elementTypes[i];
+                var concreteContainerType = typeof(StructContainer<>).MakeGenericType(elemType);
+                var dataField = concreteContainerType.GetField(nameof(StructContainer<int>.Data))!;
+                var containerConst = Expression.Constant(container, concreteContainerType);
+                var arrayAccess = Expression.Field(containerConst, dataField);
+                elementAccesses[i] = Expression.ArrayAccess(arrayAccess, indexParam);
             }
+
+            var call = Expression.Call(instanceConst, methodInfo, elementAccesses);
+            var lambda = Expression.Lambda<Action<int>>(call, indexParam);
+            compiledPerIndex = lambda.Compile();
         }
 
         private Action<int> compiledPerIndex;
@@ -81,38 +71,20 @@ internal partial struct EntityContainer
         {
             compiledPerIndex(index);
         }
-        public void InvokeFor(int entityCount)
+        public void Invoke(Dictionary<ID, int>.ValueCollection indexes)
         {
-            for (int i = 0; i < entityCount; i++)
+            foreach(int i in indexes)
                 compiledPerIndex(i);
         }
-
-        public void Compile()
+        public void InvokeFor(int length)
         {
-            for (int i = 0; i < elementTypes.Length; i++)
-            {
-                var elemType = elementTypes[i];
-                Array array = boundContainers[i].GetArray();
-                var arrType = elemType.MakeArrayType();
-                var arrConst = Expression.Constant(array, arrType);
-                elementAccesses[i] = Expression.ArrayAccess(arrConst, indexParam);
-            }
-
-            var call = Expression.Call(instanceConst, Info, elementAccesses);
-            var lambda = Expression.Lambda<Action<int>>(call, indexParam);
-            compiledPerIndex = lambda.Compile();
+            for (int i = 0; i < length; i++)
+                compiledPerIndex(i);
         }
-        
-        private ParamType GetParamType(ParameterInfo parameterInfo)
+        public void InvokeBackFor(int entityCount, int length)
         {
-            Type parameterType = parameterInfo.ParameterType;
-            if(!parameterType.IsByRef)
-                return ParamType.NonRefParam;
-
-            if(parameterType.GetElementType() == typeof(ID))
-                return ParamType.IDParam;
-            
-            return ParamType.OtherParam;
+            for (int i = 1; i < length; i++)
+                compiledPerIndex(entityCount - i);
         }
     }
 }

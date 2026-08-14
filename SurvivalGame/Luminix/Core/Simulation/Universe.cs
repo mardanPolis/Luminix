@@ -28,36 +28,7 @@ public sealed class Universe : Workspace.Service
 
         public void Tick()
         {
-            var entityTypes = controlled.entityContainers;
-            var destroyedEntities = controlled.destroyedEntities;
-            var entityLocations = controlled.entityLocations;
 
-            for(int d = 0; d < destroyedEntities.Count; d++)
-            {
-                var destroyedEntity = destroyedEntities[d];
-                ref EntityContainer entityContainer = ref entityTypes[destroyedEntity.entry];
-                entityContainer.DestroyEntity(destroyedEntity.index);
-                entityLocations.Remove(destroyedEntity.id);
-            }
-
-            destroyedEntities.Clear();
-
-            for(int t = 0; t < entityTypes.Length; t++)
-            {
-                entityTypes[t].Refresh();
-            }
-
-            var cameras = controlled.worldCameras;
-
-            for(int i = 0; i < cameras.Count; i++)
-            {
-                cameras[i].Tick();
-            }
-
-            for(int i = 0; i < entityTypes.Length; i++)
-            {
-                entityTypes[i].UpdateEntities();
-            }
         }
     }
 
@@ -76,23 +47,13 @@ public sealed class Universe : Workspace.Service
     public double TickDeltaTime { get; private set; }
     public long TickAllocated { get; private set; }
 
-    public int EntityCount => entityCount;
-
-    public Camera MainCamera { get; set; }
-
-    private readonly DenseList<Camera> worldCameras;
-
     private Registry<EntityType> typeRegistry;
-
     
-
     private int lastEntityID;
-    private int entityCount;
 
     protected override void Start()
     {
         this.lastEntityID = 0;
-        this.entityCount  = 0;
 
         this.typeRegistry = Workspace.Current.GetService<RegistryManager>().GetRegistry<EntityType>();
     }

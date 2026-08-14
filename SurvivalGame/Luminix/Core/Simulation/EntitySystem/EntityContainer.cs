@@ -2,18 +2,30 @@ using System;
 using System.Collections.Generic;
 using Luminix.Identifiers;
 using Luminix.Collections;
-using System.Reflection.Metadata;
+using System.Reflection;
 
 namespace Luminix;
 
-internal partial struct EntityContainer
+internal partial class EntityContainer
 {
-    private const int DEFAULT_ENTITY_CAPACITY = 8;
+    private const int DEFAULT_ENTITY_CAPACITY = 16;
 
-    public EntityContainer(EntityType type, Method[] startMethods, Method[] updateMethods, Method[] renderMethods, Method[] destroyMethods, IStructContainer[] structContainers)
+    public EntityContainer(EntityType type)
     {
         this.Type = type;
-        this.EntitySystem = type.EntitySystem;
+        this.EntitySystem = Type.EntitySystem;
+        
+        MethodInfo method = typeof(EntitySystem).GetMethod(
+            "Tick", BindingFlags.NonPublic | BindingFlags.Instance);
+        tickMethod = (Action)Delegate.CreateDelegate(typeof(Action), this.EntitySystem, method);
+
+        this.startMethods = startMethods;
+        this.updateMethods = updateMethods;
+        this.renderMethods = renderMethods;
+        this.destroyMethods = destroyMethods;
+
+        this.destroyedEntities = new HashSet<ID>();
+        this.entityLocation = new Dictionary<ID, int>();
 
         this.componentTypeMap = new Dictionary<Type, int>();
         for(int i = 0; i < structContainers.Length; i++)
@@ -27,67 +39,66 @@ internal partial struct EntityContainer
         this.structContainers = structContainers;
         
         Clear();
-
-        this.startMethods = startMethods;
-        this.updateMethods = updateMethods;
-        this.renderMethods = renderMethods;
-        this.destroyMethods = destroyMethods;
     }
 
     public EntityType Type { get; }
     public EntitySystem EntitySystem { get; }
 
-    public int EntityCount { get; private set; }
+    private int entityCount;
     
+    private readonly Action tickMethod;
+
     private readonly Method[] startMethods;
     private readonly Method[] updateMethods;
     private readonly Method[] renderMethods;
     private readonly Method[] destroyMethods;
-    private bool dirtyMethods = false;
 
+    private readonly Dictionary<ID, int> entityLocation;
     private readonly Dictionary<Type, int> componentTypeMap;
     private readonly IStructContainer[] structContainers;
     private readonly StructContainer<ID> entityContainer;
 
-    private int entityCount;
+    private readonly Dictionary<ID, int> createdEntities;
+    private readonly HashSet<ID> destroyedEntities;
 
-    public void CreateEntity(ID entityID)
+    public void Create(ID entityID)
     {
-        if(EntityCount >= entityContainer.Length)
+        if(entityCount >= entityContainer.Length)
         {
             int newLength = entityContainer.Length * 2;
             for(int i = 0; i < structContainers.Length; i++)
                 structContainers[i].Resize(newLength);
-            
-            dirtyMethods = true;
         }
         
         for(int i = 0; i < structContainers.Length; i++)
-            structContainers[i].Default(EntityCount);
+            structContainers[i].Default(entityCount);
         
-        entityContainer[EntityCount] = entityID;
-
-        EntityCount++;
+        entityContainer[entityCount] = entityID;
+        entityLocation.Add(entityID, entityCount);
+        createdEntities.Add(entityID, entityCount);
     }
 
-    public void DestroyEntity(int entityIndex)
+    public void Destroy(ID entityID)
     {
-        var lastIndex = EntityCount - 1;
-
-        if (entityIndex != lastIndex)
-        {
-            for(int i = 0; i < structContainers.Length; i++)
-                structContainers[i].Set(entityIndex, lastIndex);
-        }
-        EntityCount--;
+        destroyedEntities.Add(entityID);
     }
 
-    public bool HasComponent(Type componentType)
+    public void Clear()
     {
-        return componentTypeMap.ContainsKey(componentType);
+        for(int i = 0; i < structContainers.Length; i++)
+            structContainers[i].Reset(DEFAULT_ENTITY_CAPACITY);
+
+        entityCount = 0;
     }
 
-    public ref T GetEntityComponent<T>(int entityIndex) where T : struct
+
+
+    public bool HasComponent<T>() where T : struct
+    {
+        return componentTypeMap.ContainsKey(typeof(T));
+    }
+
+    public ref T GetComponent<T>(int entityIndex) where T : struct
     {
         var type = typeof(T);
 
@@ -97,46 +108,73 @@ internal partial struct EntityContainer
         return ref ((T[])structContainers[containerIndex].GetArray())[entityIndex];
     }
 
-    public void Refresh()
+
+
+    public void TickSystems()
     {
-        if (dirtyMethods)
-            CompileMethods();
-        
-        entityCount = EntityCount;
+        tickMethod();
     }
 
+    public void StartEntities()
+    {
+        if(createdEntities.Count == 0)
+            return;
+
+        for (int i = 0; i < startMethods.Length; i++)
+            startMethods[i].Invoke(createdEntities.Values);
+
+        entityCount += createdEntities.Count;
+        createdEntities.Clear();
+    } 
     public void UpdateEntities()
     {
         for (int i = 0; i < updateMethods.Length; i++)
             updateMethods[i].InvokeFor(entityCount);
     }
+
     public void RenderEntities()
     {
         for (int i = 0; i < renderMethods.Length; i++)
             renderMethods[i].InvokeFor(entityCount);
     }
-
-    public void Clear()
+    public void DestroyEntities()
     {
-        for(int i = 0; i < structContainers.Length; i++)
-            structContainers[i].Reset(DEFAULT_ENTITY_CAPACITY);
+        int count = destroyedEntities.Count;
 
-        CompileMethods();
+        if(count == 0)
+            return;
 
-        EntityCount = 0;
-    }
+        int entityCount = this.entityCount;
 
-    private void CompileMethods()
-    {
-        for(int i = 0; i < startMethods.Length; i++)
-            startMethods[i].Compile();
-        for(int i = 0; i < updateMethods.Length; i++)
-            updateMethods[i].Compile();
-        for(int i = 0; i < renderMethods.Length; i++)
-            renderMethods[i].Compile();
-        for(int i = 0; i < renderMethods.Length; i++)
-            destroyMethods[i].Compile();
+        foreach(ID entity in destroyedEntities)
+        {
+            entityCount--;
+            var lastIndex = entityCount;
+            var entityIndex = entityLocation[entity];
+            
+            entityLocation.Remove(entity);
 
-        dirtyMethods = false;
+            //if destroyed entity is last
+            if (entityIndex == lastIndex)
+                continue;
+
+            ID otherEntity = entityContainer[lastIndex];
+            for(int i = 0; i < structContainers.Length; i++)
+                structContainers[i].Swap(entityIndex, lastIndex);
+
+            entityLocation[otherEntity] = entityIndex;
+
+            if(createdEntities.Count == 0 || !createdEntities.ContainsKey(otherEntity))
+                continue;
+
+            createdEntities[otherEntity] = entityIndex;
+        }
+
+        for (int i = 0; i < destroyMethods.Length; i++)
+            destroyMethods[i].InvokeBackFor(this.entityCount, count);
+
+        this.entityCount = entityCount;
+
+        destroyedEntities.Clear();
     }
 }
