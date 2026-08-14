@@ -52,7 +52,7 @@ public sealed class Assets : Workspace.Service
 
     public AssetIO GetAssetIO() => assetIO;
 
-    public void HandleAsset(AssetIO.AssetInfo assetInfo)
+    public void HandleAsset(in AssetIO.AssetInfo assetInfo)
     {
         if (assetIO.IsTextureAsset(assetInfo))
         {
@@ -88,18 +88,62 @@ public sealed class Assets : Workspace.Service
         throw new NotSupportedException($"Unrecognized asset type for '{assetInfo.FullPath}'.");
     }
 
-    public void HandleAssets(IEnumerable<AssetIO.AssetInfo> assetInfos)
+    public void HandleAssets(IReadOnlyList<AssetIO.AssetInfo> assetInfos)
     {
-        foreach(var info in assetInfos)
-            HandleAsset(info);
+        for(int i = 0; i < assetInfos.Count; i++)
+            HandleAsset(assetInfos[i]);
     }
 
+    public AtlasAsset[] CreateAtlasAssets(IReadOnlyList<TextureAsset> textureAssets)
+    {
+        var atlasGroups = new Dictionary<string, List<TextureAsset>>();
+
+        //Grouping textures
+        for (int i = 0; i < textureAssets.Count; i++)
+        {
+            var texture = textureAssets[i];
+            string textureName = Path.GetFileName(texture.Identifier.Replace('·', Path.DirectorySeparatorChar));
+            string atlasName = texture.Identifier.Substring(0, Math.Max(0, texture.Identifier.Length - textureName.Length - 1));
+
+            if(string.IsNullOrWhiteSpace(atlasName))
+                atlasName = textureName;
+
+            if (!atlasGroups.TryGetValue(atlasName, out var group))
+            {
+                group = new List<TextureAsset>();
+                atlasGroups[atlasName] = group;
+            }
+            group.Add(texture);
+        }
+        
+        //Making Atlases
+        var groupKeys   = atlasGroups.Keys.ToArray();
+        var groupValues = atlasGroups.Values.ToArray();
+
+        var resultBag = new ConcurrentBag<AtlasAsset>();
+        workerThreadPool.ParallelFor(atlasGroups.Count, index =>
+        {
+            var atlasMaker = new AtlasMaker();
+            var atlasName = groupKeys[index];
+            var textures  = groupValues[index];
+
+            for(int i = 0; i < textures.Count; i++)
+                atlasMaker.Add(textures[i]);
+
+            var atlasResults = atlasMaker.Pack(atlasName);
+            
+            for(int i = 0; i < atlasResults.Length; i++)
+                resultBag.Add(atlasResults[i]);
+        });
+
+        return resultBag.ToArray();
+    }
     public AtlasAsset[] CreateAtlasAssets(IEnumerable<TextureAsset> textureAssets)
     {
         var atlasGroups = new Dictionary<string, List<TextureAsset>>();
 
         //Grouping textures
-        foreach (var texture in textureAssets)
+        foreach(var texture in textureAssets)
         {
             string textureName = Path.GetFileName(texture.Identifier.Replace('·', Path.DirectorySeparatorChar));
             string atlasName = texture.Identifier.Substring(0, Math.Max(0, texture.Identifier.Length - textureName.Length - 1));
@@ -126,8 +170,8 @@ public sealed class Assets : Workspace.Service
             var atlasName = groupKeys[index];
             var textures  = groupValues[index];
 
-            foreach(var texture in textures)
-                atlasMaker.Add(texture);
+            for(int i = 0; i < textures.Count; i++)
+                atlasMaker.Add(textures[i]);
 
             var atlasResults = atlasMaker.Pack(atlasName);
             
