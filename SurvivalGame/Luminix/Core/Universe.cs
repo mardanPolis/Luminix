@@ -1,8 +1,4 @@
 using System;
-using System.Collections.Generic;
-using Luminix.Collections;
-using Luminix.Identifiers;
-using Luminix.RegistrySystem;
 
 namespace Luminix;
 
@@ -26,9 +22,24 @@ public sealed class Universe : Workspace.Service
         public double TickDeltaTime { get => controlled.TickDeltaTime; set => controlled.TickDeltaTime = value; }
         public long TickAllocated { get => controlled.TickAllocated; set => controlled.TickAllocated = value; }
 
-        public void Tick()
+        public readonly void StartCreatedEntities()
         {
+            
+        }
 
+        public readonly void UpdateEntities()
+        {
+            
+        }
+
+        public readonly void RenderEntities()
+        {
+            
+        }
+
+        public readonly void DestroyEntities()
+        {
+            
         }
     }
 
@@ -47,15 +58,12 @@ public sealed class Universe : Workspace.Service
     public double TickDeltaTime { get; private set; }
     public long TickAllocated { get; private set; }
 
-    private Registry<EntityType> typeRegistry;
-    
     private int lastEntityID;
 
     protected override void Start()
     {
         this.lastEntityID = 0;
 
-        this.typeRegistry = Workspace.Current.GetService<RegistryManager>().GetRegistry<EntityType>();
     }
 
     public ID CreateEntity(EntityType entityType)

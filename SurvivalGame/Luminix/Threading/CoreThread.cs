@@ -1,16 +1,7 @@
 using System;
 using System.Diagnostics;
 using System.Threading;
-using System.Collections.Generic;
-using Microsoft.Xna.Framework.Input;
-using Microsoft.Xna.Framework;
-using Luminix.IO;
 using Luminix.Threading.Bridges;
-using Luminix.Threading.Buffers;
-using Game.Simulation;
-using Luminix.Rendering;
-using Luminix.UI;
-using Luminix.RegistrySystem;
 
 namespace Luminix.Threading;
 
@@ -20,7 +11,6 @@ public sealed class CoreThread : TickedThread
     {   
         this.Name = "CoreThread";
         this.IsBackground = false;
-        this.workerThreadCount = Environment.ProcessorCount - 2; //FIXME : workerThread count
 
         this.renderBridge = renderBridge;
         this.inputBridge = inputBridge;
@@ -34,7 +24,6 @@ public sealed class CoreThread : TickedThread
     public double TickUpdateTime => Volatile.Read(ref tickUpdateTime);
     public double TickRenderTime => Volatile.Read(ref tickRenderTime);
 
-    private int workerThreadCount;
 
     private RenderBridge renderBridge;
     private InputBridge inputBridge;
@@ -47,10 +36,9 @@ public sealed class CoreThread : TickedThread
     private Graphics.Controller graphicsController;
     private Input input;
     private Input.Controller inputController;
+    private Defs defs;
     private Assets assets;
     private Resources resources;
-    private RegistryManager registryManager;
-    private WorkerThreadPool workerThreadPool;
     
     protected sealed override void Initialize()
     {
@@ -61,26 +49,35 @@ public sealed class CoreThread : TickedThread
         universe           = new Universe(out universeController);
         graphics           = new Graphics(renderBridge, out graphicsController);
         input              = new Input(inputBridge, out inputController);
-        registryManager    = new RegistryManager();
-        workerThreadPool   = new WorkerThreadPool(workerThreadCount);
-        assets             = new Assets(registryManager, workerThreadPool, assetBridge);
+        defs               = new Defs();
+        assets             = new Assets(assetBridge);
         resources          = new Resources();
 
         //TODO : Add entityType registration.
 
-        registryManager.Freeze();
-
         var stopwatch = Stopwatch.StartNew();
 
+        defs.NewDefType<EntityType>(); // built in
+
+        defs.FinalizeTypes();
+
         var bootAssetInfos = assets.GetAssetIO().EnumerateAssetInfos(boot: true);
-        assets.HandleAssets(bootAssetInfos);
+        foreach(var info in bootAssetInfos)
+            assets.HandleAsset(info);
 
         assets.FinalizeAssets(false);
 
         var nonBootAssetInfos = assets.GetAssetIO().EnumerateAssetInfos(boot: false);
-        assets.HandleAssets(nonBootAssetInfos);
+        foreach(var info in nonBootAssetInfos)
+            assets.HandleAsset(info);
 
         assets.FinalizeAssets(true);
+
+        defs.PatchNodes();
+        defs.InheritNodes();
+        defs.DeserializeNodes();
+
+        defs.FinalizeDefs();
 
         long before = GC.GetTotalMemory(false);
         GC.Collect();
@@ -88,9 +85,8 @@ public sealed class CoreThread : TickedThread
 
         long cleared = before - after;
         logger.Log($"GC cleared: {cleared / 1024.0:F2} KB ({cleared:N0} bytes)");
-        logger.Log($"Loaded assets in {stopwatch.Elapsed.Milliseconds}ms");
+        logger.Log($"Initialized in {stopwatch.Elapsed.Milliseconds}ms");
 
-        logger.Log("Total threads at initialization: " + Process.GetCurrentProcess().Threads.Count);
 
         //TODO : debug actions
 
@@ -129,8 +125,6 @@ public sealed class CoreThread : TickedThread
         universeController.TickCount = TickCount;
         universeController.TickDeltaTime = TickDeltaTime;
         universeController.TickAllocated = TickAllocated;
-
-        universeController.Tick();
 
         // var mousePosition = input.MousePosition;
         // inputController.IsMouseOverUI = uiManagerController.isMouseColliding((int)mousePosition.X, (int)mousePosition.Y);

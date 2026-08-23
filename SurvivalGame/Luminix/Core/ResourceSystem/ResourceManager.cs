@@ -8,7 +8,6 @@ using Luminix.IO;
 using Microsoft.Xna.Framework.Audio;
 using Luminix.Collections;
 using System.Linq;
-using Luminix.Primitives;
 
 namespace Luminix;
 
@@ -59,7 +58,7 @@ public sealed class ResourceManager : Microsoft.Xna.Framework.Content.ContentMan
 
     public void CreateResource(Asset asset)
     {
-        using var _ = logger.WithPrefix("ResourceManager.CreateResource(Asset asset) - Unable to create a new Resource, reason:");
+        using var _ = logger.WithPrefix("ResourceManager - Unable to create a new Resource, reason: ");
 
         bool flag1 = disposed;
         bool flag2 = asset == null;

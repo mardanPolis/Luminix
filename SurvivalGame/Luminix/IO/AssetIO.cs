@@ -8,6 +8,8 @@ using StbImageWriteSharp;
 using System.Threading.Tasks;
 using System.Linq;
 using System.Reflection;
+using System.Text.Json.Nodes;
+using System.Text.Json;
 
 namespace Luminix.IO;
 
@@ -163,7 +165,7 @@ public sealed class AssetIO
         }
         catch(Exception ex)
         {
-            throw new InvalidDataException($"Failed to load texture '{identifier}' from '{assembly.FullName}', reason: {ex.Message}");
+            throw new InvalidDataException($"Failed to load audio '{identifier}' from '{assembly.FullName}', reason: {ex.Message}");
         }
     }
     public XnbAsset     LoadXnbAsset(Assembly assembly, string identifier)
@@ -178,10 +180,23 @@ public sealed class AssetIO
         }
         catch(Exception ex)
         {
-            throw new InvalidDataException($"Failed to load texture '{identifier}' from '{assembly.FullName}', reason: {ex.Message}");
+            throw new InvalidDataException($"Failed to load xnb '{identifier}' from '{assembly.FullName}', reason: {ex.Message}");
         }
     }
+    public DataAsset    LoadDataAsset(Assembly assembly, string identifier)
+    {
+        try
+        {
+            using Stream stream = assembly.GetManifestResourceStream(identifier);
+            JsonDocument json = JsonDocument.Parse(stream);
 
+            return new DataAsset(identifier, json);
+        }
+        catch(Exception ex)
+        {
+            throw new InvalidDataException($"Failed to load data '{identifier}' from '{assembly.FullName}', reason: {ex.Message}");
+        }
+    }
 
     //Sync
 
@@ -260,7 +275,17 @@ public sealed class AssetIO
     }
     public DataAsset    LoadDataAsset(AssetInfo assetInfo)
     {
-        return LoadDataAssetAsync(assetInfo).GetAwaiter().GetResult();
+        try
+        {
+            using Stream stream = OpenStream(assetInfo, false);
+            JsonDocument json = JsonDocument.Parse(stream);
+
+            return new DataAsset(assetInfo.FullPath, json);
+        }
+        catch(Exception ex)
+        {
+            throw new InvalidDataException($"Failed to load data at '{assetInfo.FullPath}', reason: {ex.Message}");
+        }
     }
 
     //Async
@@ -346,7 +371,17 @@ public sealed class AssetIO
     }
     public async Task<DataAsset>    LoadDataAssetAsync(AssetInfo assetInfo)
     {
-        throw new NotImplementedException(nameof(LoadDataAsset));
+        try
+        {
+            using Stream stream = OpenStream(assetInfo, false);
+            JsonDocument json = JsonDocument.Parse(stream);
+
+            return new DataAsset(assetInfo.FullPath, json);
+        }
+        catch(Exception ex)
+        {
+            throw new InvalidDataException($"Failed to load data at '{assetInfo.FullPath}', reason: {ex.Message}");
+        }
     }
 
     private Stream OpenStream(AssetInfo assetInfo, bool useAsync)

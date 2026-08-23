@@ -5,13 +5,12 @@ using System.Reflection;
 using System.Linq;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
+using Microsoft.Xna.Framework.Graphics;
 using Luminix.Rendering;
 using Luminix.Threading;
 using Luminix.Threading.Bridges;
 using Luminix.Core.Handlers;
-using Luminix.IO;
 using Luminix.Threading.Buffers;
-using Microsoft.Xna.Framework.Graphics;
 using System.Threading.Tasks;
 using System.Collections.Generic;
 
@@ -23,12 +22,19 @@ public class Main : Microsoft.Xna.Framework.Game
 
     public Main()
     {
-        Assembly assembly = Assembly.GetExecutingAssembly();
+        var assembly = Assembly.GetExecutingAssembly();
+
         string version = assembly.GetName().Version.ToString();
 
         var attribute = assembly.GetCustomAttributes<AssemblyMetadataAttribute>()
                             .FirstOrDefault(a => a.Key == "BuildDate");
         string buildDate = attribute?.Value ?? "Unknown";
+
+        var myNamespaces = assembly.GetTypes()
+            .Select(t => t.Namespace)
+            .Where(n => !string.IsNullOrEmpty(n) && n.StartsWith("Luminix"))
+            .Distinct()
+            .OrderBy(n => n);
 
         Main.Version = version;
         Main.BuildDate = buildDate;
@@ -40,6 +46,10 @@ public class Main : Microsoft.Xna.Framework.Game
         logger.Log($"Started initialization");
         logger.Log($"Build-Vers: {version}");
         logger.Log($"Build-Date: {buildDate}");
+
+        logger.Log("Namespaces:");
+        foreach (var ns in myNamespaces)
+            logger.Log(ns);
 
         stopwatch = Stopwatch.StartNew();
 

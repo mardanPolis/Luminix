@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using Luminix.Identifiers;
 using Luminix.Collections;
 using System.Reflection;
 
@@ -13,7 +12,6 @@ internal partial class EntityContainer
     public EntityContainer(EntityType type)
     {
         this.Type = type;
-        this.EntitySystem = Type.EntitySystem;
         
         MethodInfo method = typeof(EntitySystem).GetMethod(
             "Tick", BindingFlags.NonPublic | BindingFlags.Instance);

@@ -16,7 +16,6 @@ public class Camera
 
     protected readonly Universe universe;
     protected readonly Graphics graphics;
-    protected readonly DenseList<CameraComponent> cameraComponents = [];
 
     private Vector2 position0 = Vector2.Zero;
     private Vector2 position = Vector2.Zero;
@@ -88,20 +87,5 @@ public class Camera
         isDestroyed = true;
 
         //TODO : complete Destroy Method
-    }
-
-    internal void Tick()
-    {
-        position0 = position;
-        orthoSize0 = orthoSize;
-
-        for(int component = 0; component < cameraComponents.Count; component++)
-            cameraComponents[component].Tick();
-    }
-
-    internal void AttachComponent(CameraComponent cameraComponent)
-    {
-        cameraComponents.Add(cameraComponent);
-        
     }
 } 

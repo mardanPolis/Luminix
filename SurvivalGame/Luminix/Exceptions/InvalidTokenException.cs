@@ -1,6 +1,6 @@
 using System;
 
-namespace Luminix.Core.Exceptions;
+namespace Luminix.Exceptions;
 
 public class InvalidTokenException : Exception
 {

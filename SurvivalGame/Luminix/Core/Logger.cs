@@ -73,7 +73,7 @@ public readonly struct Log
 
         string prefixMsg = GetPrefixMessage(prefix);
         if(!string.IsNullOrEmpty(prefixMsg))
-            entry += $"{prefixMsg} ";
+            entry += $"{prefixMsg}";
 
         if(type != Log.Type.Print)
         {
@@ -95,13 +95,15 @@ public sealed class Logger
     private sealed class PrefixScope : IDisposable
     {
         private readonly Logger owner;
-        private readonly object previous;
+        private readonly PrefixScope previous;
+        private readonly object message;
         private bool disposed;
 
-        public PrefixScope(Logger owner, object previous)
+        public PrefixScope(Logger owner, PrefixScope previous, object message)
         {
             this.owner = owner;
             this.previous = previous;
+            this.message = message;
         }
 
         public void Dispose()
@@ -109,6 +111,17 @@ public sealed class Logger
             if(disposed) return;
             disposed = true;
             owner.prefix = previous;
+        }
+
+        public override string ToString()
+        {
+            if(previous == null)
+                return message.ToString();
+
+            if(previous.disposed)
+                return null;
+            
+            return previous.ToString() + message.ToString();
         }
     }
 
@@ -165,13 +178,13 @@ public sealed class Logger
     private readonly List<Log> logs;
     private readonly string path;
 
-    private object prefix;
+    private PrefixScope prefix;
 
-    public IDisposable WithPrefix(object prefix)
+    public IDisposable WithPrefix(object message)
     {
-        var scope = new PrefixScope(this, this.prefix);
-        this.prefix = prefix;
-        return scope;
+        var prefixScope = new PrefixScope(this, this.prefix, message);
+        this.prefix = prefixScope;
+        return prefixScope;
     }
 
     private void Print(Log log)

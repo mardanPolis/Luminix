@@ -1,6 +1,6 @@
 using System;
 
-namespace Luminix.Identifiers;
+namespace Luminix;
 
 public readonly record struct ID : IEquatable<ID>
 {

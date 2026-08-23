@@ -1,6 +1,8 @@
-namespace Luminix.Identifiers;
+using System;
 
-public readonly record struct Tag(uint value)
+namespace Luminix;
+
+public readonly record struct Tag(uint value) : IEquatable<Tag>
 {
     private readonly uint value = value;
     

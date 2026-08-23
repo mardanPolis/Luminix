@@ -3,13 +3,12 @@ using System.Collections.Generic;
 using System.Linq.Expressions;
 using System.Reflection;
 using Luminix.Collections;
-using Luminix.Identifiers;
 
 namespace Luminix;
 
 internal partial class EntityContainer
 {
-    internal sealed class Method
+    private sealed class Method
     {
         public MethodInfo Info { get; }
         public ParameterInfo[] Parameters { get; }

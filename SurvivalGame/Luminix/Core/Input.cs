@@ -1,8 +1,6 @@
 using System;
 using Microsoft.Xna.Framework.Input;
-using Luminix.Threading.Buffers;
 using Luminix.Threading.Bridges;
-using Luminix.Primitives;
 using System.Numerics;
 
 namespace Luminix;
