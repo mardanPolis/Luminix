@@ -52,6 +52,19 @@ public sealed class Logger
 
             return this;
         }
+        public Log Append(double value, ReadOnlySpan<char> format)
+        {
+            if (logger == null) return this;
+
+            Span<char> dest = logger.data.AsSpan(logger.pointer);
+            if (value.TryFormat(dest, out int written, format, System.Globalization.CultureInfo.InvariantCulture))
+            {
+                logger.pointer += written;
+                AddLength(written);
+            }
+
+            return this;
+        }
 
         public Log Append(long value)
         {
@@ -66,6 +79,19 @@ public sealed class Logger
 
             return this;
         }
+        public Log Append(long value, ReadOnlySpan<char> format)
+        {
+            if (logger == null) return this;
+
+            Span<char> dest = logger.data.AsSpan(logger.pointer);
+            if (value.TryFormat(dest, out int written, format, System.Globalization.CultureInfo.InvariantCulture))
+            {
+                logger.pointer += written;
+                AddLength(written);
+            }
+
+            return this;
+        }
 
         public Log Append(ulong value)
         {
@@ -73,6 +99,19 @@ public sealed class Logger
 
             Span<char> dest = logger.data.AsSpan(logger.pointer);
             if (value.TryFormat(dest, out int written, default, System.Globalization.CultureInfo.InvariantCulture))
+            {
+                logger.pointer += written;
+                AddLength(written);
+            }
+
+            return this;
+        }
+        public Log Append(ulong value, ReadOnlySpan<char> format)
+        {
+            if (logger == null) return this;
+
+            Span<char> dest = logger.data.AsSpan(logger.pointer);
+            if (value.TryFormat(dest, out int written, format, System.Globalization.CultureInfo.InvariantCulture))
             {
                 logger.pointer += written;
                 AddLength(written);
