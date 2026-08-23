@@ -6,125 +6,181 @@ using System.Threading;
 
 namespace Luminix;
 
-//FIXME : logger creates garbage, A LOT!
-
-public readonly struct Log
-{
-    public enum Type
-    {
-        Print,
-        Info,
-        Warning,
-        Error,
-    }
-
-    private readonly string entry;
-
-    private Log(string entry)
-    {
-        this.entry = entry;
-    }
-
-    public static implicit operator string(Log log) => log.entry;
-    
-    private static string GetTimestamp()
-    {
-        return $"[{DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss.fff")}]";
-    }
-    private static string GetTypeMessage(Log.Type type)
-    {
-        switch(type)
-        {
-            case Log.Type.Info:
-                return $"[INFO]";
-            case Log.Type.Warning:
-                return $"[WARNING]";
-            case Log.Type.Error:
-                return $"[ERROR]";
-            default:
-                return "";
-        }
-    }
-    private static string GetThreadName()
-    {
-        string name = Thread.CurrentThread.Name;
-        if(string.IsNullOrWhiteSpace(name))
-            return "";
-        
-        return $"[{name}]";
-    }
-
-    private static string GetPrefixMessage(object prefix)
-    {
-        if(prefix == null)
-            return "";
-        string name = prefix.ToString();
-        if(string.IsNullOrWhiteSpace(name))
-            return "";
-        return $"{name}";
-    }
-
-    public static Log New(object message, Log.Type type, bool timestamp, object prefix = null)
-    {
-        if(message == null)
-            message = "NULL";
-
-        var entry = "";
-
-        string prefixMsg = GetPrefixMessage(prefix);
-        if(!string.IsNullOrEmpty(prefixMsg))
-            entry += $"{prefixMsg}";
-
-        if(type != Log.Type.Print)
-        {
-            if(timestamp)
-                entry += $"{GetTimestamp()} ";
-            entry += $"{GetThreadName()} ";
-
-            entry += $"{GetTypeMessage(type)} ";
-        }
-
-        return new Log(entry + message.ToString());
-    }
-
-    public override string ToString() => entry;
-}
-
 public sealed class Logger
 {
-    private sealed class PrefixScope : IDisposable
+    public readonly ref struct Log
     {
-        private readonly Logger owner;
-        private readonly PrefixScope previous;
-        private readonly object message;
-        private bool disposed;
-
-        public PrefixScope(Logger owner, PrefixScope previous, object message)
+        public enum Type
         {
-            this.owner = owner;
-            this.previous = previous;
-            this.message = message;
+            Info,
+            Warning,
+            Error,
         }
 
-        public void Dispose()
+        private readonly int logIndex;
+        private readonly Logger logger;
+
+        internal Log(Logger logger, int logIndex)
         {
-            if(disposed) return;
-            disposed = true;
-            owner.prefix = previous;
+            this.logger = logger;
+            this.logIndex = logIndex;
         }
 
-        public override string ToString()
+        public Log Append(string value)
         {
-            if(previous == null)
-                return message.ToString();
+            if (logger == null) return this;
+            if (value == null) return this;
 
-            if(previous.disposed)
-                return null;
+            ReadOnlySpan<char> src = value.AsSpan();
+            src.CopyTo(logger.data.AsSpan(logger.pointer)); // no alloc — spans over existing memory
+            logger.pointer += src.Length;
+            AddLength(src.Length);
+
+            return this;
+        }
+
+        public Log Append(double value)
+        {
+            if (logger == null) return this;
+
+            Span<char> dest = logger.data.AsSpan(logger.pointer);
+            if (value.TryFormat(dest, out int written, default, System.Globalization.CultureInfo.InvariantCulture))
+            {
+                logger.pointer += written;
+                AddLength(written);
+            }
+
+            return this;
+        }
+
+        public Log Append(long value)
+        {
+            if (logger == null) return this;
+
+            Span<char> dest = logger.data.AsSpan(logger.pointer);
+            if (value.TryFormat(dest, out int written, default, System.Globalization.CultureInfo.InvariantCulture))
+            {
+                logger.pointer += written;
+                AddLength(written);
+            }
+
+            return this;
+        }
+
+        public Log Append(ulong value)
+        {
+            if (logger == null) return this;
+
+            Span<char> dest = logger.data.AsSpan(logger.pointer);
+            if (value.TryFormat(dest, out int written, default, System.Globalization.CultureInfo.InvariantCulture))
+            {
+                logger.pointer += written;
+                AddLength(written);
+            }
+
+            return this;
+        }
+
+        public Log Append(char value)
+        {
+            if (logger == null) return this;
+
+            logger.data[logger.pointer++] = value;
+            AddLength(1);
+
+            return this;
+        }
+
+        public Log Append(bool value)
+        {
+            if (logger == null) return this;
+
+            if (value)
+            {
+                logger.data[logger.pointer++] = 'T';
+                logger.data[logger.pointer++] = 'r';
+                logger.data[logger.pointer++] = 'u';
+                logger.data[logger.pointer++] = 'e';
+                AddLength(4);
+            }
+            else
+            {
+                logger.data[logger.pointer++] = 'F';
+                logger.data[logger.pointer++] = 'a';
+                logger.data[logger.pointer++] = 'l';
+                logger.data[logger.pointer++] = 's';
+                logger.data[logger.pointer++] = 'e';
+                AddLength(5);
+            }
+
+            return this;
+        }
+
+        public Log Append(DateTime value)
+        {
+            if (logger == null) return this;
+
+            Span<char> dest = logger.data.AsSpan(logger.pointer);
+            if (value.TryFormat(dest, out int written, default, System.Globalization.CultureInfo.InvariantCulture))
+            {
+                logger.pointer += written;
+                AddLength(written);
+            }
+
+            return this;
+        }
+
+        public Log Append(object value)
+        {
+            if (logger == null) return this;
             
-            return previous.ToString() + message.ToString();
+            switch (value)
+            {
+                case null:
+                    break;
+                case string s:
+                    Append(s);
+                    break;
+                case int i:
+                    Append((long)i);
+                    break;
+                case long l:
+                    Append(l);
+                    break;
+                case ulong ul:
+                    Append(ul);
+                    break;
+                case double d:
+                    Append(d);
+                    break;
+                case bool b:
+                    Append(b);
+                    break;
+                case char c:
+                    Append(c);
+                    break;
+                case DateTime dt:
+                    Append(dt);
+                    break;
+                default:
+                    Append(value.ToString());
+                    break;
+            }
+
+            return this;
+        }
+
+        public void End()
+        {
+            Append('\n');
+        }
+
+        private void AddLength(int count)
+        {
+            var entry = logger.logs[logIndex];
+            logger.logs[logIndex] = (entry.Start, entry.Length + count);
         }
     }
-
     private static readonly ThreadLocal<Logger> instance = new ThreadLocal<Logger>(true);
 
     internal static Logger Initialize()
@@ -136,15 +192,6 @@ public sealed class Logger
         instance.Value = logger;
         return logger;
     }
-    public static Logger Get()
-    {
-        return instance.Value;
-    }
-    public static Logger[] GetAll()
-    {
-        return instance.Values.ToArray();
-    }
-
     internal static void Shutdown()
     {
         var logger = instance.Value;
@@ -155,105 +202,120 @@ public sealed class Logger
         }
     }
 
+    public static Logger Get()
+    {
+        return instance.Value;
+    }
+    public static Logger[] GetAll()
+    {
+        return instance.Values.ToArray();
+    }
+
 
     private Logger()
     {
-        logs = new(10000);
+        logs = new(500);
+        data = new char[250000];
+        buffer = new char[250000];
         logDir = Path.Combine(AppContext.BaseDirectory, "logs");
         Directory.CreateDirectory(logDir);
         
-        path = GetThreadLogPath();
+        string name = Thread.CurrentThread.Name;
+        path =  Path.Combine(
+            logDir,
+            $"thread_{name}.log"
+        );
+
+        name = Thread.CurrentThread.Name;
+        if(string.IsNullOrWhiteSpace(name))
+            threadName = "[Engine Thread]";
+        else
+            threadName = $"[{name}]";
+
         File.WriteAllText(path, string.Empty);
     }
 
-    public Log[] Logs
-    {
-        get
-        {
-            return logs.ToArray();
-        }
-    }
+    private readonly string threadName;
 
     private readonly string logDir;
-    private readonly List<Log> logs;
     private readonly string path;
+    private readonly List<(int Start, int Length)> logs;
+    private char[] data;
+    private char[] buffer;
 
-    private PrefixScope prefix;
+    private int pointer;
 
-    public IDisposable WithPrefix(object message)
+    public Log NewLog()
     {
-        var prefixScope = new PrefixScope(this, this.prefix, message);
-        this.prefix = prefixScope;
-        return prefixScope;
+        return NewLog(true, true, Log.Type.Info);
     }
-
-    private void Print(Log log)
+    public Log NewWrn()
     {
-        Console.WriteLine(log);
-        logs.Add(log);
+        return NewLog(true, true, Log.Type.Warning);
     }
-    public void Print(object message)
+    public Log NewErr()
     {
-        Print(Luminix.Log.New(message, Luminix.Log.Type.Print, false, prefix));
-    }
-    public void Log(object message)
-    {
-        Print(Luminix.Log.New(message, Luminix.Log.Type.Info, true, prefix));
-    }
-    public void Log(object variable, object value)
-    {
-        Print(Luminix.Log.New($"{variable} : {value}", Luminix.Log.Type.Info, true, prefix));
-    }
-    public bool LogIf(bool statement, object message)
-    {
-        if(statement)
-            Print(Luminix.Log.New(message, Luminix.Log.Type.Info, true, prefix));
-        return statement;
+        return NewLog(true, true, Log.Type.Error);
     }
 
-    public void Wrn(object message)
+    public Log NewLog(bool timestamp, bool threadInfo, Log.Type type)
     {
-        Print(Luminix.Log.New(message, Luminix.Log.Type.Warning, true, prefix));
+        int logIndex = logs.Count;
+        logs.Add((pointer, 0));
+        Log log = new Log(this, logIndex);
+
+        if(timestamp)
+        {
+            log.Append('[');
+            log.Append(DateTime.Now);
+            log.Append("] ");
+        }
+
+        if(threadInfo)
+        {
+            log.Append(threadName);
+            log.Append(' ');
+        }
+
+        switch(type)
+        {
+            case Log.Type.Info:
+                log.Append("[INFO] : ");
+            break;
+            case Log.Type.Warning:
+                log.Append("[WARNING] : ");
+            break;
+            case Log.Type.Error:
+                log.Append("[ERROR] : ");
+            break;
+        }
+
+        return log;
     }
-    public bool WrnIf(bool statement, object message)
+
+    public Log NewLogIf(bool condition, bool timestamp, bool threadInfo, Log.Type type)
     {
-        if(statement)
-            Print(Luminix.Log.New(message, Luminix.Log.Type.Warning, true, prefix));
-        return statement;
+        if(condition)
+            return NewLog(timestamp, threadInfo, type);
+
+        return new Log(null, 0);
     }
-    public void Err(object message)
-    {
-        Print(Luminix.Log.New(message, Luminix.Log.Type.Error, true, prefix));
-    }
-    public bool ErrIf(bool statement, object message)
-    {
-        if(statement)
-            Print(Luminix.Log.New(message, Luminix.Log.Type.Error, true, prefix));
-        return statement;
-    }
+
 
     public void Flush()
     {
         using (StreamWriter writer = new StreamWriter(path, append: true))
         {
-            for (int i = 0; i < logs.Count; i++)
-                writer.WriteLine(logs[i]);
+            writer.Write(data, 0, pointer);
         }
+        pointer = 0;
         logs.Clear();
     }
 
     public void Clear()
     {
         Console.Clear();
+        pointer = 0;
         logs.Clear();
-    }
-
-    private string GetThreadLogPath()
-    {
-        string name = Thread.CurrentThread.Name;
-        return Path.Combine(
-            logDir,
-            $"thread_{name}.log"
-        );
     }
 }
