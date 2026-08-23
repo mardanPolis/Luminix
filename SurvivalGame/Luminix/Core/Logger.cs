@@ -120,6 +120,33 @@ public sealed class Logger
             return this;
         }
 
+        public Log Append(DateTime value)
+        {
+            if (logger == null) return this;
+
+            Span<char> dest = logger.data.AsSpan(logger.pointer);
+            if (value.TryFormat(dest, out int written, default, System.Globalization.CultureInfo.InvariantCulture))
+            {
+                logger.pointer += written;
+                AddLength(written);
+            }
+
+            return this;
+        }
+        public Log Append(DateTime value, ReadOnlySpan<char> format)
+        {
+            if (logger == null) return this;
+
+            Span<char> dest = logger.data.AsSpan(logger.pointer);
+            if (value.TryFormat(dest, out int written, format, System.Globalization.CultureInfo.InvariantCulture))
+            {
+                logger.pointer += written;
+                AddLength(written);
+            }
+
+            return this;
+        }
+
         public Log Append(char value)
         {
             if (logger == null) return this;
@@ -150,20 +177,6 @@ public sealed class Logger
                 logger.data[logger.pointer++] = 's';
                 logger.data[logger.pointer++] = 'e';
                 AddLength(5);
-            }
-
-            return this;
-        }
-
-        public Log Append(DateTime value)
-        {
-            if (logger == null) return this;
-
-            Span<char> dest = logger.data.AsSpan(logger.pointer);
-            if (value.TryFormat(dest, out int written, default, System.Globalization.CultureInfo.InvariantCulture))
-            {
-                logger.pointer += written;
-                AddLength(written);
             }
 
             return this;
@@ -284,6 +297,13 @@ public sealed class Logger
 
     private int pointer;
 
+    private string dateTimeFormat;
+
+    public void SetDateTimeFormat(string format)
+    {
+        dateTimeFormat = format;
+    }
+
     public Log NewLog()
     {
         return NewLog(true, true, Log.Type.Info);
@@ -306,7 +326,7 @@ public sealed class Logger
         if(timestamp)
         {
             log.Append('[');
-            log.Append(DateTime.Now);
+            log.Append(DateTime.Now, dateTimeFormat);
             log.Append("] ");
         }
 
