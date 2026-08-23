@@ -28,13 +28,19 @@ public sealed class Logger
 
         public Log Append(string value)
         {
-            if (logger == null) return this;
             if (value == null) return this;
 
-            ReadOnlySpan<char> src = value.AsSpan();
-            src.CopyTo(logger.data.AsSpan(logger.pointer)); // no alloc — spans over existing memory
-            logger.pointer += src.Length;
-            AddLength(src.Length);
+            Append(value.AsSpan());
+
+            return this;
+        }
+        public Log Append(ReadOnlySpan<Char> value)
+        {
+            if (logger == null) return this;
+
+            value.CopyTo(logger.data.AsSpan(logger.pointer));
+            logger.pointer += value.Length;
+            AddLength(value.Length);
 
             return this;
         }
@@ -57,10 +63,17 @@ public sealed class Logger
             if (logger == null) return this;
 
             Span<char> dest = logger.data.AsSpan(logger.pointer);
-            if (value.TryFormat(dest, out int written, format, System.Globalization.CultureInfo.InvariantCulture))
+            try
             {
-                logger.pointer += written;
-                AddLength(written);
+                if (value.TryFormat(dest, out int written, format, System.Globalization.CultureInfo.InvariantCulture))
+                {
+                    logger.pointer += written;
+                    AddLength(written);
+                }
+            }
+            catch (FormatException)
+            {
+                Append(value).Append(" > (Format ERROR -> '").Append(format).Append("')");
             }
 
             return this;
@@ -84,10 +97,17 @@ public sealed class Logger
             if (logger == null) return this;
 
             Span<char> dest = logger.data.AsSpan(logger.pointer);
-            if (value.TryFormat(dest, out int written, format, System.Globalization.CultureInfo.InvariantCulture))
+            try
             {
-                logger.pointer += written;
-                AddLength(written);
+                if (value.TryFormat(dest, out int written, format, System.Globalization.CultureInfo.InvariantCulture))
+                {
+                    logger.pointer += written;
+                    AddLength(written);
+                }
+            }
+            catch (FormatException)
+            {
+                Append(value).Append(" > (Format ERROR -> '").Append(format).Append("')");
             }
 
             return this;
@@ -111,10 +131,17 @@ public sealed class Logger
             if (logger == null) return this;
 
             Span<char> dest = logger.data.AsSpan(logger.pointer);
-            if (value.TryFormat(dest, out int written, format, System.Globalization.CultureInfo.InvariantCulture))
+            try
             {
-                logger.pointer += written;
-                AddLength(written);
+                if (value.TryFormat(dest, out int written, format, System.Globalization.CultureInfo.InvariantCulture))
+                {
+                    logger.pointer += written;
+                    AddLength(written);
+                }
+            }
+            catch (FormatException)
+            {
+                Append(value).Append(" > (Format ERROR -> '").Append(format).Append("')");
             }
 
             return this;
@@ -138,10 +165,17 @@ public sealed class Logger
             if (logger == null) return this;
 
             Span<char> dest = logger.data.AsSpan(logger.pointer);
-            if (value.TryFormat(dest, out int written, format, System.Globalization.CultureInfo.InvariantCulture))
+            try
             {
-                logger.pointer += written;
-                AddLength(written);
+                if (value.TryFormat(dest, out int written, format, System.Globalization.CultureInfo.InvariantCulture))
+                {
+                    logger.pointer += written;
+                    AddLength(written);
+                }
+            }
+            catch (FormatException)
+            {
+                Append(value).Append(" > (Format ERROR -> '").Append(format).Append("')");
             }
 
             return this;
