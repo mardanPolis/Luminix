@@ -183,7 +183,7 @@ public sealed partial class Logger
 
         public LogBuilder(int literalLength, int formattedCount, Logger logger, out bool shouldAppend)
         {
-            shouldLog = logger.TryCreateLog(Log.Type.Warning, out log);
+            shouldLog = logger.TryCreateLog(Log.Type.Info, out log);
             shouldAppend = shouldLog;
 
             if (shouldLog)
@@ -283,7 +283,7 @@ public sealed partial class Logger
 
         public ErrBuilder(int literalLength, int formattedCount, Logger logger, out bool shouldAppend)
         {
-            shouldLog = logger.TryCreateLog(Log.Type.Warning, out log);
+            shouldLog = logger.TryCreateLog(Log.Type.Error, out log);
             shouldAppend = shouldLog;
 
             if (shouldLog)
