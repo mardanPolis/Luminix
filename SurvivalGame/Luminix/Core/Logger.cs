@@ -87,6 +87,12 @@ public sealed partial class Logger
         builder.AppendLiteral(message);
         builder.End();
     }
+    public void NewLog(Log.Level logType, string message) 
+    {
+        var builder = new LogBuilder(0, 0, this, logType);
+        builder.AppendLiteral(message);
+        builder.End();
+    }
     public void NewLog(Log.Level logType, [InterpolatedStringHandlerArgument("", "logType")] ref LogBuilder message)
     {
         message.End();
