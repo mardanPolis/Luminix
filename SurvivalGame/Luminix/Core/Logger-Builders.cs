@@ -6,8 +6,15 @@ namespace Luminix;
 
 public sealed partial class Logger
 {
-    public ref struct Log
+    public readonly struct Log
     {
+        internal Log(Logger logger, int start, int length)
+        {
+            this.logger = logger;
+            this.startIndex = start;
+            this.Length = length;
+        }
+
         public enum Type
         {
             Info,
@@ -15,58 +22,104 @@ public sealed partial class Logger
             Error,
         }
 
+        private Logger logger { get; }
+
+        private int startIndex { get; }
+        public int Length { get; }
+
+        public ReadOnlySpan<char> Message => logger.data.AsSpan(startIndex, Length);
+    }
+
+    [InterpolatedStringHandler]
+    public ref struct LogBuilder
+    {
         private readonly Logger logger;
         private char[] buffer;
         private int pointer;
 
-        internal Log(Logger logger, char[] buffer)
+        public LogBuilder(int literalLength, int formattedCount, Logger logger, Log.Type logType, out bool shouldAppend)
         {
+            shouldAppend = false;
+
+            if(logger == null)
+                return;
+
+            shouldAppend = logger.TryCreateLog(logType);
+
             this.logger = logger;
-            this.buffer = buffer;
+            this.buffer = logger.logBuffer;
+
+            if(!shouldAppend)
+                return;
+
+            AppendFormatted('[');
+            AppendFormatted(DateTime.Now, logger.TimestampFormat);
+            AppendFormatted("] ");
+
+            AppendFormatted(logger.threadName);
+            AppendFormatted(' ');
+
+            switch(logType)
+            {
+                case Log.Type.Info:
+                    AppendFormatted("[INFO] : ");
+                break;
+                case Log.Type.Warning:
+                    AppendFormatted("[WARNING] : ");
+                break;
+                case Log.Type.Error:
+                    AppendFormatted("[ERROR] : ");
+                break;
+            }
         }
 
-        public Log Append(ReadOnlySpan<Char> value)
+        public LogBuilder AppendLiteral(string value)
         {
-            if (buffer == null) return this;
+            return AppendFormatted(value.AsSpan());
+        }
+
+        public LogBuilder AppendFormatted(ReadOnlySpan<Char> value)
+        {
+            if (logger == null) return this;
 
             Add(value);
             return this;
         }
-        public Log Append(object value)
+        public LogBuilder AppendFormatted(object value)
         {
-            if (buffer == null) return this;
+            if (logger == null) return this;
             
             switch (value)
             {
                 case null:
                     break;
                 case string s:
-                    Append(s);
+                    AppendFormatted(s.AsSpan());
                     break;
                 case int i:
-                    Append((long)i);
+                    AppendFormatted((long)i);
                     break;
                 case ISpanFormattable f:
-                    Add(f, default);
+                    AppendFormatted(f, default);
                     break;
                 default:
-                    Append(value.ToString());
+                    AppendFormatted(value.ToString().AsSpan());
                     break;
             }
 
             return this;
         }
 
-        public Log Append<T>(T value) where T : ISpanFormattable
+        public LogBuilder AppendFormatted<T>(T value) where T : ISpanFormattable
         {
-            if (buffer == null) return this;
+            if (logger == null) return this;
  
             Add(value, default);
             return this;
         }
-        public Log Append<T>(T value, ReadOnlySpan<char> format) where T : ISpanFormattable
+        public LogBuilder AppendFormatted<T>(T value, ReadOnlySpan<char> format) where T : ISpanFormattable
         {
-            if (buffer == null) return this;
+            if (logger == null) return this;
  
             try
             {
@@ -75,46 +128,18 @@ public sealed partial class Logger
             }
             catch (FormatException)
             {
-                Append(value).FormatError(format);
+                AppendFormatted(value).FormatError(format);
                 return this;
             }
         }
  
         public void End()
         {
-            if(buffer == null) return;
+            if(logger == null) return;
 
             logger.PushMessage(buffer.AsSpan(0, pointer));
             buffer = null;
         }
-
-        internal void AppendTimestamp(ReadOnlySpan<char> format)
-        {
-            Append('[');
-            Append(DateTime.Now, format);
-            Append("] ");
-        }
-        internal void AppendThreadName(ReadOnlySpan<char> threadName)
-        {
-            Append(threadName);
-            Append(' ');
-        }
-        internal void AppendType(Log.Type type)
-        {
-            switch(type)
-            {
-                case Log.Type.Info:
-                    Append("[INFO] : ");
-                break;
-                case Log.Type.Warning:
-                    Append("[WARNING] : ");
-                break;
-                case Log.Type.Error:
-                    Append("[ERROR] : ");
-                break;
-            }
-        }
-
 
         private void Add(ReadOnlySpan<char> value)
         {
@@ -171,157 +196,7 @@ public sealed partial class Logger
         }
         private void FormatError(ReadOnlySpan<Char> format)
         {
-            Append(" [Format Error -> '").Append(format).Append("']");
-        }
-    }
-    
-    [InterpolatedStringHandler]
-    public ref struct LogBuilder
-    {
-        private readonly bool shouldLog;
-        private Log log;
-
-        public LogBuilder(int literalLength, int formattedCount, Logger logger, out bool shouldAppend)
-        {
-            shouldLog = logger.TryCreateLog(Log.Type.Info, out log);
-            shouldAppend = shouldLog;
-
-            if (shouldLog)
-            {
-                log.AppendTimestamp(logger.TimestampFormat);
-                log.AppendThreadName(logger.threadName);
-                log.AppendType(Log.Type.Info);
-            }
-        }
-
-        public void AppendLiteral(string value)
-        {
-            log.Append(value.AsSpan());
-        }
-
-        public void AppendFormatted<T>(T value) where T : ISpanFormattable
-        {
-            log.Append(value, default);
-        }
-
-        public void AppendFormatted<T>(T value, string format) where T : ISpanFormattable
-        {
-            log.Append(value, format);
-        }
-
-        public void AppendFormatted(string value)
-        {
-            log.Append(value.AsSpan());
-        }
-
-        public void AppendFormatted(ReadOnlySpan<char> value)
-        {
-            log.Append(value);
-        }
-
-        internal void Push()
-        {
-            if (shouldLog) log.End();
-        }
-    }
-
-    [InterpolatedStringHandler]
-    public ref struct WrnBuilder
-    {
-        private readonly bool shouldLog;
-        private Log log;
-
-        public WrnBuilder(int literalLength, int formattedCount, Logger logger, out bool shouldAppend)
-        {
-            shouldLog = logger.TryCreateLog(Log.Type.Warning, out log);
-            shouldAppend = shouldLog;
-
-            if (shouldLog)
-            {
-                log.AppendTimestamp(logger.TimestampFormat);
-                log.AppendThreadName(logger.threadName);
-                log.AppendType(Log.Type.Warning);
-            }
-        }
-
-        public void AppendLiteral(string value)
-        {
-            log.Append(value.AsSpan());
-        }
-
-        public void AppendFormatted<T>(T value) where T : ISpanFormattable
-        {
-            log.Append(value, default);
-        }
-
-        public void AppendFormatted<T>(T value, string format) where T : ISpanFormattable
-        {
-            log.Append(value, format);
-        }
-
-        public void AppendFormatted(string value)
-        {
-            log.Append(value.AsSpan());
-        }
-
-        public void AppendFormatted(ReadOnlySpan<char> value)
-        {
-            log.Append(value);
-        }
-
-        internal void Push()
-        {
-            if (shouldLog) log.End();
-        }
-    }
-
-    [InterpolatedStringHandler]
-    public ref struct ErrBuilder
-    {
-        private readonly bool shouldLog;
-        private Log log;
-
-        public ErrBuilder(int literalLength, int formattedCount, Logger logger, out bool shouldAppend)
-        {
-            shouldLog = logger.TryCreateLog(Log.Type.Error, out log);
-            shouldAppend = shouldLog;
-
-            if (shouldLog)
-            {
-                log.AppendTimestamp(logger.TimestampFormat);
-                log.AppendThreadName(logger.threadName);
-                log.AppendType(Log.Type.Error);
-            }
-        }
-
-        public void AppendLiteral(string value)
-        {
-            log.Append(value.AsSpan());
-        }
-
-        public void AppendFormatted<T>(T value) where T : ISpanFormattable
-        {
-            log.Append(value, default);
-        }
-
-        public void AppendFormatted<T>(T value, string format) where T : ISpanFormattable
-        {
-            log.Append(value, format);
-        }
-
-        public void AppendFormatted(string value)
-        {
-            log.Append(value.AsSpan());
-        }
-
-        public void AppendFormatted(ReadOnlySpan<char> value)
-        {
-            log.Append(value);
-        }
-
-        internal void Push()
-        {
-            if (shouldLog) log.End();
+            AppendFormatted(" [Format Error -> '").AppendFormatted(format).AppendFormatted("']");
         }
     }
 

@@ -8,7 +8,7 @@ public sealed partial class Logger
 {
     public LogEnumerator GetEnumerator() => new LogEnumerator(this);
 
-    public ref struct LogEnumerator : IEnumerator<ReadOnlySpan<char>>
+    public ref struct LogEnumerator : IEnumerator<Log>
     {
         internal LogEnumerator(Logger logger)
         {
@@ -20,10 +20,10 @@ public sealed partial class Logger
 
         private Logger logger;
         private int index;
-        private ReadOnlySpan<char> current;
+        private Log current;
 
-        public readonly ReadOnlySpan<char> Current => current;
-        readonly object IEnumerator.Current => current.ToArray();
+        public readonly Log Current => current;
+        readonly object IEnumerator.Current => current.Message.ToArray();
 
         public bool MoveNext()
         {
@@ -32,7 +32,7 @@ public sealed partial class Logger
 
             index++;
             (int start, int length) logInfo = logger.logs[index];
-            current = logger.data.AsSpan(logInfo.start, logInfo.length);
+            current = new Log(logger, logInfo.start, logInfo.length);
             return true;
         }
 
