@@ -78,21 +78,16 @@ public sealed partial class Logger
     private bool locked;
 
     public string TimestampFormat { get; set; }
-    public Log.Type MinimumLevel { get; set; } = Log.Type.Info;
+    public Log.Level MinimumLevel { get; set; } = Log.Level.Info;
     public bool EchoToConsole { get; set; }
 
     public void NewLog(string message) 
     {
-        var builder = new LogBuilder(0, 0, this, default, out bool shouldAppend);
-        if(!shouldAppend) return;
+        var builder = new LogBuilder(0, 0, this, default);
         builder.AppendLiteral(message);
         builder.End();
     }
-    public void NewLog([InterpolatedStringHandlerArgument("")] ref LogBuilder message)
-    {
-        message.End();
-    }
-    public void NewLog(Log.Type logType, [InterpolatedStringHandlerArgument("", "logType")] ref LogBuilder message)
+    public void NewLog(Log.Level logType, [InterpolatedStringHandlerArgument("", "logType")] ref LogBuilder message)
     {
         message.End();
     }
@@ -125,7 +120,7 @@ public sealed partial class Logger
         FlushDroppedAttempts();
     }
 
-    internal bool TryCreateLog(Log.Type type)
+    internal bool TryCreateLog(Log.Level type)
     {
         if(logInCreation) { droppedLogs.Add((LogDropReason.AlreadyCreatingLog, DateTime.Now)); return false; }
         if(locked) { droppedLogs.Add((LogDropReason.LoggerLocked, DateTime.Now)); return false; }
@@ -165,20 +160,26 @@ public sealed partial class Logger
     {
         if (droppedLogs.Count == 0) return;
 
-        var logBuilder = new LogBuilder(0, 0, this, Log.Type.Warning, out bool shouldAppend);
-        if(!shouldAppend) return;
+        var logBuilder = new LogBuilder(this, Log.Level.Warning, out bool canLog);
+        if(!canLog) return;
 
-        logBuilder.AppendLiteral("Dropped ").AppendFormatted(droppedLogs.Count).AppendLiteral(" log attempt(s) while unavailable:");
+        logBuilder.AppendLiteral("Dropped ");
+        logBuilder.AppendFormatted(droppedLogs.Count);
+        logBuilder.AppendLiteral(" log attempt(s) while unavailable:");
 
         foreach (var (reason, time) in droppedLogs)
         {
             switch(reason)
             {
                 case LogDropReason.AlreadyCreatingLog:
-                    logBuilder.AppendLiteral(" - [").AppendFormatted(time, "HH:mm:ss.fff").AppendLiteral(" - was already creating a log ]");
+                    logBuilder.AppendLiteral(" - [");
+                    logBuilder.AppendFormatted(time, "HH:mm:ss.fff");
+                    logBuilder.AppendLiteral(" - was already creating a log ]");
                 break;
                 case LogDropReason.LoggerLocked: 
-                    logBuilder.AppendLiteral(" - [").AppendFormatted(time, "HH:mm:ss.fff").AppendLiteral(" - logger was locked ]");
+                    logBuilder.AppendLiteral(" - [");
+                    logBuilder.AppendFormatted(time, "HH:mm:ss.fff");
+                    logBuilder.AppendLiteral(" - logger was locked ]");
                 break;
             }
         }

@@ -15,7 +15,7 @@ public sealed partial class Logger
             this.Length = length;
         }
 
-        public enum Type
+        public enum Level
         {
             Info,
             Warning,
@@ -34,22 +34,24 @@ public sealed partial class Logger
     public ref struct LogBuilder
     {
         private readonly Logger logger;
+        private readonly bool canLog;
         private char[] buffer;
         private int pointer;
 
-        public LogBuilder(int literalLength, int formattedCount, Logger logger, Log.Type logType, out bool shouldAppend)
+        public LogBuilder(Logger logger, Log.Level level, out bool canLog)
         {
-            shouldAppend = false;
+            canLog = false;
 
             if(logger == null)
                 return;
 
-            shouldAppend = logger.TryCreateLog(logType);
+            this.canLog = logger.TryCreateLog(level);
+            canLog = this.canLog;
 
             this.logger = logger;
             this.buffer = logger.logBuffer;
 
-            if(!shouldAppend)
+            if(!this.canLog)
                 return;
 
             AppendFormatted('[');
@@ -59,89 +61,103 @@ public sealed partial class Logger
             AppendFormatted(logger.threadName);
             AppendFormatted(' ');
 
-            switch(logType)
+            switch(level)
             {
-                case Log.Type.Info:
+                case Log.Level.Info:
                     AppendFormatted("[INFO] : ");
                 break;
-                case Log.Type.Warning:
+                case Log.Level.Warning:
                     AppendFormatted("[WARNING] : ");
                 break;
-                case Log.Type.Error:
+                case Log.Level.Error:
                     AppendFormatted("[ERROR] : ");
                 break;
             }
         }
 
-        public LogBuilder AppendLiteral(string value)
+        public LogBuilder(int literalLength, int formattedCount, Logger logger, Log.Level level)
         {
-            return AppendFormatted(value.AsSpan());
-        }
+            if(logger == null)
+                return;
 
-        public LogBuilder AppendFormatted(ReadOnlySpan<Char> value)
-        {
-            if (logger == null) return this;
+            canLog = logger.TryCreateLog(level);
 
-            Add(value);
-            return this;
-        }
-        public LogBuilder AppendFormatted(object value)
-        {
-            if (logger == null) return this;
-            
-            switch (value)
+            this.logger = logger;
+            this.buffer = logger.logBuffer;
+
+            if(!canLog)
+                return;
+
+            AppendFormatted('[');
+            AppendFormatted(DateTime.Now, logger.TimestampFormat);
+            AppendFormatted("] ");
+
+            AppendFormatted(logger.threadName);
+            AppendFormatted(' ');
+
+            switch(level)
             {
-                case null:
-                    break;
-                case string s:
-                    AppendFormatted(s.AsSpan());
-                    break;
-                case int i:
-                    AppendFormatted((long)i);
-                    break;
-                case ISpanFormattable f:
-                    AppendFormatted(f, default);
-                    break;
-                default:
-                    AppendFormatted(value.ToString().AsSpan());
-                    break;
+                case Log.Level.Info:
+                    AppendFormatted("[INFO] : ");
+                break;
+                case Log.Level.Warning:
+                    AppendFormatted("[WARNING] : ");
+                break;
+                case Log.Level.Error:
+                    AppendFormatted("[ERROR] : ");
+                break;
             }
+        }
+        public bool AppendLiteral(string value)
+        {
+            if (logger == null) return false;
 
-            return this;
+            return Add(value.AsSpan());
         }
 
-        public LogBuilder AppendFormatted<T>(T value) where T : ISpanFormattable
+        public bool AppendFormatted<T>(T value) where T : ISpanFormattable
         {
-            if (logger == null) return this;
- 
-            Add(value, default);
-            return this;
+            if (logger == null || !canLog) return false;
+
+            return Add(value, default);
         }
-        public LogBuilder AppendFormatted<T>(T value, ReadOnlySpan<char> format) where T : ISpanFormattable
+        public bool AppendFormatted<T>(T value, ReadOnlySpan<char> format) where T : ISpanFormattable
         {
-            if (logger == null) return this;
- 
+            if (logger == null || !canLog) return false;
+
             try
             {
-                Add(value, format);
-                return this;
+                return Add(value, format);
             }
             catch (FormatException)
             {
-                AppendFormatted(value).FormatError(format);
-                return this;
+                FormatError(format);
+                return false; // stop appending further arguments once a format error hits
             }
         }
- 
+
+        public bool AppendFormatted(object value)
+        {
+            if (logger == null || !canLog || value == null) return false;
+
+            return Add(value.ToString());
+        }
+        public bool AppendFormatted(ReadOnlySpan<char> value)
+        {
+            if (logger == null || !canLog) return false;
+
+            return Add(value);
+        }
+
         public void End()
         {
-            if(logger == null) return;
+            if(logger == null || !canLog) return;
 
             logger.PushMessage(buffer.AsSpan(0, pointer));
             buffer = null;
         }
 
-        private void Add(ReadOnlySpan<char> value)
+        private bool Add(ReadOnlySpan<char> value)
         {
             int remaining = buffer.Length - pointer;
 
@@ -151,27 +167,28 @@ public sealed partial class Logger
                 pointer += remaining;
 
                 LengthError();
-                return;
+                return false;
             }
 
             value.CopyTo(buffer.AsSpan(pointer));
             pointer += value.Length;
+            return true;
         }
-        private void Add<T>(T value, ReadOnlySpan<char> format) where T : ISpanFormattable
+        private bool Add<T>(T value, ReadOnlySpan<char> format) where T : ISpanFormattable
         {
             Span<char> dest = buffer.AsSpan(pointer);
 
             if (value.TryFormat(dest, out int written, format, System.Globalization.CultureInfo.InvariantCulture))
             {
                 pointer += written;
-                return;
+                return true;
             }
 
             Span<char> scratch = stackalloc char[128];
             if (!value.TryFormat(scratch, out int fullWritten, format, System.Globalization.CultureInfo.InvariantCulture))
             {
                 LengthError();
-                return;
+                return false;
             }
 
             int remaining = buffer.Length - pointer;
@@ -184,6 +201,7 @@ public sealed partial class Logger
             }
 
             LengthError();
+            return false;
         }
         
         private void LengthError()
@@ -196,7 +214,9 @@ public sealed partial class Logger
         }
         private void FormatError(ReadOnlySpan<Char> format)
         {
-            AppendFormatted(" [Format Error -> '").AppendFormatted(format).AppendFormatted("']");
+            AppendFormatted(" [Format Error -> '");
+            AppendFormatted(format);
+            AppendFormatted("']");
         }
     }
 
