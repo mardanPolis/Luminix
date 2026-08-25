@@ -1,191 +1,14 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Threading;
 
 namespace Luminix;
 
-public sealed class Logger
+public sealed partial class Logger
 {
-    public ref struct Log
-    {
-        public enum Type
-        {
-            Info,
-            Warning,
-            Error,
-        }
-
-        private readonly Logger logger;
-        private char[] buffer;
-        private int pointer;
-
-        internal Log(Logger logger, char[] buffer)
-        {
-            this.logger = logger;
-            this.buffer = buffer;
-        }
-
-        public Log Append(ReadOnlySpan<Char> value)
-        {
-            if (buffer == null) return this;
-
-            Add(value);
-            return this;
-        }
-        public Log Append(object value)
-        {
-            if (buffer == null) return this;
-            
-            switch (value)
-            {
-                case null:
-                    break;
-                case string s:
-                    Append(s);
-                    break;
-                case int i:
-                    Append((long)i);
-                    break;
-                case ISpanFormattable f:
-                    Add(f, default);
-                    break;
-                default:
-                    Append(value.ToString());
-                    break;
-            }
-
-            return this;
-        }
-
-        public Log Append<T>(T value) where T : ISpanFormattable
-        {
-            if (buffer == null) return this;
- 
-            Add(value, default);
-            return this;
-        }
-        public Log Append<T>(T value, ReadOnlySpan<char> format) where T : ISpanFormattable
-        {
-            if (buffer == null) return this;
- 
-            try
-            {
-                Add(value, format);
-                return this;
-            }
-            catch (FormatException)
-            {
-                Append(value).FormatError(format);
-                return this;
-            }
-        }
- 
-        public void End()
-        {
-            if(buffer == null) return;
-
-            logger.PushMessage(buffer.AsSpan(0, pointer));
-            buffer = null;
-        }
-
-        internal void AppendTimestamp(ReadOnlySpan<char> format)
-        {
-            Append('[');
-            Append(DateTime.Now, format);
-            Append("] ");
-        }
-        internal void AppendThreadName(ReadOnlySpan<char> threadName)
-        {
-            Append(threadName);
-            Append(' ');
-        }
-        internal void AppendType(Log.Type type)
-        {
-            switch(type)
-            {
-                case Log.Type.Info:
-                    Append("[INFO] : ");
-                break;
-                case Log.Type.Warning:
-                    Append("[WARNING] : ");
-                break;
-                case Log.Type.Error:
-                    Append("[ERROR] : ");
-                break;
-            }
-        }
-
-
-        private void Add(ReadOnlySpan<char> value)
-        {
-            int remaining = buffer.Length - pointer;
-
-            if (value.Length > remaining)
-            {
-                value.Slice(0, remaining).CopyTo(buffer.AsSpan(pointer));
-                pointer += remaining;
-
-                LengthError();
-                return;
-            }
-
-            value.CopyTo(buffer.AsSpan(pointer));
-            pointer += value.Length;
-        }
-        private void Add<T>(T value, ReadOnlySpan<char> format) where T : ISpanFormattable
-        {
-            Span<char> dest = buffer.AsSpan(pointer);
-
-            if (value.TryFormat(dest, out int written, format, System.Globalization.CultureInfo.InvariantCulture))
-            {
-                pointer += written;
-                return;
-            }
-
-            Span<char> scratch = stackalloc char[128];
-            if (!value.TryFormat(scratch, out int fullWritten, format, System.Globalization.CultureInfo.InvariantCulture))
-            {
-                LengthError();
-                return;
-            }
-
-            int remaining = buffer.Length - pointer;
-            int toCopy = Math.Min(fullWritten, remaining);
-
-            if (toCopy > 0)
-            {
-                scratch.Slice(0, toCopy).CopyTo(buffer.AsSpan(pointer));
-                pointer += toCopy;
-            }
-
-            LengthError();
-        }
-        
-        private void LengthError()
-        {
-            ReadOnlySpan<char> chars = "...[Length Error -> log exceeded length of 16384 characters]";
-
-            var length = chars.Length;
-            chars.CopyTo(buffer.AsSpan(pointer - length));
-            End();
-        }
-        private void FormatError(ReadOnlySpan<Char> format)
-        {
-            Append(" [Format Error -> '").Append(format).Append("']");
-        }
-    }
-    
-    private enum LogDropReason
-    {
-        AlreadyCreatingLog,
-        LoggerLocked,
-    }
-
-
-
     private static readonly ThreadLocal<Logger> instance = new ThreadLocal<Logger>(true);
 
     internal static Logger Initialize()
@@ -215,7 +38,6 @@ public sealed class Logger
     {
         return instance.Values.ToArray();
     }
-
 
     private Logger(int logMaximumLength = 16384)
     {
@@ -270,6 +92,21 @@ public sealed class Logger
     public Log NewErr()
     {
         return NewLog(true, true, Log.Type.Error);
+    }
+    
+    public void NewLog([InterpolatedStringHandlerArgument("")] ref LogBuilder message)
+    {
+        message.Push();
+    }
+
+    public void NewWrn([InterpolatedStringHandlerArgument("")] ref WrnBuilder message)
+    {
+        message.Push();
+    }
+
+    public void NewErr([InterpolatedStringHandlerArgument("")] ref ErrBuilder message)
+    {
+        message.Push();
     }
 
     public Log NewLogIf(bool condition, bool timestamp, bool threadInfo, Log.Type type)
@@ -327,47 +164,17 @@ public sealed class Logger
         FlushDroppedAttempts();
     }
 
-    public LogEnumerator GetEnumerator() => new LogEnumerator(this);
-
-    public ref struct LogEnumerator : IEnumerator<ReadOnlySpan<char>>
+    internal bool TryCreateLog(Log.Type type, out Log log)
     {
-        internal LogEnumerator(Logger logger)
+        if (logInCreation || locked || type < MinimumLevel)
         {
-            this.logger = logger;
-            this.index = -1;
-            this.current = default;
-            logger.locked = true;
+            log = new Log(this, null);
+            return false;
         }
 
-        private Logger logger;
-        private int index;
-        private ReadOnlySpan<char> current;
-
-        public readonly ReadOnlySpan<char> Current => current;
-        readonly object IEnumerator.Current => current.ToArray();
-
-        public bool MoveNext()
-        {
-            if (index + 1 >= logger.logs.Count)
-                return false;
-
-            index++;
-            (int start, int length) logInfo = logger.logs[index];
-            current = logger.data.AsSpan(logInfo.start, logInfo.length);
-            return true;
-        }
-
-        public void Reset()
-        {
-            index = -1;
-            current = default;
-        }
-
-        public void Dispose()
-        {
-            logger.locked = false;
-            logger.FlushDroppedAttempts();
-        }
+        logInCreation = true;
+        log = new Log(this, logBuffer);
+        return true;
     }
 
     private void PushMessage(ReadOnlySpan<char> message)
@@ -396,8 +203,6 @@ public sealed class Logger
 
         FlushDroppedAttempts();
     }
-
-
     private void FlushDroppedAttempts()
     {
         if (droppedLogs.Count == 0) return;
