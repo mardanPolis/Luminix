@@ -9,6 +9,31 @@ namespace Luminix;
 
 public sealed partial class Logger
 {
+    public readonly struct Log
+    {
+        internal Log(Logger logger, int start, int length, Level level)
+        {
+            this.logger = logger;
+            this.startIndex = start;
+            this.Length = length;
+            this.LogLevel = level;
+        }
+
+        public enum Level
+        {
+            Info,
+            Warning,
+            Error,
+        }
+
+        private Logger logger { get; }
+
+        private int startIndex { get; }
+        public int Length { get; }
+        public Log.Level LogLevel { get; }
+        public ReadOnlySpan<char> Message => logger.data.AsSpan(startIndex, Length);
+    }
+
     private static readonly ThreadLocal<Logger> instance = new ThreadLocal<Logger>(true);
 
     internal static Logger Initialize()
@@ -66,7 +91,7 @@ public sealed partial class Logger
 
     private readonly string logDir;
     private readonly string path;
-    private readonly List<(int Start, int Length)> logs;
+    private readonly List<(int Start, int Length, Log.Level level)> logs;
     private char[] data;
     private char[] logBuffer;
 
@@ -136,9 +161,17 @@ public sealed partial class Logger
         return true;
     }
 
-    private void PushMessage(ReadOnlySpan<char> message)
+    private void PushMessage(Log.Level level, ReadOnlySpan<char> message)
     {
         logInCreation = false;
+
+        DateTime currentTime = DateTime.Now;
+
+        Span<char> header = stackalloc char[128];
+        int headerLength = WriteHeader(header, currentTime, level);
+
+
+        int totalLength = headerLength + message.Length;
 
         if(EchoToConsole)
         {
@@ -148,17 +181,21 @@ public sealed partial class Logger
             Console.Out.Write(consoleLine);
         }
 
-        if(message.TryCopyTo(data.AsSpan(pointer)))
+        if (pointer + totalLength <= data.Length)
         {
-            logs.Add((pointer, message.Length));
-            pointer += message.Length;
-            return;
+            header.Slice(0, headerLength).CopyTo(data.AsSpan(pointer));
+            message.CopyTo(data.AsSpan(pointer + headerLength));
+            logs.Add((pointer, totalLength, level));
+            pointer += totalLength;
         }
-
-        Flush();
-        message.CopyTo(data.AsSpan(pointer));
-        logs.Add(new (0, message.Length));
-        pointer = message.Length;
+        else
+        {
+            Flush();
+            header.Slice(0, headerLength).CopyTo(data.AsSpan(0));
+            message.CopyTo(data.AsSpan(headerLength));
+            logs.Add((0, totalLength, level));
+            pointer = totalLength;
+        }
 
         FlushDroppedAttempts();
     }
@@ -192,5 +229,37 @@ public sealed partial class Logger
 
         logBuilder.End();
         droppedLogs.Clear();
+    }
+
+    private int WriteHeader(Span<char> dest, DateTime timestamp, Log.Level logLevel)
+    {
+        int written = 0;
+
+        dest[written++] = '[';
+
+        if (timestamp.TryFormat(dest.Slice(written), out int timeWritten, TimestampFormat, System.Globalization.CultureInfo.InvariantCulture))
+            written += timeWritten;
+
+        dest[written++] = ']';
+        dest[written++] = ' ';
+
+        ReadOnlySpan<char> thread = threadName;
+        thread.CopyTo(dest.Slice(written));
+        written += thread.Length;
+
+        dest[written++] = ' ';
+
+        ReadOnlySpan<char> typeLabel = logLevel switch
+        {
+            Log.Level.Info => "[INFO] : ",
+            Log.Level.Warning => "[WARNING] : ",
+            Log.Level.Error => "[ERROR] : ",
+            _ => ReadOnlySpan<char>.Empty,
+        };
+
+        typeLabel.CopyTo(dest.Slice(written));
+        written += typeLabel.Length;
+
+        return written;
     }
 }

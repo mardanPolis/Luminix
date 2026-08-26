@@ -31,8 +31,8 @@ public sealed partial class Logger
                 return false;
 
             index++;
-            (int start, int length) logInfo = logger.logs[index];
-            current = new Log(logger, logInfo.start, logInfo.length);
+            (int start, int length, Log.Level level) log = logger.logs[index];
+            current = new Log(logger, log.start, log.length, log.level);
             return true;
         }
 

@@ -6,30 +6,6 @@ namespace Luminix;
 
 public sealed partial class Logger
 {
-    public readonly struct Log
-    {
-        internal Log(Logger logger, int start, int length)
-        {
-            this.logger = logger;
-            this.startIndex = start;
-            this.Length = length;
-        }
-
-        public enum Level
-        {
-            Info,
-            Warning,
-            Error,
-        }
-
-        private Logger logger { get; }
-
-        private int startIndex { get; }
-        public int Length { get; }
-
-        public ReadOnlySpan<char> Message => logger.data.AsSpan(startIndex, Length);
-    }
-
     [InterpolatedStringHandler]
     public ref struct LogBuilder
     {
@@ -37,6 +13,8 @@ public sealed partial class Logger
         private readonly bool canLog;
         private char[] buffer;
         private int pointer;
+
+        private Log.Level level;
 
         public LogBuilder(Logger logger, Log.Level level, out bool canLog)
         {
@@ -50,29 +28,7 @@ public sealed partial class Logger
 
             this.logger = logger;
             this.buffer = logger.logBuffer;
-
-            if(!this.canLog)
-                return;
-
-            AppendFormatted('[');
-            AppendFormatted(DateTime.Now, logger.TimestampFormat);
-            AppendFormatted("] ");
-
-            AppendFormatted(logger.threadName);
-            AppendFormatted(' ');
-
-            switch(level)
-            {
-                case Log.Level.Info:
-                    AppendFormatted("[INFO] : ");
-                break;
-                case Log.Level.Warning:
-                    AppendFormatted("[WARNING] : ");
-                break;
-                case Log.Level.Error:
-                    AppendFormatted("[ERROR] : ");
-                break;
-            }
+            this.level = level;
         }
 
         public LogBuilder(int literalLength, int formattedCount, Logger logger, Log.Level level)
@@ -153,7 +109,7 @@ public sealed partial class Logger
         {
             if(logger == null || !canLog) return;
 
-            logger.PushMessage(buffer.AsSpan(0, pointer));
+            logger.PushMessage(level, buffer.AsSpan(0, pointer));
             buffer = null;
         }
 
