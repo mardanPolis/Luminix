@@ -44,7 +44,7 @@ public sealed class CoreThread : TickedThread
     {
         IsBackground = true;
 
-        logger.Log($"Started initialization");
+        logger.NewLog($"Started initialization");
 
         universe           = new Universe(out universeController);
         graphics           = new Graphics(renderBridge, out graphicsController);
@@ -84,8 +84,8 @@ public sealed class CoreThread : TickedThread
         long after = GC.GetTotalMemory(true);
 
         long cleared = before - after;
-        logger.Log($"GC cleared: {cleared / 1024.0:F2} KB ({cleared:N0} bytes)");
-        logger.Log($"Initialized in {stopwatch.Elapsed.Milliseconds}ms");
+        logger.NewLog($"GC cleared: {cleared / 1024.0:F2} KB ({cleared:N0} bytes)");
+        logger.NewLog($"Initialized in {stopwatch.Elapsed.Milliseconds}ms");
 
 
         //TODO : debug actions
@@ -114,6 +114,8 @@ public sealed class CoreThread : TickedThread
 
     private void Update()
     {
+        logger.Refresh();
+
         graphicsController.SwapBuffers();
 
         inputController.UpdateData();

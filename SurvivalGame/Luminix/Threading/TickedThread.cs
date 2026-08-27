@@ -77,8 +77,8 @@ public class TickedThread : BaseThread
 
             Interlocked.Exchange(ref tickAllocated, endBytes - startBytes);
 
-            logger.Log($"{Name} initialized in {stopwatch.Elapsed.Milliseconds}ms");
-            logger.Log($"{Name} allocated {tickAllocated / 1024.0:F2} KB ({tickAllocated:N0} bytes during initialization!");
+            logger.NewLog(Logger.Log.Level.Info, $"{Name} initialized in {stopwatch.Elapsed.Milliseconds}ms");
+            logger.NewLog(Logger.Log.Level.Info, $"{Name} allocated {tickAllocated / 1024.0:F2} KB ({tickAllocated:N0} bytes during initialization!");
 
             while (running)
             {

@@ -79,7 +79,7 @@ public sealed class Workspace
         }
         catch
         {
-            Logger.Get().Err($"Failed to create a workspace!");
+            Logger.Get().NewLog(Logger.Log.Level.Error, $"Failed to create a workspace!");
             throw;
         }
     }

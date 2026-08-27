@@ -14,7 +14,7 @@ try
 }
 catch(Exception ex)
 {
-    logger.Err(ex);
+    logger.NewLog(Logger.Log.Level.Error, $"Fatal Error: {ex}");
 }
 finally
 {

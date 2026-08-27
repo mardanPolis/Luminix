@@ -27,11 +27,11 @@ public abstract class BaseThread
                 running = true;
                 thread.Value = this;
                 threadAction();
+                OnStop();
             }
             catch(Exception ex)
             {
-                logger.Err(ex);
-                throw;
+                logger.NewLog(Logger.Log.Level.Error, $"Fatal Error: {ex}");
             }
             finally
             {

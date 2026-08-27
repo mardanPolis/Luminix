@@ -51,7 +51,7 @@ public sealed class Resources : Workspace.Service, IEnumerable<Resource>
         if (resources != null && resources.TryGetValue((type, identifier), out Resource resource))
             return (T)resource;
 
-        Logger.Get().Wrn($"Resource identified '{identifier}' was not found.");
+        Logger.Get().NewLog(Logger.Log.Level.Warning, $"Resource identified '{identifier}' was not found.");
         return null;
     }
 

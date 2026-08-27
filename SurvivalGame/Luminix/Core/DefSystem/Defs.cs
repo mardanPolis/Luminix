@@ -78,8 +78,6 @@ public sealed class Defs : Workspace.Service
         JsonDocument json = dataAsset.Json;
         JsonElement root = json.RootElement;
 
-        using var _ = logger.WithPrefix("Unable to parse dataAsset to a node, reason: ");
-
         try
         {
             if (root.TryGetProperty("defType", out JsonElement type))
@@ -96,28 +94,38 @@ public sealed class Defs : Workspace.Service
             }
             else
             {
-                logger.Err("DataAsset has neither 'defType' nor 'patchType' — cannot determine data kind.");
+                logger.NewLog(Logger.Log.Level.Error, "Unable to parse dataAsset to a node, reason: DataAsset has neither 'defType' nor 'patchType' — cannot determine data kind.");
             }
         }
         catch (Exception ex)
         {
-            logger.Err(ex);
+            logger.NewLog(Logger.Log.Level.Error, $"Unable to parse dataAsset to a node, reason: {ex}");
         }
     }
 
     internal void PatchNodes()
     {
-        using var _ = logger.WithPrefix("Unable to ");
         foreach(var patchNode in patchNodes)
         {
             var id = patchNode.DefID.Split('/');;
             string defType = id[1];
             string defName = id[1];
 
-            if(logger.ErrIf(id.Length != 2, $"resolve patch DefID-'{patchNode.DefID}', reason: expected format 'DefType/DefName'")) continue;
-
-            if(logger.ErrIf(!defTypes.TryGetValue(defType, out Type type), $"resolve patch DefID-'{patchNode.DefID}', reason: unknown Def Type of '{defType}'")) continue;
-            if(logger.ErrIf(!defNodes.TryGetValue((type, defName), out var target), $"patch def '{patchNode.DefID}', reason: Failed to find def with defID '{patchNode.DefID}'")) continue;
+            if(id.Length != 2)
+            {
+                logger.NewLog(Logger.Log.Level.Error, $"Unable to resolve patch DefID-'{patchNode.DefID}', reason: expected format 'DefType/DefName'");
+                continue;
+            }
+            if(!defTypes.TryGetValue(defType, out Type type))
+            {
+                logger.NewLog(Logger.Log.Level.Error, $"Unable to resolve patch DefID-'{patchNode.DefID}', reason: unknown Def Type of '{defType}'");
+                continue;
+            }
+            if(!defNodes.TryGetValue((type, defName), out var target))
+            {
+                logger.NewLog(Logger.Log.Level.Error, $"Unable to patch def '{patchNode.DefID}', reason: Failed to find def with defID '{patchNode.DefID}'");
+                continue;
+            }
 
             try
             {
@@ -125,7 +133,7 @@ public sealed class Defs : Workspace.Service
             }
             catch(Exception ex)
             {
-                logger.Err($"patch def '{patchNode.DefID}', reason: {ex}");
+                logger.NewLog(Logger.Log.Level.Error, $"Unable to patch def '{patchNode.DefID}', reason: {ex}");
             }
         }
 
@@ -136,10 +144,8 @@ public sealed class Defs : Workspace.Service
         List<DefNode> parentLessNodes;
         Dictionary<DefNode, List<DefNode>> defNodeChildren;
 
-        void CreateInheritanceTree()
+        bool CreateInheritanceTree()
         {
-            using var _ = logger.WithPrefix("Unable to create inheritance tree, reason: ");
-
             try
             {
                 //creating
@@ -153,8 +159,12 @@ public sealed class Defs : Workspace.Service
                     }
 
                     var parentID = (defTypes[defNode.DefType], defNode.Parent);
-                    if (logger.ErrIf(!defNodes.TryGetValue(parentID, out var parentNode), $"def '{defNode.DefName}' references unknown parent '{defNode.Parent}'")) continue; // FIXME : THREAD UNSAFE
 
+                    if(!defNodes.TryGetValue(parentID, out var parentNode))
+                    {
+                        logger.NewLog(Logger.Log.Level.Error, $"Unable to insert a def into inheritance tree, reason: def '{defNode.DefName}' references unknown parent '{defNode.Parent}'");
+                        continue;
+                    }
 
                     if (!defNodeChildren.TryGetValue(parentNode, out var children))
                     {
@@ -164,13 +174,15 @@ public sealed class Defs : Workspace.Service
 
                     children.Add(defNode);
                 }
+                return true;
             }
             catch (Exception ex)
             {
-                logger.Err(ex);
+                logger.NewLog(Logger.Log.Level.Error, $"Unable to create inheritance tree, reason: {ex}");
+                return false;
             }
         }
-        void CheckForInheritanceCycles()
+        bool CheckForInheritanceCycles()
         {
 
             try
@@ -189,7 +201,7 @@ public sealed class Defs : Workspace.Service
                 }
                 
                 if(defNodes.Count == visited.Count) // no node are in a cycle
-                    return;
+                    return true;
 
                 var unreachableNodes = defNodeChildren.Keys
                     .Concat(defNodeChildren.Values.SelectMany(c => c))
@@ -220,15 +232,17 @@ public sealed class Defs : Workspace.Service
                         reportedCycles.Add(cycleNode);
 
                     var cycleDescription = string.Join(" -> ", cycle.Select(n => n.DefName));
-                    logger.Err($"resolve inheritance, reason: cycle detected: {cycleDescription} -> {cycle[0].DefName}");
+                    logger.NewLog(Logger.Log.Level.Error, $"Unable to resolve inheritance, reason: cycle detected: {cycleDescription} -> {cycle[0].DefName}");
                 }
+                return true;
             }
             catch(Exception ex)
             {
-                logger.Err(ex);
+                logger.NewLog(Logger.Log.Level.Error, $"Unable to resolve def node inheritance, reason: {ex}");
+                return false;
             }
         }
-        void HandleParentInheritance(DefNode parent)
+        void HandleInheritance(DefNode parent)
         {
             Dictionary<string, JsonElement> childProperties;
             Dictionary<string, JsonElement> parentProperties;
@@ -287,28 +301,27 @@ public sealed class Defs : Workspace.Service
                 }
                 catch (Exception ex)
                 {
-                    logger.Err($"Failed to inherit properties for def '{child.DefName}' from parent '{parent.DefName}', reason: {ex}");
+                    logger.NewLog(Logger.Log.Level.Error, $"Failed to inherit properties for def '{child.DefName}' from parent '{parent.DefName}', reason: {ex}");
                     continue;
                 }
 
-                HandleParentInheritance(child);
+                HandleInheritance(child);
             }
         }
-        using var _ = logger.WithPrefix("Unable to resolve def node inheritance, reason: ");
         
         try
         {
             parentLessNodes = [];
             defNodeChildren = [];
 
-            CreateInheritanceTree();
-            CheckForInheritanceCycles();
+            if(!CreateInheritanceTree()) return;
+            if(!CheckForInheritanceCycles()) return;
 
-            Parallel.ForEach(parentLessNodes, defNode => HandleParentInheritance(defNode));
+            Parallel.ForEach(parentLessNodes, defNode => HandleInheritance(defNode));
         }
         catch(Exception ex)
         {
-            
+            logger.NewLog(Logger.Log.Level.Error, $"Failed to handle def inheritance, reason: {ex}");
         }
     }
     internal void DeserializeNodes()
@@ -317,22 +330,25 @@ public sealed class Defs : Workspace.Service
 
         foreach(var defNode in defNodes.Values)
         {
-            using var firstPrefix = logger.WithPrefix("Unable to parse DefNode to Def, reason: ");
-
             if(defNode.Abstract)
                 continue;
 
+            if(string.IsNullOrWhiteSpace(defNode.DefType) || defNode.DefType.Any(char.IsWhiteSpace))
+            {
+                logger.NewLog(Logger.Log.Level.Error, "Unable to Parse DefNode, reason: Provided 'DefType' is null, empty or has whitespaces.");
+                continue;
+            }
+
+            if(string.IsNullOrWhiteSpace(defNode.DefName) || defNode.DefName.Any(char.IsWhiteSpace))
+            {
+                logger.NewLog(Logger.Log.Level.Error, "Unable to Parse DefNode, reason: Provided 'DefName' is null, empty or has whitespaces.");
+                continue;
+            }
+
+            Type defType = defTypes[defNode.DefType];
+
             try
             {
-                if (logger.ErrIf(string.IsNullOrWhiteSpace(defNode.DefType) || defNode.DefType.Any(char.IsWhiteSpace), "Provided 'DefType' is null, empty or has whitespaces.")) continue;
-                if (logger.ErrIf(string.IsNullOrWhiteSpace(defNode.DefName) || defNode.DefName.Any(char.IsWhiteSpace), "Provided 'DefName' is null, empty or has whitespaces.")) continue;
-
-                Type defType = defTypes[defNode.DefType];
-
-                firstPrefix.Dispose();
-
-                using var _ = logger.WithPrefix($"Unable to parse DefNode to {defType.FullName}, reason: ");
-
                 Def def = ParseDefNode(defNode, constructors[defType]);
                 defs[(defType, def.Name)] = def;
                 defContainers[defType].Add(def);
@@ -340,7 +356,7 @@ public sealed class Defs : Workspace.Service
             }
             catch(Exception ex)
             {
-                logger.Err(ex);
+                logger.NewLog(Logger.Log.Level.Error, $"Unable to parse DefNode to {defType.FullName}, reason: {ex}");
             }
         }
     }

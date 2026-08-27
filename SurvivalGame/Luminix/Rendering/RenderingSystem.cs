@@ -198,16 +198,16 @@ public sealed class RenderingSystem : Workspace.Service
                 screenShotTarget.SaveAsPng(stream, screenShotRect.Width, screenShotRect.Height);
                 screenShotTarget.Dispose();
 
-                Logger.Get().Log($"Screenshot saved to: {screenshotPath}");
+                Logger.Get().NewLog(Logger.Log.Level.Info, $"Screenshot saved to: {screenshotPath}");
             }
 
             GC.Collect();
         }
         catch (Exception e)
         {
-            Logger.Get().Err($"Failed to save screenshot. Error: {e.Message}");
+            Logger.Get().NewLog(Logger.Log.Level.Error, $"RenderingSystem: failed to produce a screenshot, reason: {e.Message}");
         }
-    } 
+    }
 
     public void SetResolution(int width, int height)
     {

@@ -85,7 +85,7 @@ public sealed class AssetIO
                 yield return new AssetInfo(targetPath, relativePath);
 
 
-            Logger.Get()?.Log($"Unsupported extension '{extension}' at location: '{path}'!");
+            Logger.Get()?.NewLog(Logger.Log.Level.Warning, $"Unsupported extension '{extension}' at location: '{path}'!");
             continue;
         }
     }
@@ -426,9 +426,6 @@ public sealed class AssetIO
     //     ImageWriter writer = new ImageWriter();
     //     writer.WritePng(bytes, (int)size.X, (int)size.Y, StbImageWriteSharp.ColorComponents.RedGreenBlueAlpha, stream);
 
-    //     // TODO : only in debug
-    //     // if(Settings.DebugAssets)
-    //     //     Logger.Get().Log($"Texture '{name}', saved to: '{path}'");
     // }
 
 }

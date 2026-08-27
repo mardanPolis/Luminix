@@ -43,17 +43,17 @@ public class Main : Microsoft.Xna.Framework.Game
         workspace = new Workspace(out workspaceController);
 
         logger = Logger.Get();
-        logger.Log($"Started initialization");
-        logger.Log($"Build-Vers: {version}");
-        logger.Log($"Build-Date: {buildDate}");
+        logger.NewLog($"Started initialization");
+        logger.NewLog($"Build-Vers: {version}");
+        logger.NewLog($"Build-Date: {buildDate}");
 
-        logger.Log("Namespaces:");
+        logger.NewLog("Namespaces:");
         foreach (var ns in myNamespaces)
-            logger.Log(ns);
+            logger.NewLog(ns);
 
         stopwatch = Stopwatch.StartNew();
 
-        logger.Log($"Creating GraphicsDeviceManager");
+        logger.NewLog($"Creating GraphicsDeviceManager");
         graphics = new GraphicsDeviceManager(this);
         graphics.SynchronizeWithVerticalRetrace = true;
         graphics.PreferredBackBufferWidth = 1920;
@@ -65,7 +65,7 @@ public class Main : Microsoft.Xna.Framework.Game
         resourceManager = new ResourceManager(this);
         IsMouseVisible = true;
 
-        logger.Log($"Initializing threads");
+        logger.NewLog($"Initializing threads");
         //initialize threads
         {
             renderBridge = new RenderBridge();
@@ -134,7 +134,7 @@ public class Main : Microsoft.Xna.Framework.Game
     {
         try
         {
-            logger.Log($"Initializing");
+            logger.NewLog($"Initializing");
             startBytes = GC.GetAllocatedBytesForCurrentThread();
             
             ThreadPool.SetMaxThreads(3, 1);
@@ -160,10 +160,10 @@ public class Main : Microsoft.Xna.Framework.Game
 
             foreach(var adapter in GraphicsAdapter.Adapters)
             {
-                logger.Log($"Adapter: {adapter.DisplayName}");
+                logger.NewLog($"Adapter: {adapter.DisplayName}");
                 foreach(var mode in adapter.SupportedDisplayModes)
                 {
-                    logger.Log($" - Mode: {mode.ToString()}");
+                    logger.NewLog($" - Mode: {mode.ToString()}");
                 }
             }
 
@@ -177,18 +177,18 @@ public class Main : Microsoft.Xna.Framework.Game
         }
         catch
         {
-            Logger.Get().Err($"Exception happened during initialization");
+            Logger.Get().NewLog(Logger.Log.Level.Error, $"Exception happened during initialization");
             throw;
         }
 
         workspaceController.Start();
 
-        logger.Log($"RenderThread initialized in {stopwatch.Elapsed.Milliseconds}ms");
+        logger.NewLog($"RenderThread initialized in {stopwatch.Elapsed.Milliseconds}ms");
 
         long endBytes = GC.GetAllocatedBytesForCurrentThread();
         allocated = endBytes - startBytes;
 
-        logger.Log($"RenderThread allocated {allocated / 1024.0:F2} KB ({allocated:N0}) bytes during initialization!");
+        logger.NewLog($"RenderThread allocated {allocated / 1024.0:F2} KB ({allocated:N0}) bytes during initialization!");
     }
 
     protected override void Update(GameTime gameTime)
@@ -208,8 +208,6 @@ public class Main : Microsoft.Xna.Framework.Game
             
         /* Resources END |*/
 
-        //TODO : add render settings and so on able to be access from other threads
-    
         var windowPos = Window.ClientBounds.Location;
         if(windowPos != windowPosition)
             OnWindowMove(windowPos);
