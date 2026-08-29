@@ -11,7 +11,7 @@ try
         mainCore.Render();
     });
     coreThread.Priority = System.Threading.ThreadPriority.AboveNormal;
-    coreThread.IsBackground = true;
+    coreThread.IsBackground = false;
 
     var renderThread = new UnmanagedThread("RenderThread", () =>
     {

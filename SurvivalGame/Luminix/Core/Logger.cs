@@ -77,7 +77,7 @@ public sealed partial class Logger
         logBuffer = new char[Math.Min(data.Length, logMaximumLength)];
         Directory.CreateDirectory(LogDir);
         
-        string logPath = Luminix.Threading.Thread.CurrentThread.LogPath;
+        string logPath = Luminix.Threading.Thread.CurrentThread?.LogPath ?? Path.Combine(Logger.LogDir, $"unknown_{instance.Values.Count}.log");
 
         File.WriteAllText(logPath, string.Empty);
     }
@@ -228,7 +228,7 @@ public sealed partial class Logger
         dest[written++] = ']';
         dest[written++] = ' ';
 
-        var name = Luminix.Threading.Thread.CurrentThread.Name;
+        var name = Luminix.Threading.Thread.CurrentThread?.Name ?? "EngineThread";
         Span<char> threadName = stackalloc char[name.Length + 2];
         threadName[0] = '[';
         name.CopyTo(threadName[1..]);

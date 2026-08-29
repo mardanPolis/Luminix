@@ -40,6 +40,7 @@ public sealed partial class Logger
 
             this.logger = logger;
             this.buffer = logger.logBuffer;
+            this.level = level;
         }
         public bool AppendLiteral(string value)
         {

@@ -33,8 +33,6 @@ internal sealed class MainCore
         logger = Logger.Get();
         logger.EchoToConsole = true;
 
-        logger.NewLog(Logger.Log.Level.Info, $"Thread: {Thread.CurrentThread}");
-
         renderBridge = ThreadBridges.GetBridge<RenderBridge>("RenderThread");
         inputBridge = ThreadBridges.GetBridge<InputBridge>("RenderThread");
         resourceBridge = ThreadBridges.GetBridge<ResourceBridge>("RenderThread");
@@ -55,7 +53,6 @@ internal sealed class MainCore
 
         var stopwatch = Stopwatch.StartNew();
 
-        logger.NewLog(Logger.Log.Level.Info, $"Started Initialization.");
         logger.NewLog(Logger.Log.Level.Info, $"Build-Vers: {LuminixManifest.BuildVers}");
         logger.NewLog(Logger.Log.Level.Info, $"Build-Date: {LuminixManifest.BuildDate}");
 

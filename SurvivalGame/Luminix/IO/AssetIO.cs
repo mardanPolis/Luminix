@@ -31,11 +31,14 @@ public sealed class AssetIO
         {
             Name = Path.GetFileNameWithoutExtension(relativePath).ToLower();
             IsGenerated = false;
-            Size = new FileInfo(FullPath).Length;
 
             RootPath = rootPath;
             RelativePath = Path.ChangeExtension(relativePath, null);
             Extension = Path.GetExtension(relativePath);
+
+            Size = new FileInfo(FullPath).Length;
+
+            Logger.Get().NewLog(Logger.Log.Level.Info, $"{rootPath}, {RelativePath}, {Extension}");
         }
 
         public string Name { get; }
@@ -82,8 +85,10 @@ public sealed class AssetIO
             string extension = Path.GetExtension(relativePath).ToLower();
             
             if(textureExtensions.Contains(extension) || dataExtensions.Contains(extension) || audioExtensions.Contains(extension) || xnbExtensions.Contains(extension))
+            {
                 yield return new AssetInfo(targetPath, relativePath);
-
+                continue;
+            }
 
             Logger.Get()?.NewLog(Logger.Log.Level.Warning, $"Unsupported extension '{extension}' at location: '{path}'!");
             continue;
