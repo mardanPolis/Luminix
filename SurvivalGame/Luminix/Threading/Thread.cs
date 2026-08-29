@@ -1,38 +1,35 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Threading;
 
 namespace Luminix.Threading;
 
 public abstract class Thread
 {
-    private static readonly ThreadLocal<Thread> thread = new(true);
+    protected static readonly ThreadLocal<Thread> thread = new(true);
 
     public static Thread CurrentThread => thread.Value;
     public static IList<Thread> Threads => thread.Values;
 
     protected Logger logger;
 
-    protected Thread()
+    private protected Thread() 
     {
-        thread.Value = this;
-        systemThread = System.Threading.Thread.CurrentThread;
-        ThreadID = new ID((uint)Threads.Count);
+        this.ThreadID = new ID((uint)Threads.Count);
     }
 
-    protected System.Threading.Thread systemThread { get; init; }
+    protected System.Threading.Thread SystemThread { get; private protected init; }
 
-    public ID ThreadID { get; private set; }
-    public string Name { get => systemThread.Name; set => systemThread.Name = value; }
-    public bool IsBackground { get => systemThread.IsBackground; set => systemThread.IsBackground = value; }
-    public virtual bool IsAlive => systemThread.IsAlive;
-    public ThreadPriority Priority { get => systemThread.Priority; set => systemThread.Priority = value; }
+    public ID ThreadID { get; private init; }
+    public string Name { get => SystemThread.Name; set { SystemThread.Name = value; LogPath = Path.Combine(Logger.LogDir, $"thread_{value}.log"); } }
+    public bool IsBackground { get => SystemThread.IsBackground; set => SystemThread.IsBackground = value; }
+    public virtual bool IsAlive => SystemThread.IsAlive;
+    public ThreadPriority Priority { get => SystemThread.Priority; set => SystemThread.Priority = value; }
 
-    protected void NullifyThread()
-    {
-        thread.Value = null;
-    }
+    public string LogPath { get; private set; }
 
     public abstract void Start();
-    public abstract void Stop();
+
+    public override string ToString() => Name;
 }

@@ -192,29 +192,53 @@ public sealed class Assets : Workspace.Service
         TextureAsset[] textureResults = new TextureAsset[textureInfos.Length];
         var textureTask = Parallel.ForAsync(0, textureInfos.Length, async (i, ct) =>
         {
-            textureResults[i] = await assetIO.LoadTextureAssetAsync(textureInfos[i]);
+            try
+            {
+                textureResults[i] = await assetIO.LoadTextureAssetAsync(textureInfos[i]);
+            }
+            catch (Exception ex)
+            {
+                Logger.Initialize().NewLog(Logger.Log.Level.Error, $"Fatal Error: {ex}");
+                throw;
+            }
         });
 
         AssetIO.AssetInfo[] audioInfos = audioAssetInfos.Values.ToArray();
         AudioAsset[] audioResults = new AudioAsset[audioInfos.Length];
         var audioTask = Parallel.ForAsync(0, audioInfos.Length, async (i, ct) =>
         {
-            audioResults[i] = await assetIO.LoadAudioAssetAsync(audioInfos[i]);
+            try
+            {
+                audioResults[i] = await assetIO.LoadAudioAssetAsync(audioInfos[i]);
+            }
+            catch (Exception ex)
+            {
+                Logger.Initialize().NewLog(Logger.Log.Level.Error, $"Fatal Error: {ex}");
+                throw;
+            }
         });
 
         Task assetAssemblyTask = Task.Run(() =>
         {
-            assets.AddRange(textureAssets.Values);
-            assets.AddRange(atlasAssets.Values);
-            assets.AddRange(audioAssets.Values);
-            assets.AddRange(shaderAssets.Values);
-            assets.AddRange(fontAssets.Values);
+            try
+            {
+                assets.AddRange(textureAssets.Values);
+                assets.AddRange(atlasAssets.Values);
+                assets.AddRange(audioAssets.Values);
+                assets.AddRange(shaderAssets.Values);
+                assets.AddRange(fontAssets.Values);
 
-            var pending = new List<Task> { audioTask, textureTask };
-            Task finished = Task.WhenAny(pending).GetAwaiter().GetResult();
+                var pending = new List<Task> { audioTask, textureTask };
+                Task finished = Task.WhenAny(pending).GetAwaiter().GetResult();
 
-            assets.AddRange(audioResults);
-            assets.AddRange(makeAtlases ? CreateAtlasAssets(textureResults) : textureResults);
+                assets.AddRange(audioResults);
+                assets.AddRange(makeAtlases ? CreateAtlasAssets(textureResults) : textureResults);
+            }
+            catch (Exception ex)
+            {
+                Logger.Initialize().NewLog(Logger.Log.Level.Error, $"Fatal Error: {ex}");
+                throw;
+            }
         });
 
         for(int i = 0; i < dataAssets.Count; i++)

@@ -30,6 +30,11 @@ internal sealed class MainCore
 
     internal void Initialize()
     {
+        logger = Logger.Get();
+        logger.EchoToConsole = true;
+
+        logger.NewLog(Logger.Log.Level.Info, $"Thread: {Thread.CurrentThread}");
+
         renderBridge = ThreadBridges.GetBridge<RenderBridge>("RenderThread");
         inputBridge = ThreadBridges.GetBridge<InputBridge>("RenderThread");
         resourceBridge = ThreadBridges.GetBridge<ResourceBridge>("RenderThread");

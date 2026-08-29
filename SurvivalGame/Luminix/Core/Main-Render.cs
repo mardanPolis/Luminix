@@ -19,12 +19,8 @@ internal sealed class MainRender : Microsoft.Xna.Framework.Game
         //workspace
         workspace = new Workspace(out workspaceController);
 
-        logger = Logger.Get();
-        logger.NewLog(Logger.Log.Level.Info,$"Started initialization");
-        
         stopwatch = Stopwatch.StartNew();
 
-        logger.NewLog(Logger.Log.Level.Info,$"Creating GraphicsDeviceManager");
         graphics = new GraphicsDeviceManager(this);
         graphics.SynchronizeWithVerticalRetrace = true;
         graphics.PreferredBackBufferWidth = 1920;
@@ -46,7 +42,7 @@ internal sealed class MainRender : Microsoft.Xna.Framework.Game
     private AssetBridge coreAssetBridge;
 
     //RenderThread
-    private readonly Thread mainSystemThread = Thread.CurrentThread;
+    private readonly Thread mainThread;
     private readonly TickedThread coreThread = null;
 
     private long startBytes = 0;
@@ -70,7 +66,7 @@ internal sealed class MainRender : Microsoft.Xna.Framework.Game
 
     private RenderInfoBuffer renderInfoBuffer;
 
-    public Thread MainSystemThread => mainSystemThread;
+    public Thread MainThread => mainThread;
     public TickedThread CoreThread => coreThread;
 
     internal ResourceManager ResourceManager => resourceManager;
@@ -89,10 +85,18 @@ internal sealed class MainRender : Microsoft.Xna.Framework.Game
         init => base.Content = value;
     }
 
+    internal void Start()
+    {
+        
+    }
+
     protected override void Initialize()
     {
         try
         {
+            logger = Logger.Get();
+            logger.EchoToConsole = true;
+            logger.NewLog(Logger.Log.Level.Info, $"Started initialization");
 
             renderBridge = ThreadBridges.GetBridge<RenderBridge>("CoreThread");
             coreInputBridge = ThreadBridges.GetBridge<InputBridge>("CoreThread");

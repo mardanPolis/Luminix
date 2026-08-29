@@ -6,14 +6,15 @@ namespace Luminix.Threading;
 
 public abstract class ManagedThread : Thread
 {
-    protected ManagedThread()
+    protected ManagedThread(string name)
     {
-        systemThread = new System.Threading.Thread(() =>
+        this.SystemThread = new System.Threading.Thread(() =>
         {
-            logger = Logger.Initialize();
-            
             if(threadAction == null)
                 throw new InvalidOperationException($"Thread action cannot be null, thread: {ThreadID} {Name} ");
+
+            thread.Value = this;
+            logger = Logger.Initialize();
 
             try
             {
@@ -27,12 +28,12 @@ public abstract class ManagedThread : Thread
             }
             finally
             {
-                NullifyThread();
                 Logger.Shutdown();
+                thread.Value = null;
                 running = false;
             }
         });
-
+        this.Name = name;
     }
 
     protected Action threadAction;
@@ -41,8 +42,8 @@ public abstract class ManagedThread : Thread
 
     public override bool IsAlive => running;
 
-    public override void Start() => systemThread.Start();
-    public override void Stop()
+    public override void Start() => SystemThread.Start();
+    public void Stop()
     {
         running = false;
         OnStop();

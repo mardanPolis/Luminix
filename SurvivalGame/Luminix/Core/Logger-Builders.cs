@@ -40,29 +40,6 @@ public sealed partial class Logger
 
             this.logger = logger;
             this.buffer = logger.logBuffer;
-
-            if(!canLog)
-                return;
-
-            AppendFormatted('[');
-            AppendFormatted(DateTime.Now, logger.TimestampFormat);
-            AppendFormatted("] ");
-
-            AppendFormatted(logger.threadName);
-            AppendFormatted(' ');
-
-            switch(level)
-            {
-                case Log.Level.Info:
-                    AppendFormatted("[INFO] : ");
-                break;
-                case Log.Level.Warning:
-                    AppendFormatted("[WARNING] : ");
-                break;
-                case Log.Level.Error:
-                    AppendFormatted("[ERROR] : ");
-                break;
-            }
         }
         public bool AppendLiteral(string value)
         {

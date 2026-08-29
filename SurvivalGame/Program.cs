@@ -2,33 +2,37 @@
 using Luminix;
 using Luminix.Threading;
 
-var logger = Logger.Initialize();
 try
 {
     var mainCore = new Luminix.MainCore();
-    var coreThread = new TickedThread(mainCore.Initialize, () =>
+    var coreThread = new TickedThread("CoreThread", mainCore.Initialize, () =>
     {
         mainCore.Update();
         mainCore.Render();
     });
-    coreThread.Name = "CoreThread";
     coreThread.Priority = System.Threading.ThreadPriority.AboveNormal;
     coreThread.IsBackground = true;
 
-    using var mainRender = new Luminix.MainRender(coreThread);
-    var renderThread = new RenderThread(mainRender);
+    var renderThread = new UnmanagedThread("RenderThread", () =>
+    {
+        using var mainRender = new Luminix.MainRender(coreThread);
+        mainRender.Run();
+    });
+    renderThread.Priority = System.Threading.ThreadPriority.AboveNormal;
+    renderThread.IsBackground = false;
 
     coreThread.Start();
-    mainRender.Run();
+    renderThread.Start();
 }
 catch(Exception ex)
 {
-    logger.NewLog(Logger.Log.Level.Error, $"Fatal Error: {ex}");
+    Console.WriteLine($"{ex}");
 }
 finally
 {
     if (Thread.Threads != null)
         foreach (var thread in Thread.Threads)
-            thread?.Stop();
-    logger.Flush();
+            if(thread is ManagedThread managedThread)
+                managedThread?.Stop();
+    Logger.Get().Flush();
 }

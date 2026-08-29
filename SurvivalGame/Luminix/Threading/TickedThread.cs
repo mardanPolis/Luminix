@@ -7,7 +7,7 @@ namespace Luminix.Threading;
 public sealed class TickedThread : ManagedThread
 {
     //constructor
-    public TickedThread(Action init, Action tick, uint tickRate = 60) : base()
+    public TickedThread(string name, Action init, Action tick, uint tickRate = 60) : base(name)
     {
         TickRate = tickRate;
         threadAction = ThreadAction();

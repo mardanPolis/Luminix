@@ -35,6 +35,12 @@ public sealed partial class Logger
     }
 
     private static readonly ThreadLocal<Logger> instance = new ThreadLocal<Logger>(true);
+    internal static readonly string LogDir;
+
+    static Logger()
+    {
+        LogDir = Path.Combine(AppContext.BaseDirectory, "logs");
+    }
 
     internal static Logger Initialize()
     {
@@ -69,28 +75,13 @@ public sealed partial class Logger
         logs = new(500);
         data = new char[256000];
         logBuffer = new char[Math.Min(data.Length, logMaximumLength)];
-        logDir = Path.Combine(AppContext.BaseDirectory, "logs");
-        Directory.CreateDirectory(logDir);
+        Directory.CreateDirectory(LogDir);
         
-        string name = Thread.CurrentThread.Name;
-        path =  Path.Combine(
-            logDir,
-            $"thread_{name}.log"
-        );
+        string logPath = Luminix.Threading.Thread.CurrentThread.LogPath;
 
-        name = Thread.CurrentThread.Name;
-        if(string.IsNullOrWhiteSpace(name))
-            threadName = "[Engine Thread]";
-        else
-            threadName = $"[{name}]";
-
-        File.WriteAllText(path, string.Empty);
+        File.WriteAllText(logPath, string.Empty);
     }
 
-    private readonly string threadName;
-
-    private readonly string logDir;
-    private readonly string path;
     private readonly List<(int Start, int Length, Log.Level level)> logs;
     private char[] data;
     private char[] logBuffer;
@@ -120,8 +111,7 @@ public sealed partial class Logger
     public void Flush()
     {
         if(locked) return;
-
-        using (StreamWriter writer = new StreamWriter(path, append: true))
+        using (StreamWriter writer = new StreamWriter(Luminix.Threading.Thread.CurrentThread.LogPath, append: true))
         {
             writer.Write(data, 0, pointer);
         }
@@ -169,15 +159,16 @@ public sealed partial class Logger
 
         if(EchoToConsole)
         {
-            Span<char> consoleLine = stackalloc char[message.Length + Environment.NewLine.Length];
-            message.CopyTo(consoleLine);
-            Environment.NewLine.AsSpan().CopyTo(consoleLine.Slice(message.Length));
+            Span<char> consoleLine = stackalloc char[headerLength + message.Length + Environment.NewLine.Length];
+            header[0..headerLength].CopyTo(consoleLine);
+            message.CopyTo(consoleLine.Slice(headerLength));
+            Environment.NewLine.AsSpan().CopyTo(consoleLine.Slice(headerLength + message.Length));
             Console.Out.Write(consoleLine);
         }
 
         if (pointer + totalLength <= data.Length)
         {
-            header.Slice(0, headerLength).CopyTo(data.AsSpan(pointer));
+            header[..headerLength].CopyTo(data.AsSpan(pointer));
             message.CopyTo(data.AsSpan(pointer + headerLength));
             logs.Add((pointer, totalLength, level));
             pointer += totalLength;
@@ -185,7 +176,7 @@ public sealed partial class Logger
         else
         {
             Flush();
-            header.Slice(0, headerLength).CopyTo(data.AsSpan(0));
+            header[..headerLength].CopyTo(data.AsSpan(0));
             message.CopyTo(data.AsSpan(headerLength));
             logs.Add((0, totalLength, level));
             pointer = totalLength;
@@ -237,9 +228,14 @@ public sealed partial class Logger
         dest[written++] = ']';
         dest[written++] = ' ';
 
-        ReadOnlySpan<char> thread = threadName;
-        thread.CopyTo(dest.Slice(written));
-        written += thread.Length;
+        var name = Luminix.Threading.Thread.CurrentThread.Name;
+        Span<char> threadName = stackalloc char[name.Length + 2];
+        threadName[0] = '[';
+        name.CopyTo(threadName[1..]);
+        threadName[^1] = ']';
+        
+        threadName.CopyTo(dest.Slice(written));
+        written += threadName.Length;
 
         dest[written++] = ' ';
 

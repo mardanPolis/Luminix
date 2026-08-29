@@ -40,6 +40,8 @@ internal static class ThreadBridges
 
     public static TBridge GetBridge<TBridge>(string targetThreadName) where TBridge : class, new()
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(targetThreadName);
+
         var threadPair = new ThreadPair(Thread.CurrentThread.Name, targetThreadName);
         var bridgeType = typeof(TBridge);
 
