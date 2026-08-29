@@ -4,13 +4,16 @@ using System.Threading;
 
 namespace Luminix.Threading;
 
-public class TickedThread : BaseThread
+public sealed class TickedThread : ManagedThread
 {
     //constructor
-    protected TickedThread(uint tickRate = 60) : base()
+    public TickedThread(Action init, Action tick, uint tickRate = 60) : base()
     {
         TickRate = tickRate;
         threadAction = ThreadAction();
+
+        this.init = init;
+        this.tick = tick;
     }
 
     private Stopwatch stopwatch;
@@ -28,24 +31,21 @@ public class TickedThread : BaseThread
     private double tickDeltaTime = 0;
     private long tickAllocated = 0;
 
-    protected long TickIntervalInTicks => tickIntervalInTicks;
+    private readonly Action init;
+    private readonly Action tick;
 
-    protected uint TickRate
+    public uint TickRate
     {
         get { return tickRate; }
         set { tickRate = value; Interlocked.Exchange(ref tickIntervalInTicks, (uint)(Stopwatch.Frequency / value)); }
     }
-    protected long TickCount => tickCount;
-    protected double TickTime => tickTime;
-    protected double TickDeltaTime => tickDeltaTime;
-    protected long TickAllocated => tickAllocated;
+    public long TickCount => tickCount;
+    public double TickTime => tickTime;
+    public double TickDeltaTime => tickDeltaTime;
+    public long TickAllocated => tickAllocated;
 
-    protected long CurrentElapsedTicks => internalStopwatch.ElapsedTicks;
+    public long CurrentElapsedTicks => internalStopwatch.ElapsedTicks;
     public float PartialTick => (float)(stopwatch.ElapsedTicks - Volatile.Read(ref lastTickDate)) / Interlocked.Read(ref tickIntervalInTicks);
-
-    protected virtual void Initialize() {}
-    protected virtual void DebugInitialize() {}
-    protected virtual void Tick() {}
 
     private Action ThreadAction()
     {
@@ -67,9 +67,7 @@ public class TickedThread : BaseThread
 
             workspace = new Workspace(out workspaceController);
 
-            Initialize();
-            //TODO : only in debug – if(Settings.Debug)
-            DebugInitialize();
+            init();
             
             workspaceController.Start();
 
@@ -89,11 +87,11 @@ public class TickedThread : BaseThread
                     long ticksRemaining = nextTick - currentTicks;
                     
                     if (ticksRemaining > threshold10ms)
-                        Thread.Sleep(5);
+                        System.Threading.Thread.Sleep(5);
                     else if (ticksRemaining > threshold4ms)
-                        Thread.Yield();
+                        System.Threading.Thread.Yield();
                     else if (ticksRemaining > threshold1ms)
-                        Thread.SpinWait(1);
+                        System.Threading.Thread.SpinWait(1);
 
                     continue;
                 } 
@@ -108,7 +106,7 @@ public class TickedThread : BaseThread
 
                 startBytes = GC.GetAllocatedBytesForCurrentThread();
 
-                Tick();
+                tick();
 
                 tickAllocated = GC.GetAllocatedBytesForCurrentThread() - startBytes;
 

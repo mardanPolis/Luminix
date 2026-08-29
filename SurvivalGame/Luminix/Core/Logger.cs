@@ -106,19 +106,13 @@ public sealed partial class Logger
     public Log.Level MinimumLevel { get; set; } = Log.Level.Info;
     public bool EchoToConsole { get; set; }
 
-    public void NewLog(string message) 
+    public void NewLog(Log.Level logLevel, string message) 
     {
-        var builder = new LogBuilder(0, 0, this, default);
+        var builder = new LogBuilder(0, 0, this, logLevel);
         builder.AppendLiteral(message);
         builder.End();
     }
-    public void NewLog(Log.Level logType, string message) 
-    {
-        var builder = new LogBuilder(0, 0, this, logType);
-        builder.AppendLiteral(message);
-        builder.End();
-    }
-    public void NewLog(Log.Level logType, [InterpolatedStringHandlerArgument("", "logType")] ref LogBuilder message)
+    public void NewLog(Log.Level logLevel, [InterpolatedStringHandlerArgument("", "logLevel")] ref LogBuilder message)
     {
         message.End();
     }

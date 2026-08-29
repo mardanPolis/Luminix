@@ -14,7 +14,7 @@ namespace Luminix;
 
 public sealed class ResourceManager : Microsoft.Xna.Framework.Content.ContentManager
 {
-    internal ResourceManager(Main main) : base(main.Services)
+    internal ResourceManager(MainRender main) : base(main.Services)
     {
         MethodInfo method = typeof(Microsoft.Xna.Framework.Content.ContentManager).GetMethod("RecordDisposable", BindingFlags.Instance | BindingFlags.NonPublic) ??
          throw new InvalidOperationException("Could not find method RecordDisposable on ContentManager.");
@@ -43,7 +43,7 @@ public sealed class ResourceManager : Microsoft.Xna.Framework.Content.ContentMan
     private Action<IDisposable> recordDisposable;
 
     private Logger logger;
-    private Main main;
+    private MainRender main;
     private Resources resources;
     private bool disposed = false;
 

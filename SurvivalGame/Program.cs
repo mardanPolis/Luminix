@@ -1,16 +1,25 @@
 ﻿using System;
-using System.Threading;
 using Luminix;
 using Luminix.Threading;
 
-Thread.CurrentThread.Priority = ThreadPriority.AboveNormal;
-Thread.CurrentThread.Name = "RenderThread";
-
 var logger = Logger.Initialize();
-using var engine = new Luminix.Main();
 try
 {
-    engine.Run();
+    var mainCore = new Luminix.MainCore();
+    var coreThread = new TickedThread(mainCore.Initialize, () =>
+    {
+        mainCore.Update();
+        mainCore.Render();
+    });
+    coreThread.Name = "CoreThread";
+    coreThread.Priority = System.Threading.ThreadPriority.AboveNormal;
+    coreThread.IsBackground = true;
+
+    using var mainRender = new Luminix.MainRender(coreThread);
+    var renderThread = new RenderThread(mainRender);
+
+    coreThread.Start();
+    mainRender.Run();
 }
 catch(Exception ex)
 {
@@ -18,8 +27,8 @@ catch(Exception ex)
 }
 finally
 {
-    if (BaseThread.Threads != null)
-        foreach (var thread in BaseThread.Threads)
+    if (Thread.Threads != null)
+        foreach (var thread in Thread.Threads)
             thread?.Stop();
     logger.Flush();
 }

@@ -1,9 +1,13 @@
 using System;
+using System.Linq;
+using System.Reflection;
 
 namespace Luminix;
 
 public sealed class Universe : Workspace.Service
 {
+    private readonly Defs defs;
+
     internal readonly struct Controller 
     {
         internal Controller(Universe controlled)
@@ -52,7 +56,7 @@ public sealed class Universe : Workspace.Service
     private readonly bool controllerIssued;
 
     //Global Variables
-    public uint TickRate { get; private set; }
+    public uint TickRate { get; set; }
     public long TickCount { get; private set; }
     public double TickTime { get; private set; }
     public double TickDeltaTime { get; private set; }

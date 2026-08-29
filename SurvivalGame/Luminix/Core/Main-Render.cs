@@ -1,8 +1,7 @@
 using System;
 using System.Diagnostics;
-using System.Threading;
-using System.Reflection;
-using System.Linq;
+using System.Threading.Tasks;
+using System.Collections.Generic;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
@@ -11,49 +10,21 @@ using Luminix.Threading;
 using Luminix.Threading.Bridges;
 using Luminix.Core.Handlers;
 using Luminix.Threading.Buffers;
-using System.Threading.Tasks;
-using System.Collections.Generic;
 
 namespace Luminix;
-public class Main : Microsoft.Xna.Framework.Game
+internal sealed class MainRender : Microsoft.Xna.Framework.Game
 {
-    public static string Version { get; private set; }
-    public static string BuildDate { get; private set; }
-
-    public Main()
+    internal MainRender(TickedThread coreThread)
     {
-        var assembly = Assembly.GetExecutingAssembly();
-
-        string version = assembly.GetName().Version.ToString();
-
-        var attribute = assembly.GetCustomAttributes<AssemblyMetadataAttribute>()
-                            .FirstOrDefault(a => a.Key == "BuildDate");
-        string buildDate = attribute?.Value ?? "Unknown";
-
-        var myNamespaces = assembly.GetTypes()
-            .Select(t => t.Namespace)
-            .Where(n => !string.IsNullOrEmpty(n) && n.StartsWith("Luminix"))
-            .Distinct()
-            .OrderBy(n => n);
-
-        Main.Version = version;
-        Main.BuildDate = buildDate;
-
         //workspace
         workspace = new Workspace(out workspaceController);
 
         logger = Logger.Get();
-        logger.NewLog($"Started initialization");
-        logger.NewLog($"Build-Vers: {version}");
-        logger.NewLog($"Build-Date: {buildDate}");
-
-        logger.NewLog("Namespaces:");
-        foreach (var ns in myNamespaces)
-            logger.NewLog(ns);
-
+        logger.NewLog(Logger.Log.Level.Info,$"Started initialization");
+        
         stopwatch = Stopwatch.StartNew();
 
-        logger.NewLog($"Creating GraphicsDeviceManager");
+        logger.NewLog(Logger.Log.Level.Info,$"Creating GraphicsDeviceManager");
         graphics = new GraphicsDeviceManager(this);
         graphics.SynchronizeWithVerticalRetrace = true;
         graphics.PreferredBackBufferWidth = 1920;
@@ -65,19 +36,7 @@ public class Main : Microsoft.Xna.Framework.Game
         resourceManager = new ResourceManager(this);
         IsMouseVisible = true;
 
-        logger.NewLog($"Initializing threads");
-        //initialize threads
-        {
-            renderBridge = new RenderBridge();
-            coreInputBridge = new InputBridge();
-            coreResourceBridge = new ResourceBridge();
-            coreAssetBridge = new AssetBridge();
-
-            coreThread = new CoreThread(renderBridge, coreAssetBridge, coreInputBridge, coreResourceBridge);
-
-        }
-        //starting threads
-        coreThread.Start();
+        this.coreThread = coreThread;
     }
 
     //Core Bridges
@@ -87,8 +46,8 @@ public class Main : Microsoft.Xna.Framework.Game
     private AssetBridge coreAssetBridge;
 
     //RenderThread
-    private Thread mainThread = Thread.CurrentThread;
-    private CoreThread coreThread = null;
+    private readonly Thread mainSystemThread = Thread.CurrentThread;
+    private readonly TickedThread coreThread = null;
 
     private long startBytes = 0;
     private long allocated = 0;
@@ -111,8 +70,8 @@ public class Main : Microsoft.Xna.Framework.Game
 
     private RenderInfoBuffer renderInfoBuffer;
 
-    public Thread MainSystemThread => mainThread;
-    public CoreThread CoreThread => coreThread;
+    public Thread MainSystemThread => mainSystemThread;
+    public TickedThread CoreThread => coreThread;
 
     internal ResourceManager ResourceManager => resourceManager;
     internal GraphicsDeviceManager GraphicsDeviceManager => graphics;
@@ -134,10 +93,16 @@ public class Main : Microsoft.Xna.Framework.Game
     {
         try
         {
-            logger.NewLog($"Initializing");
+
+            renderBridge = ThreadBridges.GetBridge<RenderBridge>("CoreThread");
+            coreInputBridge = ThreadBridges.GetBridge<InputBridge>("CoreThread");
+            coreResourceBridge = ThreadBridges.GetBridge<ResourceBridge>("CoreThread");
+            coreAssetBridge = ThreadBridges.GetBridge<AssetBridge>("CoreThread");
+            
+            logger.NewLog(Logger.Log.Level.Info, $"Initializing");
             startBytes = GC.GetAllocatedBytesForCurrentThread();
             
-            ThreadPool.SetMaxThreads(3, 1);
+            System.Threading.ThreadPool.SetMaxThreads(3, 1);
 
             //systems
             renderingSystem = new RenderingSystem(this, renderBridge);
@@ -145,9 +110,6 @@ public class Main : Microsoft.Xna.Framework.Game
             //handlers
             inputHandler = new InputHandler(coreInputBridge);
             
-            //threads
-            coreThread.Priority = ThreadPriority.AboveNormal;
-
             //base initialization
             base.Initialize();
 
@@ -160,10 +122,10 @@ public class Main : Microsoft.Xna.Framework.Game
 
             foreach(var adapter in GraphicsAdapter.Adapters)
             {
-                logger.NewLog($"Adapter: {adapter.DisplayName}");
+                logger.NewLog(Logger.Log.Level.Info, $"Adapter: {adapter.DisplayName}");
                 foreach(var mode in adapter.SupportedDisplayModes)
                 {
-                    logger.NewLog($" - Mode: {mode.ToString()}");
+                    logger.NewLog(Logger.Log.Level.Info, $" - Mode: {mode.ToString()}");
                 }
             }
 
@@ -183,12 +145,12 @@ public class Main : Microsoft.Xna.Framework.Game
 
         workspaceController.Start();
 
-        logger.NewLog($"RenderThread initialized in {stopwatch.Elapsed.Milliseconds}ms");
+        logger.NewLog(Logger.Log.Level.Info, $"RenderThread initialized in {stopwatch.Elapsed.Milliseconds}ms");
 
         long endBytes = GC.GetAllocatedBytesForCurrentThread();
         allocated = endBytes - startBytes;
 
-        logger.NewLog($"RenderThread allocated {allocated / 1024.0:F2} KB ({allocated:N0}) bytes during initialization!");
+        logger.NewLog(Logger.Log.Level.Info, $"RenderThread allocated {allocated / 1024.0:F2} KB ({allocated:N0}) bytes during initialization!");
     }
 
     protected override void Update(GameTime gameTime)

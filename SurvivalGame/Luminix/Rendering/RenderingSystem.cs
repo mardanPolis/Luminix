@@ -10,7 +10,7 @@ namespace Luminix.Rendering;
 
 public sealed class RenderingSystem : Workspace.Service
 {
-    internal RenderingSystem(Main main, RenderBridge renderBridge)
+    internal RenderingSystem(MainRender main, RenderBridge renderBridge)
     {
         ArgumentNullException.ThrowIfNull(main);
         ArgumentNullException.ThrowIfNull(main.GraphicsDeviceManager);
@@ -25,7 +25,7 @@ public sealed class RenderingSystem : Workspace.Service
         this.renderBridge = renderBridge;
     }
 
-    private Main main;
+    private MainRender main;
     private Renderer renderer;
     private GraphicsDeviceManager graphics;
     private GameWindow window;

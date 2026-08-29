@@ -148,7 +148,7 @@ internal sealed class SystemDebugRenderer : DebugRenderer
         managedMemoryAmounts[currentIndex] = usedMemory / 1024.0 / 1024.0;
         
         sb.Clear();
-        sb.Append("Build-Version:").Append(Main.Version).Append(" | Build-Date:").Append(Main.BuildDate).Append('\n');
+        sb.Append("Build-Version:").Append(LuminixManifest.BuildVers).Append(" | Build-Date:").Append(LuminixManifest.BuildVers).Append('\n');
         sb.Append(graphics.Resolution.X).Append('x').Append(graphics.Resolution.Y).Append(" @ ").Append(graphics.RefreshRate).Append('\n');
         sb.AppendDouble(frameDeltaTimeAvg > 0 ? double.Round(1.0 / (frameDeltaTimeAvg / 1000)) : 0, 0, 3);
         sb.Append(":FPS | ");
