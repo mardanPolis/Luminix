@@ -37,8 +37,6 @@ public sealed class AssetIO
             Extension = Path.GetExtension(relativePath);
 
             Size = new FileInfo(FullPath).Length;
-
-            Logger.Get().NewLog(Logger.Log.Level.Info, $"{rootPath}, {RelativePath}, {Extension}");
         }
 
         public string Name { get; }

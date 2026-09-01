@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Frozen;
 using System.Collections.Generic;
 using Luminix.Threading.Buffers;
 using Microsoft.Xna.Framework;
@@ -37,11 +38,11 @@ internal sealed class Renderer
         resources = renderingSystem.ResourceManager.Resources;
         spriteBatch = renderingSystem.SpriteBatch;
 
-        defaultShader = resources.GetResource<ShaderResource>("GenericShader");
+        defaultShader = resources.GetResource<ShaderResource>("Assets.Built-In.Shaders.GenericShader.xnb");
         defaultTexture = resources.GetResource<TextureResource>("NullTexture");
-        defaultFontBold = resources.GetResource<FontResource>("IBMPlexMono-Bold");
-        defaultFontMedium = resources.GetResource<FontResource>("IBMPlexMono-Medium");
-        defaultFontRegular = resources.GetResource<FontResource>("IBMPlexMono-Regular");
+        defaultFontBold = resources.GetResource<FontResource>("Assets.Built-In.Fonts.IBMPlexMono-Bold.xnb");
+        defaultFontMedium = resources.GetResource<FontResource>("Assets.Built-In.Fonts.IBMPlexMono-Medium.xnb");
+        defaultFontRegular = resources.GetResource<FontResource>("Assets.Built-In.Fonts.IBMPlexMono-Regular.xnb");
 
         var vertices = new VertexPositionColorTexture[] {
             new (new Vector3(-0.5f, -0.5f, 0), Color.White, new Vector2(0, 0)),

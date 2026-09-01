@@ -65,9 +65,9 @@ public sealed class Resources : Workspace.Service, IEnumerable<Resource>
             textures.Count + audios.Count + fonts.Count + shaders.Count);
 
         var textureType = typeof(TextureResource);
-        var audioType = typeof(TextureResource);
-        var fontType = typeof(TextureResource);
-        var shaderType = typeof(TextureResource);
+        var audioType = typeof(AudioResource);
+        var fontType = typeof(FontResource);
+        var shaderType = typeof(ShaderResource);
 
         foreach (var (key, value) in textures)
             combined[(textureType, key)] = value;

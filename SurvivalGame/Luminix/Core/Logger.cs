@@ -99,7 +99,8 @@ public sealed partial class Logger
 
     public void NewLog(Log.Level logLevel, string message) 
     {
-        var builder = new LogBuilder(0, 0, this, logLevel);
+        var builder = new LogBuilder(this, logLevel, out bool canLog);
+        if(!canLog) return;
         builder.AppendLiteral(message);
         builder.End();
     }
@@ -108,12 +109,79 @@ public sealed partial class Logger
         message.End();
     }
 
+    public void NewLog<T>(Log.Level logLevel, IReadOnlyList<T> collection)
+    {
+        var builder = new LogBuilder(this, logLevel, out bool canLog);
+        if (!canLog) return;
+
+        builder.AppendFormatted(collection.GetType().Name);
+        if(collection.Count > 0)
+        {
+            builder.AppendFormatted(" contains: \n");
+            for (int i = 0; i < collection.Count; i++)
+            {
+                builder.AppendFormatted(i);
+                builder.AppendFormatted(" - ");
+
+                if (collection[i] is ISpanFormattable formattable)
+                    builder.AppendFormatted(formattable);
+                else
+                    builder.AppendFormatted(collection[i]?.ToString() ?? "null");
+
+                builder.AppendFormatted('\n');
+            }
+        }
+        else
+        {
+            builder.AppendFormatted(" is empty");
+        }
+        builder.End();
+    }
+
+    public void NewLog<TDictionary, T1, T2>(Log.Level logLevel, TDictionary collection) where TDictionary : IReadOnlyDictionary<T1, T2>
+    {
+        var builder = new LogBuilder(this, logLevel, out bool canLog);
+        if (!canLog) return;
+
+        builder.AppendFormatted(collection.GetType().Name);
+        if(collection.Count > 0)
+        {
+            builder.AppendFormatted(" contains: \n");
+            foreach(var pair in collection)
+            {
+                builder.AppendFormatted(" - [");
+
+                if (pair.Key is ISpanFormattable key)
+                    builder.AppendFormatted(key);
+                else
+                    builder.AppendFormatted(pair.Key.ToString() ?? "null");
+
+                builder.AppendFormatted("] : ");
+
+                if (pair.Value is ISpanFormattable value)
+                    builder.AppendFormatted(value);
+                else
+                    builder.AppendFormatted(pair.Value.ToString() ?? "null");
+
+                builder.AppendFormatted('\n');
+            }
+        }
+        else
+        {
+            builder.AppendFormatted(" is empty");
+        }
+        builder.End();
+    }
+
     public void Flush()
     {
         if(locked) return;
         using (StreamWriter writer = new StreamWriter(Luminix.Threading.Thread.CurrentThread.LogPath, append: true))
         {
-            writer.Write(data, 0, pointer);
+            foreach(Log log in this)
+            {
+                writer.WriteLine(log.Message);
+            } 
         }
         pointer = 0;
         logs.Clear();
@@ -123,6 +191,7 @@ public sealed partial class Logger
     public void Clear()
     {
         if(locked) return;
+        locked = true;
 
         Console.Clear();
         pointer = 0;
@@ -153,7 +222,6 @@ public sealed partial class Logger
 
         Span<char> header = stackalloc char[128];
         int headerLength = WriteHeader(header, currentTime, level);
-
 
         int totalLength = headerLength + message.Length;
 

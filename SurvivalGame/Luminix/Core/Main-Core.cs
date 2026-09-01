@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics;
+using Luminix.IO;
 using Luminix.Threading;
 using Luminix.Threading.Bridges;
 
@@ -55,10 +56,6 @@ internal sealed class MainCore
 
         logger.NewLog(Logger.Log.Level.Info, $"Build-Vers: {LuminixManifest.BuildVers}");
         logger.NewLog(Logger.Log.Level.Info, $"Build-Date: {LuminixManifest.BuildDate}");
-
-        logger.NewLog(Logger.Log.Level.Info, "Namespaces:");
-        foreach (var ns in LuminixManifest.Namespaces)
-            logger.NewLog(Logger.Log.Level.Info, ns);
 
         defs.NewDefType<EntityType>(); // built in
 

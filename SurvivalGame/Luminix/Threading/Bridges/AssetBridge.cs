@@ -58,4 +58,6 @@ internal class AssetBridge
 
         _taskCompletionSources = taskCompletionSources;
     }
+
+    public bool AssetsPassing => tasks.Count > 0 || groupTasks.Count > 0;
 }

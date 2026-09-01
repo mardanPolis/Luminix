@@ -10,6 +10,8 @@ internal class StructContainer<T> : IStructContainer where T : struct
     public T[] Data => data;
     private T[] data;
 
+    private T defaultValue = default;
+
     public ref T this[int index] {
         get => ref data[index];
     }
@@ -24,8 +26,14 @@ internal class StructContainer<T> : IStructContainer where T : struct
     }
     public void Default(int index)
     {
-        data[index] = default;
+        data[index] = defaultValue;
     }
+
+    public void SetDefaultValue(T defaultValue)
+    {
+        this.defaultValue = defaultValue;
+    }
+
     public void Swap(int index, int otherIndex)
     {
         T temp = data[index];

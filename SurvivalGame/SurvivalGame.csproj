@@ -31,7 +31,9 @@
     </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="Assets/Built-In/**/*.xnb" />
+    <EmbeddedResource Include="Assets/Built-In/**/*.xnb">
+      <LogicalName>$([System.String]::Copy('%(Identity)').Replace('\', '.').Replace('/', '.'))</LogicalName>
+    </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
     <!-- Replaced MonoGame NuGet with local DLL -->

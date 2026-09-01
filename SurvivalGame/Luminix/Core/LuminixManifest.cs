@@ -32,4 +32,18 @@ public static class LuminixManifest
 
         namespaces = myNamespaces.ToArray();
     } 
+
+    public static Assembly GetAssembly(string name)
+    {
+        var assemblies = AppDomain.CurrentDomain.GetAssemblies();
+        for(int i = 0; i < assemblies.Length; i++)
+        {
+            if(string.Equals(assemblies[i].GetName().Name, name, StringComparison.Ordinal))
+            {
+                return assemblies[i];
+            }
+        }
+
+        throw new ArgumentException($"There is no loaded Assembly named '{name}'", nameof(name));
+    }
 }

@@ -1,10 +1,11 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 
 namespace Luminix;
 
-public sealed class Universe : Workspace.Service
+public sealed partial class Universe : Workspace.Service
 {
     private readonly Defs defs;
 
@@ -28,22 +29,38 @@ public sealed class Universe : Workspace.Service
 
         public readonly void StartCreatedEntities()
         {
-            
+            var containers = controlled.entityContainers;
+            for(int i = 0; i < containers.Length; i++)
+            {
+                containers[i].StartEntities();
+            }
         }
 
         public readonly void UpdateEntities()
         {
-            
+            var containers = controlled.entityContainers;
+            for(int i = 0; i < containers.Length; i++)
+            {
+                containers[i].UpdateEntities();
+            }
         }
 
         public readonly void RenderEntities()
         {
-            
+            var containers = controlled.entityContainers;
+            for(int i = 0; i < containers.Length; i++)
+            {
+                containers[i].RenderEntities();
+            }
         }
 
         public readonly void DestroyEntities()
         {
-            
+            var containers = controlled.entityContainers;
+            for(int i = 0; i < containers.Length; i++)
+            {
+                containers[i].DestroyEntities();
+            }
         }
     }
 
@@ -62,31 +79,105 @@ public sealed class Universe : Workspace.Service
     public double TickDeltaTime { get; private set; }
     public long TickAllocated { get; private set; }
 
-    private int lastEntityID;
+    private ID entityID;
+
+    private Dictionary<ID, EntityType> entities;
+
+    private Dictionary<EntityType, EntityContainer> typeContainers;
+    private EntityContainer[] entityContainers;
 
     protected override void Start()
     {
-        this.lastEntityID = 0;
+        var defs = Workspace.Current.GetService<Defs>();
+        var entityTypes = defs.GetDefs<EntityType>();
+        entityContainers = CreateEntityContainers(entityTypes);
 
+        foreach(EntityContainer container in entityContainers)
+        {
+            container.EntitySystem.Initialize(container.Type);
+        }
     }
 
     public ID CreateEntity(EntityType entityType)
     {
-    }
+        if(!typeContainers.TryGetValue(entityType, out EntityContainer container))
+        {
+            throw new ArgumentException("Unknown entity type", nameof(entityType));
+        }
 
-    public void DestroyEntity(ID entityID)
+        entityID = new ID(entityID.Value + 1);
+        container.Create(entityID);
+        entities[entityID] = entityType; 
+
+        return entityID;
+    }
+    public bool DestroyEntity(ID entityID)
     {
+        if (!entities.TryGetValue(entityID, out EntityType entityType))
+        {
+            return false;
+        }
+
+        if (!typeContainers.TryGetValue(entityType, out EntityContainer container))
+        {
+            return false;
+        }
+
+        container.Destroy(entityID);
+        entities.Remove(entityID);
+        return true;
     }
 
     public bool EntityExists(ID entityID)
     {
+        return entities.ContainsKey(entityID);
     }
 
-    public bool EntityHasComponent<T>(ID entityID) where T : struct
-    {
-    }
     public ref T GetEntityComponent<T>(ID entityID) where T : struct
     {
-    }
+        if (!entities.TryGetValue(entityID, out EntityType entityType))
+        {
+            throw new ArgumentException($"Entity does not exist", nameof(entityID));
+        }
 
+        return ref typeContainers[entityType].GetComponent<T>(entityID);
+    }
+    public EntityType GetEntityType(ID entityID)
+    {
+        if (!entities.TryGetValue(entityID, out EntityType entityType))
+        {
+            throw new ArgumentException($"Entity does not exist", nameof(entityID));
+        }
+
+        return entityType;
+    }
+    
+    public bool HasComponent<T>(EntityType entityType) where T : struct
+    {
+        if(!typeContainers.TryGetValue(entityType, out EntityContainer container))
+        {
+            throw new ArgumentException("Unknown entity type", nameof(entityType));
+        }
+
+        return container.HasComponent<T>();
+    }
+    
+    public EntitySystem GetEntitySystem(EntityType entityType)
+    {
+        if(!typeContainers.TryGetValue(entityType, out EntityContainer container))
+        {
+            throw new ArgumentException("Unknown entity type", nameof(entityType));
+        }
+
+        return container.EntitySystem;
+    }
+    public int GetEntityCount(EntityType entityType)
+    {
+        if(!typeContainers.TryGetValue(entityType, out EntityContainer container))
+        {
+            throw new ArgumentException("Unknown entity type", nameof(entityType));
+        }
+
+        return container.EntityCount;
+    }
 }

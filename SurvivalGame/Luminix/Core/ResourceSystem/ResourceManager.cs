@@ -9,6 +9,7 @@ using Microsoft.Xna.Framework.Audio;
 using Luminix.Collections;
 using System.Linq;
 using Luminix.Extensions;
+using System.Diagnostics;
 
 namespace Luminix;
 
@@ -57,10 +58,13 @@ public sealed class ResourceManager : Microsoft.Xna.Framework.Content.ContentMan
     private Dictionary<string, FontResource> fontResources;
     private Dictionary<string, ShaderResource> shaderResources;
 
+    private Stopwatch stopwatch = new Stopwatch();
+
     public void CreateResource(Asset asset)
     {
         try
         {
+            stopwatch.Restart();
             if(disposed)
             {
                 logger.NewLog(Logger.Log.Level.Error, $"ResourceManager - Unable to create a Resource, reason: ResourceManager is disposed!");
@@ -215,7 +219,6 @@ public sealed class ResourceManager : Microsoft.Xna.Framework.Content.ContentMan
                         CreateShader(assetIdentifier, xnbAsset);
                     break;
                 }
-
                 return;
             }
 

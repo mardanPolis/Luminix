@@ -2,16 +2,14 @@ using System;
 using System.Collections;
 using System.Collections.Frozen;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Threading.Tasks;
-using Luminix.Collections;
-using Luminix.Exceptions;
 using Luminix.Extensions;
-using Luminix.JsonContext;
+using Luminix.Json;
 
 namespace Luminix;
 
@@ -28,14 +26,10 @@ public sealed class Defs : Workspace.Service
         patchTypes = new Dictionary<string, Type>();
 
         defNodes = [];
+        patchNodes = [];
         defs = new Dictionary<(Type, string), Def>();
         defContainers = new Dictionary<Type, IList>();
         defList = [];
-    }
-
-    public sealed class Token
-    {
-        internal Token() { }
     }
 
     private JsonSerializerOptions serializerOptions;
@@ -49,9 +43,6 @@ public sealed class Defs : Workspace.Service
     private List<Def> defList;
     private IDictionary<Type, IList> defContainers;
     private IDictionary<(Type, string), Def> defs;
-
-    private Token cachedToken;
-
 
     public void NewPatchType<T>() where T : PatchNode
     {
@@ -71,6 +62,27 @@ public sealed class Defs : Workspace.Service
 
         defTypes[type.Name] = type;
         defContainers[type] = new List<T>();
+    }
+
+    public T GetDef<T>(string name) where T : Def
+    {
+        if (!defs.TryGetValue((typeof(T), name), out Def def))
+            throw new KeyNotFoundException($"No {typeof(T).Name} def named \"{name}\" was found.");
+
+        return (T)def;
+    }
+
+    public ReadOnlySpan<T> GetDefs<T>() where T : Def
+    {
+        if (!defContainers.TryGetValue(typeof(T), out IList container))
+            throw new InvalidOperationException($"No defs of type {typeof(T).Name} have been registered.");
+
+        return CollectionsMarshal.AsSpan((List<T>)container);
+    }
+
+    public ReadOnlySpan<Def> GetDefs()
+    {
+        return CollectionsMarshal.AsSpan(defList);
     }
 
     public void ParseDataAsset(DataAsset dataAsset)
@@ -258,31 +270,11 @@ public sealed class Defs : Workspace.Service
                         if (parentValue.ValueKind != JsonValueKind.Object && childValue.ValueKind != JsonValueKind.Object)
                             continue;
 
-                        var parentObj = JsonObject.Create(parentValue)!;
-                        var childObj = JsonObject.Create(childValue)!;
-
-                        MergeJsonObjects(parentObj, childObj);
-
-                        childProperties[key] = JsonSerializer.SerializeToElement(childObj);
+                        childProperties[key] = LuminixJsonUtility.MergeJsonElements(parentValue, childValue);
                     }
                     else
                     {
                         childProperties[key] = parentValue;
-                    }
-                }
-            }
-            void MergeJsonObjects(JsonObject parent, JsonObject child)
-            {
-                foreach (var (key, parentNode) in parent)
-                {
-                    if (child.TryGetPropertyValue(key, out var childNode) && childNode is not null)
-                    {
-                        if (parentNode is JsonObject parentChildObj && childNode is JsonObject childChildObj)
-                            MergeJsonObjects(parentChildObj, childChildObj);
-                    }
-                    else
-                    {
-                        child[key] = parentNode?.DeepClone();
                     }
                 }
             }
@@ -326,8 +318,6 @@ public sealed class Defs : Workspace.Service
     }
     internal void DeserializeNodes()
     {
-        var constructors = GetDefConstructors();
-
         foreach(var defNode in defNodes.Values)
         {
             if(defNode.Abstract)
@@ -349,7 +339,7 @@ public sealed class Defs : Workspace.Service
 
             try
             {
-                Def def = ParseDefNode(defNode, constructors[defType]);
+                Def def = ParseDefNode(defNode);
                 defs[(defType, def.Name)] = def;
                 defContainers[defType].Add(def);
                 defList.Add(def);
@@ -380,80 +370,13 @@ public sealed class Defs : Workspace.Service
         }
     }
 
-    internal void ValidateToken(Token token)
+    private Def ParseDefNode(DefNode defNode)
     {
-        if (!cachedToken.Equals(token))
-            throw new InvalidTokenException();
+        Type defType = defTypes[defNode.DefType];
+        
+        JsonObject defJson = LuminixJsonUtility.Parse(defNode.Properties);
+        defJson["name"] = defNode.DefName;
 
-        cachedToken = null;
-    }
-
-    private Def ParseDefNode(DefNode defNode, (ConstructorInfo, Dictionary<string, (int, ParameterInfo)>) constructorData)
-    {
-        var (constructor, parameters) = constructorData;
-        var properties = defNode.Properties;
-
-        var arguments = new object[parameters.Count];
-        foreach(var param in parameters.Values)
-            arguments[param.Item1] = param.Item2.DefaultValue;
-
-        Token token = new Token();
-        cachedToken = token;
-
-        arguments[0] = token;
-        arguments[1] = defNode.DefName;
-
-        void PopulateArguments()
-        {
-            List<string> unresolvedProperties = null;
-            foreach(var prop in properties)
-            {
-                if(!parameters.TryGetValue(prop.Key, out (int ParameterIndex, ParameterInfo ParameterInfo) parameter))
-                {
-                    unresolvedProperties ??= [];
-                    unresolvedProperties.Add(prop.Key);
-                    continue;
-                }
-
-                arguments[parameter.ParameterIndex] = prop.Value.Deserialize(parameter.ParameterInfo.ParameterType, serializerOptions);
-            }
-
-            if (unresolvedProperties != null)
-                throw new InvalidOperationException($"Unresolved properties - {string.Join(", ", unresolvedProperties)}");
-        }
-        PopulateArguments();
-
-        return (Def)constructor.Invoke(arguments);
-    }
-    private Dictionary<Type, (ConstructorInfo, Dictionary<string, (int, ParameterInfo)>)> GetDefConstructors()
-    {
-        var constructors = new Dictionary<Type, (ConstructorInfo, Dictionary<string, (int, ParameterInfo)>)>();
-
-        foreach(var type in defTypes.Values)
-        {
-            if(defTypes.ContainsKey(type.Name))
-                continue;
-
-            var constructor = type.GetConstructors().Single();
-
-            var parameters = constructor.GetParameters();
-            if (parameters.Length < 2
-                || parameters[0].ParameterType != typeof(Defs.Token)
-                || parameters[1].ParameterType != typeof(string))
-            {
-                throw new InvalidOperationException($"Constructor for '{type.Name}' must start with (Defs.Token, string, ...), but found ({string.Join(", ", parameters.Select(p => p.ParameterType.Name))}).");
-            }
-
-            var parametersMap = new Dictionary<string, (int, ParameterInfo)>(parameters.Length);
-            for(int i = 0; i < parameters.Length; i++)
-            {
-                var parameter = parameters[i];
-                parametersMap.Add(parameter.Name, (i, parameter));
-            }
-
-            constructors[type] = (constructor, parametersMap);
-        }
-
-        return constructors;
+        return LuminixJsonUtility.Deserialize(defJson, defType) as Def;
     }
 }

@@ -8,7 +8,7 @@ namespace Luminix;
 
 internal partial class EntityContainer
 {
-    private sealed class Method
+    internal sealed class Method
     {
         public MethodInfo Info { get; }
         public ParameterInfo[] Parameters { get; }
@@ -69,11 +69,6 @@ internal partial class EntityContainer
         public void Invoke(int index)
         {
             compiledPerIndex(index);
-        }
-        public void Invoke(Dictionary<ID, int>.ValueCollection indexes)
-        {
-            foreach(int i in indexes)
-                compiledPerIndex(i);
         }
         public void InvokeFor(int length)
         {

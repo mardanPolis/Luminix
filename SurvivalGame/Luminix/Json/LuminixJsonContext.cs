@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace Luminix.JsonContext;
+namespace Luminix.Json;
 
 [JsonSourceGenerationOptions(PropertyNameCaseInsensitive = true)]
 [JsonSerializable(typeof(EntityType))]

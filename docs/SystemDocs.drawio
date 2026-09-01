@@ -1,6 +1,6 @@
 <mxfile host="65bd71144e">
     <diagram id="Mi8evZDzhRH7zFpaVJ2M" name="Page-1">
-        <mxGraphModel dx="2278" dy="2413" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" pageWidth="900" pageHeight="1600" background="#FFFFFF" math="0" shadow="0">
+        <mxGraphModel dx="2583" dy="2581" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" pageWidth="900" pageHeight="1600" background="#FFFFFF" math="0" shadow="0">
             <root>
                 <mxCell id="0"/>
                 <mxCell id="1" parent="0"/>
@@ -621,7 +621,7 @@
                 <mxCell id="429" value="&lt;div&gt;&lt;b&gt;&lt;u&gt;+ sealed class Universe : Workspace.Service&lt;/u&gt;&lt;/b&gt;&lt;/div&gt;&lt;br&gt;&lt;div&gt;Description —&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;Properties —&lt;/div&gt;&lt;br&gt;&lt;div&gt;&lt;font face=&quot;Consolas&quot;&gt;+ get, - set &lt;i&gt;TickRate&lt;/i&gt;: &lt;font color=&quot;#0000cc&quot;&gt;uint&lt;/font&gt;&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font face=&quot;Consolas&quot;&gt;+ get, - set &lt;i&gt;TickCount&lt;/i&gt;: &lt;font color=&quot;#0000cc&quot;&gt;long&lt;/font&gt;&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font face=&quot;Consolas&quot;&gt;+ get, - set &lt;i&gt;TickTime&lt;/i&gt;: &lt;font color=&quot;#0000cc&quot;&gt;double&lt;/font&gt;&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font face=&quot;Consolas&quot;&gt;+ get, - set &lt;i&gt;TickDeltaTime&lt;/i&gt;: &lt;font color=&quot;#0000cc&quot;&gt;double&lt;/font&gt;&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font face=&quot;Consolas&quot;&gt;+ get, - set &lt;i&gt;TickAllocated&lt;/i&gt;: &lt;font color=&quot;#0000cc&quot;&gt;long&lt;/font&gt;&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;&lt;font face=&quot;Consolas&quot;&gt;- entityTypeRegistry: &lt;font color=&quot;#0000cc&quot;&gt;Registry&amp;lt;EntityType&amp;gt;&lt;/font&gt;&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;&lt;font face=&quot;Consolas&quot;&gt;- entities: &lt;font color=&quot;#0000cc&quot;&gt;Dictionary&amp;lt;ID, EntityContainer&amp;gt;&lt;/font&gt;&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font face=&quot;Consolas&quot;&gt;- entityContainers: &lt;font color=&quot;#0000cc&quot;&gt;EntityContainer[]&lt;/font&gt;&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font face=&quot;Consolas&quot;&gt;- lastEntityID: &lt;font color=&quot;#0000cc&quot;&gt;int&lt;/font&gt;&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;&lt;font face=&quot;Consolas&quot;&gt;# override &lt;b&gt;Start&lt;/b&gt;()&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;&lt;font face=&quot;Consolas&quot;&gt;+ &lt;b&gt;CreateEntity&lt;/b&gt;(entityType: &lt;font color=&quot;#0000cc&quot;&gt;EntityType&lt;/font&gt;): &lt;font color=&quot;#0000cc&quot;&gt;ID&lt;/font&gt;&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font data-font-src=&quot;https://fonts.googleapis.com/css?family=Consolas&quot; face=&quot;Consolas&quot;&gt;&lt;span style=&quot;color: rgb(63, 63, 63);&quot;&gt;+ &lt;/span&gt;&lt;b style=&quot;color: rgb(63, 63, 63); scrollbar-color: rgb(226, 226, 226) rgb(251, 251, 251);&quot;&gt;EntityExists&lt;/b&gt;&lt;span style=&quot;color: rgb(63, 63, 63);&quot;&gt;(entityType: &lt;/span&gt;&lt;font style=&quot;scrollbar-color: rgb(226, 226, 226) rgb(251, 251, 251); color: rgb(0, 0, 204);&quot;&gt;EntityType&lt;/font&gt;&lt;span style=&quot;color: rgb(63, 63, 63);&quot;&gt;): &lt;/span&gt;&lt;font style=&quot;scrollbar-color: rgb(226, 226, 226) rgb(251, 251, 251); color: rgb(0, 0, 204);&quot;&gt;bool&lt;/font&gt;&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font data-font-src=&quot;https://fonts.googleapis.com/css?family=Consolas&quot; face=&quot;Consolas&quot;&gt;+ &lt;b&gt;EntityExists&lt;/b&gt;(entityID: &lt;font color=&quot;#0000cc&quot;&gt;ID&lt;/font&gt;): &lt;font color=&quot;#0000cc&quot;&gt;bool&lt;/font&gt;&lt;/font&gt;&lt;/div&gt;&lt;span style=&quot;color: rgb(63, 63, 63); font-family: Consolas;&quot;&gt;+ &lt;/span&gt;&lt;b style=&quot;color: rgb(63, 63, 63); scrollbar-color: rgb(226, 226, 226) rgb(251, 251, 251); font-family: Consolas;&quot;&gt;EntityHasComponent&lt;/b&gt;&lt;span style=&quot;color: rgb(63, 63, 63); font-family: Consolas;&quot;&gt;&lt;b&gt;&amp;lt;T: struct&amp;gt;&lt;/b&gt;(entityType: &lt;/span&gt;&lt;font style=&quot;scrollbar-color: rgb(226, 226, 226) rgb(251, 251, 251); font-family: Consolas; color: rgb(0, 0, 204);&quot;&gt;Type&lt;/font&gt;&lt;span style=&quot;color: rgb(63, 63, 63); font-family: Consolas;&quot;&gt;): &lt;/span&gt;&lt;font style=&quot;scrollbar-color: rgb(226, 226, 226) rgb(251, 251, 251); font-family: Consolas; color: rgb(0, 0, 204);&quot;&gt;bool&lt;/font&gt;&lt;div&gt;&lt;font data-font-src=&quot;https://fonts.googleapis.com/css?family=Consolas&quot; face=&quot;Consolas&quot;&gt;+ &lt;b&gt;EntityHasComponent&amp;lt;T: struct&amp;gt;&lt;/b&gt;(entityID: &lt;font color=&quot;#0000cc&quot;&gt;ID&lt;/font&gt;): &lt;font color=&quot;#0000cc&quot;&gt;bool&lt;/font&gt;&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font data-font-src=&quot;https://fonts.googleapis.com/css?family=Consolas&quot; face=&quot;Consolas&quot;&gt;+ &lt;b&gt;GetEntityComponent&amp;lt;T: struct&amp;gt;&lt;/b&gt;(entityID: &lt;font color=&quot;#0000cc&quot;&gt;ID&lt;/font&gt;): &lt;font color=&quot;#0000cc&quot;&gt;ref T&lt;/font&gt;&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font data-font-src=&quot;https://fonts.googleapis.com/css?family=Consolas&quot; face=&quot;Consolas&quot;&gt;+ &lt;b&gt;GetEntityType&lt;/b&gt;(entityID: ID): &lt;font style=&quot;color: rgb(0, 0, 204);&quot;&gt;EntityType&lt;/font&gt;&lt;br&gt;+ &lt;b&gt;DestroyEntity&lt;/b&gt;(entityID: &lt;font color=&quot;#0000cc&quot;&gt;ID&lt;/font&gt;): &lt;font color=&quot;#0000cc&quot;&gt;bool&lt;br&gt;&lt;/font&gt;&lt;/font&gt;&lt;/div&gt;&lt;span style=&quot;color: rgb(63, 63, 63); font-family: Consolas;&quot;&gt;+ &lt;/span&gt;&lt;b style=&quot;color: rgb(63, 63, 63); scrollbar-color: rgb(226, 226, 226) rgb(251, 251, 251); font-family: Consolas;&quot;&gt;DestroyEntities&lt;/b&gt;&lt;span style=&quot;color: rgb(63, 63, 63); font-family: Consolas;&quot;&gt;(entityType: &lt;/span&gt;&lt;font style=&quot;scrollbar-color: rgb(226, 226, 226) rgb(251, 251, 251); font-family: Consolas; color: rgb(0, 0, 204);&quot;&gt;EntityType&lt;/font&gt;&lt;span style=&quot;color: rgb(63, 63, 63); font-family: Consolas;&quot;&gt;): &lt;/span&gt;&lt;font style=&quot;scrollbar-color: rgb(226, 226, 226) rgb(251, 251, 251); font-family: Consolas; color: rgb(0, 0, 204);&quot;&gt;bool&lt;/font&gt;&lt;div&gt;&lt;font data-font-src=&quot;https://fonts.googleapis.com/css?family=Consolas&quot; face=&quot;Consolas&quot;&gt;+ &lt;b&gt;DestroyEntities&lt;/b&gt;()&lt;/font&gt;&lt;/div&gt;&lt;br&gt;&lt;div&gt;&lt;font face=&quot;Consolas&quot;&gt;~ &lt;u&gt;Controller&lt;/u&gt;: &lt;font color=&quot;#0000cc&quot;&gt;struct&lt;/font&gt;&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font face=&quot;Consolas&quot;&gt;~ &lt;b&gt;StartCreatedEntities&lt;/b&gt;()&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font face=&quot;Consolas&quot;&gt;~ &lt;b&gt;UpdateEntities&lt;/b&gt;()&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font face=&quot;Consolas&quot;&gt;~ &lt;b&gt;RenderEntities&lt;/b&gt;()&lt;br&gt;~ &lt;b&gt;DestroyEntities&lt;/b&gt;()&lt;/font&gt;&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;fontFamily=Helvetica;" parent="1" vertex="1">
                     <mxGeometry x="1400" y="800" width="680" height="800" as="geometry"/>
                 </mxCell>
-                <mxCell id="432" value="&lt;div&gt;&lt;b&gt;&lt;u&gt;+ sealed class EntityType&lt;/u&gt;&lt;/b&gt;&lt;b style=&quot;background-color: transparent; color: rgb(63, 63, 63); scrollbar-color: rgb(226, 226, 226) rgb(251, 251, 251);&quot;&gt;&lt;u style=&quot;color: rgb(63, 63, 63); scrollbar-color: rgb(226, 226, 226) rgb(251, 251, 251);&quot;&gt; : Def&lt;/u&gt;&lt;/b&gt;&lt;/div&gt;&lt;br&gt;&lt;div&gt;Description —&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;Properties —&lt;/div&gt;&lt;br&gt;&lt;div&gt;&lt;font face=&quot;Consolas&quot;&gt;~ EntityType(token: &lt;font color=&quot;#0000cc&quot;&gt;Registry&amp;lt;EntityType&amp;gt;.Token&lt;/font&gt;, id: &lt;font color=&quot;#0000cc&quot;&gt;string&lt;/font&gt;, entitySystem: &lt;font color=&quot;#0000cc&quot;&gt;JsonObject&lt;/font&gt;, components: &lt;font color=&quot;#0000cc&quot;&gt;JsonObject&lt;/font&gt;): &lt;font color=&quot;#0000cc&quot;&gt;EntityType&lt;/font&gt;&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font face=&quot;Consolas&quot;&gt;&lt;br&gt;&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font face=&quot;Consolas&quot;&gt;+ get &lt;i&gt;Name&lt;/i&gt;: &lt;font style=&quot;color: rgb(0, 0, 204);&quot;&gt;string&lt;/font&gt;&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font data-font-src=&quot;https://fonts.googleapis.com/css?family=Consolas&quot; face=&quot;Consolas&quot;&gt;+ get &lt;i&gt;EntitySystemType&lt;/i&gt;: &lt;/font&gt;&lt;font&gt;&lt;font style=&quot;color: rgb(0, 0, 204);&quot; data-font-src=&quot;https://fonts.googleapis.com/css?family=Consolas&quot; face=&quot;Consolas&quot;&gt;Type&lt;/font&gt;&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font face=&quot;Consolas&quot;&gt;+ get &lt;i&gt;EntitySystemProperties&lt;/i&gt;: &lt;font style=&quot;color: rgb(0, 0, 204);&quot;&gt;IProperty[]&lt;/font&gt;&lt;font&gt;&lt;font style=&quot;color: rgb(0, 0, 204);&quot; data-font-src=&quot;https://fonts.googleapis.com/css?family=Consolas&quot;&gt;&lt;font color=&quot;#0000cc&quot;&gt;&lt;br&gt;&lt;/font&gt;&lt;/font&gt;+ get &lt;i&gt;Components&lt;/i&gt;: &lt;font style=&quot;color: rgb(0, 0, 204);&quot;&gt;IComponent[]&lt;/font&gt;&lt;/font&gt;&lt;/font&gt;&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;fontFamily=Helvetica;" parent="1" vertex="1">
+                <mxCell id="432" value="&lt;div&gt;&lt;b&gt;&lt;u&gt;+ sealed class EntityType&lt;/u&gt;&lt;/b&gt;&lt;b style=&quot;background-color: transparent; color: rgb(63, 63, 63); scrollbar-color: rgb(226, 226, 226) rgb(251, 251, 251);&quot;&gt;&lt;u style=&quot;color: rgb(63, 63, 63); scrollbar-color: rgb(226, 226, 226) rgb(251, 251, 251);&quot;&gt; : Def&lt;/u&gt;&lt;/b&gt;&lt;/div&gt;&lt;br&gt;&lt;div&gt;Description —&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;Properties —&lt;/div&gt;&lt;br&gt;&lt;div&gt;&lt;font face=&quot;Consolas&quot;&gt;~ EntityType(token: &lt;font color=&quot;#0000cc&quot;&gt;Registry&amp;lt;EntityType&amp;gt;.Token&lt;/font&gt;, id: &lt;font color=&quot;#0000cc&quot;&gt;string&lt;/font&gt;, entitySystem: &lt;font color=&quot;#0000cc&quot;&gt;JsonObject&lt;/font&gt;, components: &lt;font color=&quot;#0000cc&quot;&gt;JsonObject&lt;/font&gt;): &lt;font color=&quot;#0000cc&quot;&gt;EntityType&lt;/font&gt;&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font face=&quot;Consolas&quot;&gt;&lt;br&gt;&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font face=&quot;Consolas&quot;&gt;+ get &lt;i&gt;Name&lt;/i&gt;: &lt;font style=&quot;color: rgb(0, 0, 204);&quot;&gt;string&lt;/font&gt;&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font data-font-src=&quot;https://fonts.googleapis.com/css?family=Consolas&quot; face=&quot;Consolas&quot;&gt;+ get &lt;i&gt;EntitySystem&lt;/i&gt;: &lt;/font&gt;&lt;font&gt;&lt;font style=&quot;color: rgb(0, 0, 204);&quot; data-font-src=&quot;https://fonts.googleapis.com/css?family=Consolas&quot; face=&quot;Consolas&quot;&gt;EntitySystem&lt;/font&gt;&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font face=&quot;Consolas&quot;&gt;&lt;font&gt;+ get &lt;i&gt;Components&lt;/i&gt;: &lt;font style=&quot;color: rgb(0, 0, 204);&quot;&gt;&lt;font style=&quot;color: rgb(0, 0, 204);&quot;&gt;ReadOnlySpan&amp;lt;IComponent&amp;gt;&lt;/font&gt;&lt;br&gt;&lt;/font&gt;&lt;/font&gt;&lt;/font&gt;&lt;font data-font-src=&quot;https://fonts.googleapis.com/css?family=Consolas&quot; face=&quot;Consolas&quot;&gt;&lt;br&gt;- components: &lt;font style=&quot;color: rgb(0, 0, 204);&quot;&gt;IComponent[]&lt;/font&gt;&lt;/font&gt;&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;fontFamily=Helvetica;" parent="1" vertex="1">
                     <mxGeometry x="1400" y="1620" width="680" height="240" as="geometry"/>
                 </mxCell>
                 <mxCell id="433" value="&lt;div&gt;&lt;b&gt;&lt;u&gt;+ abstract class EntitySystem&lt;/u&gt;&lt;/b&gt;&lt;/div&gt;&lt;br&gt;&lt;div&gt;Description —&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;Properties —&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;&lt;font face=&quot;Consolas&quot;&gt;+ abstract &lt;b&gt;GetComponentTypes&lt;/b&gt;(): &lt;font color=&quot;#0000cc&quot;&gt;Type[]&lt;/font&gt;&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;&lt;font face=&quot;Consolas&quot;&gt;# get, - set &lt;i&gt;Graphics&lt;/i&gt;: &lt;font color=&quot;#0000cc&quot;&gt;Graphics&lt;/font&gt;&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font face=&quot;Consolas&quot;&gt;# get, - set &lt;i&gt;EntityType&lt;/i&gt;: &lt;font color=&quot;#0000cc&quot;&gt;EntityType&lt;/font&gt;&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;&lt;font face=&quot;Consolas&quot;&gt;~ &lt;b&gt;Initialize&lt;/b&gt;(entityType: &lt;font color=&quot;#0000cc&quot;&gt;EntityType&lt;/font&gt;)&lt;br&gt;# virtual &lt;b&gt;Tick&lt;/b&gt;()&lt;/font&gt;&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;fontFamily=Helvetica;" parent="1" vertex="1">
@@ -650,7 +650,7 @@
                 <mxCell id="484" value="CoreThread Tick" style="ellipse;whiteSpace=wrap;html=1;fontFamily=Helvetica;" parent="1" vertex="1">
                     <mxGeometry x="740" y="800" width="120" height="80" as="geometry"/>
                 </mxCell>
-                <mxCell id="574" value="" style="edgeStyle=none;html=1;" parent="1" source="521" target="573" edge="1">
+                <mxCell id="718" value="" style="edgeStyle=none;html=1;" parent="1" source="521" target="573" edge="1">
                     <mxGeometry relative="1" as="geometry"/>
                 </mxCell>
                 <mxCell id="521" value="Tick Universe" style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Helvetica;" parent="1" vertex="1">
@@ -690,15 +690,15 @@
                 <mxCell id="530" value="Render UI" style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Helvetica;" parent="1" vertex="1">
                     <mxGeometry x="740" y="1370" width="120" height="60" as="geometry"/>
                 </mxCell>
-                <mxCell id="579" value="" style="edgeStyle=none;html=1;" parent="1" source="534" target="547" edge="1">
+                <mxCell id="720" value="" style="edgeStyle=none;html=1;" parent="1" source="534" target="538" edge="1">
                     <mxGeometry relative="1" as="geometry"/>
                 </mxCell>
                 <mxCell id="534" value="Destroy Entities" style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Helvetica;" parent="1" vertex="1">
-                    <mxGeometry x="900" y="1280" width="120" height="60" as="geometry"/>
+                    <mxGeometry x="900" y="1190" width="120" height="60" as="geometry"/>
                 </mxCell>
-                <mxCell id="540" style="edgeStyle=none;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;exitX=0.5;exitY=1;exitDx=0;exitDy=0;" parent="1" source="547" target="526" edge="1">
+                <mxCell id="540" style="edgeStyle=none;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" target="526" edge="1">
                     <mxGeometry relative="1" as="geometry">
-                        <mxPoint x="960" y="1460" as="sourcePoint"/>
+                        <mxPoint x="960" y="1430" as="sourcePoint"/>
                         <Array as="points">
                             <mxPoint x="960" y="1450"/>
                             <mxPoint x="880" y="1450"/>
@@ -707,11 +707,11 @@
                         </Array>
                     </mxGeometry>
                 </mxCell>
-                <mxCell id="581" value="" style="edgeStyle=none;html=1;" parent="1" source="538" target="534" edge="1">
+                <mxCell id="721" value="" style="edgeStyle=none;html=1;" parent="1" source="538" target="547" edge="1">
                     <mxGeometry relative="1" as="geometry"/>
                 </mxCell>
                 <mxCell id="538" value="Start Created Entities" style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Helvetica;" parent="1" vertex="1">
-                    <mxGeometry x="900" y="1190" width="120" height="60" as="geometry"/>
+                    <mxGeometry x="900" y="1280" width="120" height="60" as="geometry"/>
                 </mxCell>
                 <mxCell id="545" value="&lt;h1 style=&quot;margin-top: 0px;&quot;&gt;Creating Entity&lt;br&gt;&lt;/h1&gt;&lt;div&gt;&lt;font face=&quot;Consolas&quot;&gt;• Allocates a slot at the end of the container.&lt;br&gt;• The new Entity is not updated until the next tick&lt;br&gt;• Entity is created instantly&lt;/font&gt;&lt;/div&gt;" style="text;html=1;whiteSpace=wrap;overflow=hidden;rounded=0;fillColor=#f5f5f5;fontColor=#333333;strokeColor=#666666;fontFamily=Helvetica;" parent="1" vertex="1">
                     <mxGeometry x="2800" y="800" width="340" height="120" as="geometry"/>
@@ -730,12 +730,6 @@
                 </mxCell>
                 <mxCell id="553" value="&lt;h1 style=&quot;margin-top: 0px;&quot;&gt;Method class methods&lt;br&gt;&lt;/h1&gt;&lt;div&gt;&lt;font face=&quot;Consolas&quot; data-font-src=&quot;https://fonts.googleapis.com/css?family=Consolas&quot;&gt;• Invoke(index): Invokes the method on a single target entity specified by its index.&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font face=&quot;Consolas&quot;&gt;&lt;font data-font-src=&quot;https://fonts.googleapis.com/css?family=Consolas&quot;&gt;&lt;br&gt;&lt;span style=&quot;color: rgb(63, 63, 63);&quot;&gt;• Invoke(indexes):&amp;nbsp;&lt;/span&gt;&lt;/font&gt;&lt;span style=&quot;background-color: transparent;&quot;&gt;Invokes the specified method across multiple target entities identified by their indexes.&lt;/span&gt;&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font face=&quot;Consolas&quot; data-font-src=&quot;https://fonts.googleapis.com/css?family=Consolas&quot;&gt;&lt;span style=&quot;color: rgb(63, 63, 63);&quot;&gt;&lt;br&gt;&lt;/span&gt;&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font face=&quot;Consolas&quot; data-font-src=&quot;https://fonts.googleapis.com/css?family=Consolas&quot;&gt;• InvokeFor(length): Invokes the method sequentially across a specified range of entities, starting from the beginning up to the given length.&lt;br&gt;&lt;br&gt;&lt;/font&gt;&lt;/div&gt;&lt;div&gt;&lt;font data-font-src=&quot;https://fonts.googleapis.com/css?family=Consolas&quot; face=&quot;Consolas&quot;&gt;&lt;font data-font-src=&quot;https://fonts.googleapis.com/css?family=Consolas&quot;&gt;• InvokeBackFor(length):&amp;nbsp;&lt;/font&gt;&lt;span style=&quot;background-color: transparent;&quot;&gt;Invokes the method sequentially across a specified range of entities, starting from the end and moving backward for the given length.&lt;/span&gt;&lt;/font&gt;&lt;/div&gt;" style="text;html=1;whiteSpace=wrap;overflow=hidden;rounded=0;fillColor=#f5f5f5;fontColor=#333333;strokeColor=#666666;fontFamily=Helvetica;" parent="1" vertex="1">
                     <mxGeometry x="2800" y="1620" width="340" height="580" as="geometry"/>
-                </mxCell>
-                <mxCell id="583" value="" style="edgeStyle=none;html=1;" parent="1" source="573" target="538" edge="1">
-                    <mxGeometry relative="1" as="geometry"/>
-                </mxCell>
-                <mxCell id="573" value="Tick EntitySystems" style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Helvetica;" parent="1" vertex="1">
-                    <mxGeometry x="900" y="1100" width="120" height="60" as="geometry"/>
                 </mxCell>
                 <mxCell id="593" value="&lt;span style=&quot;color: rgb(0, 0, 0);&quot;&gt;&lt;font style=&quot;font-size: 35px;&quot;&gt;Def System&lt;/font&gt;&lt;/span&gt;" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fillColor=#E6E6E6;fontFamily=Helvetica;" parent="1" vertex="1">
                     <mxGeometry x="4200" y="-1200" width="640" height="40" as="geometry"/>
@@ -860,17 +854,8 @@
                 <mxCell id="656" value="PatchNodes" style="rounded=1;whiteSpace=wrap;html=1;" parent="1" vertex="1">
                     <mxGeometry x="5070" y="-760" width="120" height="60" as="geometry"/>
                 </mxCell>
-                <mxCell id="675" value="" style="edgeStyle=none;html=1;" parent="1" source="659" target="662" edge="1">
-                    <mxGeometry relative="1" as="geometry"/>
-                </mxCell>
                 <mxCell id="659" value="Defs MergeNodes" style="ellipse;whiteSpace=wrap;html=1;fontFamily=Helvetica;" parent="1" vertex="1">
                     <mxGeometry x="5310" y="-1080" width="120" height="80" as="geometry"/>
-                </mxCell>
-                <mxCell id="677" value="" style="edgeStyle=none;html=1;" parent="1" source="662" target="676" edge="1">
-                    <mxGeometry relative="1" as="geometry"/>
-                </mxCell>
-                <mxCell id="662" value="Foreach DefNode" style="rounded=0;whiteSpace=wrap;html=1;" parent="1" vertex="1">
-                    <mxGeometry x="5310" y="-859" width="120" height="60" as="geometry"/>
                 </mxCell>
                 <mxCell id="671" value="DefNode Dictionary" style="rounded=1;whiteSpace=wrap;html=1;" parent="1" vertex="1">
                     <mxGeometry x="4930" y="-660" width="120" height="60" as="geometry"/>
@@ -878,97 +863,11 @@
                 <mxCell id="673" value="PatchNode List" style="rounded=1;whiteSpace=wrap;html=1;" parent="1" vertex="1">
                     <mxGeometry x="5070" y="-660" width="120" height="60" as="geometry"/>
                 </mxCell>
-                <mxCell id="691" value="" style="edgeStyle=none;html=1;" parent="1" source="676" target="681" edge="1">
+                <mxCell id="719" value="" style="edgeStyle=none;html=1;" parent="1" source="573" target="534" edge="1">
                     <mxGeometry relative="1" as="geometry"/>
                 </mxCell>
-                <mxCell id="676" value="Has Parent" style="rhombus;whiteSpace=wrap;html=1;" parent="1" vertex="1">
-                    <mxGeometry x="5330" y="-769" width="80" height="80" as="geometry"/>
-                </mxCell>
-                <mxCell id="684" value="" style="edgeStyle=none;html=1;" parent="1" source="681" target="683" edge="1">
-                    <mxGeometry relative="1" as="geometry"/>
-                </mxCell>
-                <mxCell id="681" value="Get Parent Node" style="rounded=0;whiteSpace=wrap;html=1;" parent="1" vertex="1">
-                    <mxGeometry x="5310" y="-659" width="120" height="60" as="geometry"/>
-                </mxCell>
-                <mxCell id="689" style="edgeStyle=none;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="683" target="698" edge="1">
-                    <mxGeometry relative="1" as="geometry">
-                        <mxPoint x="5370" y="-459" as="targetPoint"/>
-                    </mxGeometry>
-                </mxCell>
-                <mxCell id="690" value="No" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="689" vertex="1" connectable="0">
-                    <mxGeometry x="-0.3524" y="-1" relative="1" as="geometry">
-                        <mxPoint x="1" as="offset"/>
-                    </mxGeometry>
-                </mxCell>
-                <mxCell id="695" style="edgeStyle=none;html=1;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" parent="1" source="683" target="694" edge="1">
-                    <mxGeometry relative="1" as="geometry">
-                        <Array as="points">
-                            <mxPoint x="5510" y="-529"/>
-                        </Array>
-                    </mxGeometry>
-                </mxCell>
-                <mxCell id="702" value="Yes" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="695" vertex="1" connectable="0">
-                    <mxGeometry x="-0.5105" relative="1" as="geometry">
-                        <mxPoint as="offset"/>
-                    </mxGeometry>
-                </mxCell>
-                <mxCell id="683" value="Parent Has Parent" style="rhombus;whiteSpace=wrap;html=1;" parent="1" vertex="1">
-                    <mxGeometry x="5330" y="-569" width="80" height="80" as="geometry"/>
-                </mxCell>
-                <mxCell id="696" style="edgeStyle=none;html=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="694" target="681" edge="1">
-                    <mxGeometry relative="1" as="geometry">
-                        <Array as="points">
-                            <mxPoint x="5510" y="-679"/>
-                            <mxPoint x="5370" y="-679"/>
-                        </Array>
-                    </mxGeometry>
-                </mxCell>
-                <mxCell id="694" value="Cache the Node in a stack" style="rounded=0;whiteSpace=wrap;html=1;" parent="1" vertex="1">
-                    <mxGeometry x="5450" y="-659" width="120" height="60" as="geometry"/>
-                </mxCell>
-                <mxCell id="704" value="" style="edgeStyle=none;html=1;" parent="1" source="698" target="703" edge="1">
-                    <mxGeometry relative="1" as="geometry"/>
-                </mxCell>
-                <mxCell id="698" value="Foreach stack" style="rounded=0;whiteSpace=wrap;html=1;" parent="1" vertex="1">
-                    <mxGeometry x="5310" y="-458" width="120" height="60" as="geometry"/>
-                </mxCell>
-                <mxCell id="701" value="Yes" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" parent="1" vertex="1">
-                    <mxGeometry x="5320" y="-689" width="40" height="30" as="geometry"/>
-                </mxCell>
-                <mxCell id="705" style="edgeStyle=none;html=1;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="703" target="698" edge="1">
-                    <mxGeometry relative="1" as="geometry">
-                        <Array as="points">
-                            <mxPoint x="5450" y="-329"/>
-                            <mxPoint x="5450" y="-428"/>
-                        </Array>
-                    </mxGeometry>
-                </mxCell>
-                <mxCell id="706" value="No" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="705" vertex="1" connectable="0">
-                    <mxGeometry x="-0.8051" y="-1" relative="1" as="geometry">
-                        <mxPoint as="offset"/>
-                    </mxGeometry>
-                </mxCell>
-                <mxCell id="708" value="" style="edgeStyle=none;html=1;" parent="1" source="703" target="707" edge="1">
-                    <mxGeometry relative="1" as="geometry"/>
-                </mxCell>
-                <mxCell id="709" value="Yes" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="708" vertex="1" connectable="0">
-                    <mxGeometry x="-0.2344" y="-1" relative="1" as="geometry">
-                        <mxPoint as="offset"/>
-                    </mxGeometry>
-                </mxCell>
-                <mxCell id="703" value="Node Has Parent" style="rhombus;whiteSpace=wrap;html=1;" parent="1" vertex="1">
-                    <mxGeometry x="5330" y="-369" width="80" height="80" as="geometry"/>
-                </mxCell>
-                <mxCell id="710" style="edgeStyle=none;html=1;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="707" target="698" edge="1">
-                    <mxGeometry relative="1" as="geometry">
-                        <Array as="points">
-                            <mxPoint x="5450" y="-229"/>
-                            <mxPoint x="5450" y="-428"/>
-                        </Array>
-                    </mxGeometry>
-                </mxCell>
-                <mxCell id="707" value="Merge parent node with child node" style="rounded=0;whiteSpace=wrap;html=1;" parent="1" vertex="1">
-                    <mxGeometry x="5310" y="-259" width="120" height="60" as="geometry"/>
+                <mxCell id="573" value="Tick EntitySystems" style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Helvetica;" parent="1" vertex="1">
+                    <mxGeometry x="900" y="1100" width="120" height="60" as="geometry"/>
                 </mxCell>
             </root>
         </mxGraphModel>

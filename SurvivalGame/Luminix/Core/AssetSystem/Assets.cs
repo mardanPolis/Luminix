@@ -103,6 +103,13 @@ public sealed class Assets : Workspace.Service
         for (int i = 0; i < textureAssets.Count; i++)
         {
             var texture = textureAssets[i];
+
+            if(texture == null)
+            {
+                logger.NewLog(Logger.Log.Level.Error, "Unable to add texture to an atlas, reason: provided texture is null!");
+                continue;
+            }
+
             string textureName = Path.GetFileName(texture.Identifier.Replace('·', Path.DirectorySeparatorChar));
             string atlasName = texture.Identifier.Substring(0, Math.Max(0, texture.Identifier.Length - textureName.Length - 1));
 
@@ -218,35 +225,23 @@ public sealed class Assets : Workspace.Service
             }
         });
 
-        Task assetAssemblyTask = Task.Run(() =>
-        {
-            try
-            {
-                assets.AddRange(textureAssets.Values);
-                assets.AddRange(atlasAssets.Values);
-                assets.AddRange(audioAssets.Values);
-                assets.AddRange(shaderAssets.Values);
-                assets.AddRange(fontAssets.Values);
+        assets.AddRange(textureAssets.Values);
+        assets.AddRange(atlasAssets.Values);
+        assets.AddRange(audioAssets.Values);
+        assets.AddRange(shaderAssets.Values);
+        assets.AddRange(fontAssets.Values);
 
-                var pending = new List<Task> { audioTask, textureTask };
-                Task finished = Task.WhenAny(pending).GetAwaiter().GetResult();
+        var pending = new List<Task> { audioTask, textureTask };
+        Task.WhenAll(pending).GetAwaiter().GetResult();;
 
-                assets.AddRange(audioResults);
-                assets.AddRange(makeAtlases ? CreateAtlasAssets(textureResults) : textureResults);
-            }
-            catch (Exception ex)
-            {
-                Logger.Initialize().NewLog(Logger.Log.Level.Error, $"Fatal Error: {ex}");
-                throw;
-            }
-        });
+        assets.AddRange(audioResults);
+        assets.AddRange(makeAtlases ? CreateAtlasAssets(textureResults) : textureResults);
 
         for(int i = 0; i < dataAssets.Count; i++)
         {
             defs.ParseDataAsset(dataAssets[i]);
         }
 
-        assetAssemblyTask.GetAwaiter().GetResult();
         assetBridge.Register(assets).GetAwaiter().GetResult();
 
         textureAssetInfos.Clear();

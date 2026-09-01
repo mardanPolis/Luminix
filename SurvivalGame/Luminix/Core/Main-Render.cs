@@ -8,14 +8,18 @@ using Microsoft.Xna.Framework.Graphics;
 using Luminix.Rendering;
 using Luminix.Threading;
 using Luminix.Threading.Bridges;
-using Luminix.Core.Handlers;
+using Luminix.InputSystem.Handlers;
 using Luminix.Threading.Buffers;
+using Luminix.IO;
 
 namespace Luminix;
 internal sealed class MainRender : Microsoft.Xna.Framework.Game
 {
     internal MainRender(TickedThread coreThread)
     {
+        logger = Logger.Get();
+        logger.EchoToConsole = true;
+
         //workspace
         workspace = new Workspace(out workspaceController);
 
@@ -32,7 +36,10 @@ internal sealed class MainRender : Microsoft.Xna.Framework.Game
         resourceManager = new ResourceManager(this);
         IsMouseVisible = true;
 
+        this.mainThread = Thread.CurrentThread;
         this.coreThread = coreThread;
+
+        logger.NewLog(Logger.Log.Level.Info, $"RenderThread bootstrap in {stopwatch.Elapsed.Milliseconds}ms");
     }
 
     //Core Bridges
@@ -85,28 +92,20 @@ internal sealed class MainRender : Microsoft.Xna.Framework.Game
         init => base.Content = value;
     }
 
-    internal void Start()
-    {
-        
-    }
-
     protected override void Initialize()
     {
         try
         {
-            logger = Logger.Get();
-            logger.EchoToConsole = true;
-            logger.NewLog(Logger.Log.Level.Info, $"Started initialization");
+            logger.NewLog(Logger.Log.Level.Info, $"Started initialization in {stopwatch.Elapsed.Milliseconds}ms");
 
             renderBridge = ThreadBridges.GetBridge<RenderBridge>("CoreThread");
             coreInputBridge = ThreadBridges.GetBridge<InputBridge>("CoreThread");
             coreResourceBridge = ThreadBridges.GetBridge<ResourceBridge>("CoreThread");
             coreAssetBridge = ThreadBridges.GetBridge<AssetBridge>("CoreThread");
             
-            logger.NewLog(Logger.Log.Level.Info, $"Initializing");
             startBytes = GC.GetAllocatedBytesForCurrentThread();
             
-            System.Threading.ThreadPool.SetMaxThreads(3, 1);
+            AssetIO assetIO = new AssetIO();
 
             //systems
             renderingSystem = new RenderingSystem(this, renderBridge);
@@ -119,19 +118,18 @@ internal sealed class MainRender : Microsoft.Xna.Framework.Game
 
             TextureAsset nullTextureAsset = new ("NullTexture", Resources.BuiltIn.NullTextureColor, new Vector2(32, 32));
             TextureAsset pixelTextureAsset = new ("Pixel", Resources.BuiltIn.PixelTextureColor, new Vector2(1, 1));
+
             resourceManager.CreateResource(nullTextureAsset);
             resourceManager.CreateResource(pixelTextureAsset);
 
-            //Loading Embedded assets
+            resourceManager.CreateResource(assetIO.LoadXnbAsset(LuminixManifest.Assembly, "Assets.Built-In.Fonts.IBMPlexMono-Bold.xnb"));
+            resourceManager.CreateResource(assetIO.LoadXnbAsset(LuminixManifest.Assembly, "Assets.Built-In.Fonts.IBMPlexMono-Medium.xnb"));
+            resourceManager.CreateResource(assetIO.LoadXnbAsset(LuminixManifest.Assembly, "Assets.Built-In.Fonts.IBMPlexMono-Regular.xnb"));
+            resourceManager.CreateResource(assetIO.LoadXnbAsset(LuminixManifest.Assembly, "Assets.Built-In.Shaders.GenericShader.xnb"));
 
-            foreach(var adapter in GraphicsAdapter.Adapters)
-            {
-                logger.NewLog(Logger.Log.Level.Info, $"Adapter: {adapter.DisplayName}");
-                foreach(var mode in adapter.SupportedDisplayModes)
-                {
-                    logger.NewLog(Logger.Log.Level.Info, $" - Mode: {mode.ToString()}");
-                }
-            }
+            resourceManager.Resources.Set(resourceManager.TextureResources, resourceManager.AudioResources, resourceManager.FontResources, resourceManager.ShaderResources);
+
+            //Adapters
 
             //Renderer initialization   
             renderingSystem.Initialize();
@@ -165,13 +163,16 @@ internal sealed class MainRender : Microsoft.Xna.Framework.Game
         inputHandler.Update(IsActive);
 
         /*| Resources */
-        coreAssetBridge.ConsumeAssets(resourceManager.CreateResource, out List<TaskCompletionSource> tsks);
-        resourceManager.Resources.Set(resourceManager.TextureResources, resourceManager.AudioResources, resourceManager.FontResources, resourceManager.ShaderResources);
-        coreResourceBridge.Set(resourceManager.Resources.GetResources());
+        if(coreAssetBridge.AssetsPassing)
+        {
+            coreAssetBridge.ConsumeAssets(resourceManager.CreateResource, out List<TaskCompletionSource> tsks);
+            resourceManager.Resources.Set(resourceManager.TextureResources, resourceManager.AudioResources, resourceManager.FontResources, resourceManager.ShaderResources);
+            coreResourceBridge.Set(resourceManager.Resources.GetResources());
 
-        for(int i = 0; i < tsks.Count; i++)
-            tsks[i].SetResult();
-            
+            for(int i = 0; i < tsks.Count; i++)
+                tsks[i].SetResult();
+                
+        }
         /* Resources END |*/
 
         var windowPos = Window.ClientBounds.Location;
