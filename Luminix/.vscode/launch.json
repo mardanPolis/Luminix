@@ -5,10 +5,10 @@
     "version": "0.2.0",
     "configurations": [
       {
-        "name": "C#: SurvivalGame Debug",
+        "name": "C#: Luminix Debug",
         "type": "dotnet",
         "request": "launch",
-        "projectPath": "${workspaceFolder}/SurvivalGame.csproj"
+        "projectPath": "${workspaceFolder}/Luminix.csproj"
       }
     ],
   }
