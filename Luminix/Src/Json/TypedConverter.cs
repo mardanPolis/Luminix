@@ -20,7 +20,7 @@ public class TypedConverterFactory : JsonConverterFactory
 
     public class TypedConverter<T> : JsonConverter<T> where T : class
     {
-        public override T? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+        public override T Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {
             if(reader.TokenType == JsonTokenType.Null) return null;
 
@@ -45,7 +45,7 @@ public class TypedConverterFactory : JsonConverterFactory
                 throw new JsonException($"Cannot instantiate abstract type '{typeof(T).Name}' without a 'Type' discriminator.");
             }
 
-            return (T?)JsonSerializer.Deserialize(root.GetRawText(), targetType, options);
+            return (T)JsonSerializer.Deserialize(root.GetRawText(), targetType, options);
         }
 
         public override void Write(Utf8JsonWriter writer, T value, JsonSerializerOptions options)

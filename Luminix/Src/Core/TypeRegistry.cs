@@ -42,23 +42,32 @@ public static class TypeRegistry
         return;
     }
 
+    public static void Add(Type type, string name)
+    {
+        if(typeNames.ContainsKey(type))
+            return;
+
+        types.TryAdd(name, type);
+        typeNames.TryAdd(type, name);
+        return;
+    }
+
     private static Type Resolve(string name)
     {
         int firstDot = name.IndexOf('.');
         if (firstDot < 0)
             throw new ArgumentException(
-                $"'{name}' is not valid. Expected format: 'AssemblyName.Namespace.ClassName'.",
+                $"'{name}' is not valid. Expected format: 'Namespace.ClassName'. First namespace - assembly name.",
                 nameof(name));
 
         string assemblyName = name[..firstDot];
-        string typeName = name[(firstDot + 1)..];
 
         var assembly = LuminixManifest.GetAssembly(assemblyName);
 
-        var type = assembly.GetType(typeName, throwOnError: false)
-            ?? assembly.GetTypes().FirstOrDefault(t => t.Name == typeName);
+        var type = assembly.GetType(name, throwOnError: false)
+            ?? assembly.GetTypes().FirstOrDefault(t => t.Name == name);
 
-        if (type == null) throw new ArgumentException($"'{name}' — assembly '{assemblyName}' was found, but no type named '{typeName}' exists in it.", nameof(name));
+        if (type == null) throw new ArgumentException($"'{name}' — assembly '{assemblyName}' was found, but no type named '{name}' exists in it.", nameof(name));
 
         return type;
     }

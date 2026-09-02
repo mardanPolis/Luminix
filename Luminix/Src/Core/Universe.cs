@@ -7,8 +7,6 @@ namespace Luminix;
 
 public sealed partial class Universe : Workspace.Service
 {
-    private readonly Defs defs;
-
     internal readonly struct Controller 
     {
         internal Controller(Universe controlled)
@@ -91,11 +89,13 @@ public sealed partial class Universe : Workspace.Service
         var defs = Workspace.Current.GetService<Defs>();
         var entityTypes = defs.GetDefs<EntityType>();
         entityContainers = CreateEntityContainers(entityTypes);
+        entities = [];
+        
+        foreach(EntityContainer container in entityContainers)
+            typeContainers[container.Type] = container;
 
         foreach(EntityContainer container in entityContainers)
-        {
             container.EntitySystem.Initialize(container.Type);
-        }
     }
 
     public ID CreateEntity(EntityType entityType)
@@ -110,6 +110,10 @@ public sealed partial class Universe : Workspace.Service
         entities[entityID] = entityType; 
 
         return entityID;
+    }
+    public bool EntityExists(ID entityID)
+    {
+        return entities.ContainsKey(entityID);
     }
     public bool DestroyEntity(ID entityID)
     {
@@ -126,11 +130,6 @@ public sealed partial class Universe : Workspace.Service
         container.Destroy(entityID);
         entities.Remove(entityID);
         return true;
-    }
-
-    public bool EntityExists(ID entityID)
-    {
-        return entities.ContainsKey(entityID);
     }
 
     public ref T GetEntityComponent<T>(ID entityID) where T : struct

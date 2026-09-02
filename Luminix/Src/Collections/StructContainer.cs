@@ -1,10 +1,12 @@
 using System;
+using System.Runtime.CompilerServices;
 
 namespace Luminix.Collections;
 
 internal class StructContainer<T> : IStructContainer where T : struct
 {
     public Type StructType => typeof(T);
+    public int StructSize => Unsafe.SizeOf<T>();
     public int Length => data.Length;
 
     public T[] Data => data;

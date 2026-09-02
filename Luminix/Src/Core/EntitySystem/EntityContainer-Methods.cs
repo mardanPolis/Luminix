@@ -34,22 +34,40 @@ internal partial class EntityContainer
                 Type parameterType = parameterInfo.ParameterType;
                 Type elementType = parameterType.GetElementType();
 
-                if(!parameterType.IsByRef)
-                {
-                    if(isByInOnly || elementType == typeof(ID))
-                        throw new InvalidOperationException($"Parameter '{parameterInfo.Name}' on '{methodInfo.DeclaringType?.Name}.{methodInfo.Name}' must be passed by 'in' parameter modifier!");
-
-                    throw new InvalidOperationException($"Parameter '{parameterInfo.Name}' on '{methodInfo.DeclaringType?.Name}.{methodInfo.Name}' must be passed by 'ref'/'in' parameter modifier!");
-                }
-
-                if((isByInOnly || elementType == typeof(ID)) && !parameterInfo.IsIn)
-                    throw new InvalidOperationException($"Parameter '{parameterInfo.Name}' on '{methodInfo.DeclaringType?.Name}.{methodInfo.Name}' must be passed by 'in' parameter modifier!");
+                if (!structContainers.TryGetValue(elementType, out var container))
+                    throw new InvalidOperationException($"EntityType has no component with Type {elementType.Name}!");
+                
+                if (parameterInfo.IsOut)
+                    throw new InvalidOperationException($"Parameter '{parameterInfo.Name}' on '{methodInfo.DeclaringType?.Name}.{methodInfo.Name}' must not be passed with 'out' parameter modifier!");
 
                 if(!parameterTypes.TryAdd(elementType))
                     throw new InvalidOperationException($"Repeating parameters with the same type {elementType.Name}!");
 
-                if (!structContainers.TryGetValue(elementType, out var container))
-                    throw new InvalidOperationException($"EntityType has no component with Type {elementType.Name}!");
+                var structSize = container.StructSize;
+
+                if (elementType == typeof(ID))
+                {
+                    if (parameterType.IsByRef)
+                        throw new InvalidOperationException($"Parameter '{parameterInfo.Name}' on '{methodInfo.DeclaringType?.Name}.{methodInfo.Name}' must be passed by value.");
+                }
+                else
+                {
+                    if(!parameterType.IsByRef && structSize > 8)
+                    {
+                        if(isByInOnly)
+                            throw new InvalidOperationException($"Parameter '{parameterInfo.Name}' on '{methodInfo.DeclaringType?.Name}.{methodInfo.Name}' must be passed by 'in' parameter modifier!");
+
+                        throw new InvalidOperationException($"Parameter '{parameterInfo.Name}' on '{methodInfo.DeclaringType?.Name}.{methodInfo.Name}' must be passed by 'ref'/'in' parameter modifier!");
+                    }
+
+                    if(isByInOnly && !parameterInfo.IsIn && structSize > 8)
+                        throw new InvalidOperationException($"Parameter '{parameterInfo.Name}' on '{methodInfo.DeclaringType?.Name}.{methodInfo.Name}' must be passed by 'in' parameter modifier!");
+
+                    if (parameterInfo.IsIn && structSize <= 8)
+                    {
+                        Logger.Get().NewLog(Logger.Log.Level.Warning, $"Parameter '{parameterInfo.Name}' on '{methodInfo.DeclaringType?.Name}.{methodInfo.Name}' is 'in {elementType.Name}' ({structSize} bytes) — no benefit over pass-by-value below 8 bytes, consider removing 'in'.");
+                    }
+                }
 
                 var elemType = elementTypes[i];
                 var concreteContainerType = typeof(StructContainer<>).MakeGenericType(elemType);

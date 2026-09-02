@@ -1,4 +1,5 @@
 using System;
+using Microsoft.Xna.Framework.Graphics;
 
 namespace Luminix.Threading.Buffers;
 
@@ -12,7 +13,7 @@ internal sealed class RenderInfoBuffer
     public long Allocated { get; set; }
     public long DrawCalls { get; set; }
 
-    public bool updated { get; set; }
+    public bool Updated { get; set; }
 
     public void Reset()
     {
@@ -24,6 +25,6 @@ internal sealed class RenderInfoBuffer
         Allocated = 0;
         DrawCalls = 0;
 
-        updated = false;
+        Updated = false;
     }
 }

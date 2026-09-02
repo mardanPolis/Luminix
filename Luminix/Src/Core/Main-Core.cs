@@ -79,15 +79,6 @@ internal sealed class MainCore
 
         defs.FinalizeDefs();
 
-        long before = GC.GetTotalMemory(false);
-        GC.Collect();
-        long after = GC.GetTotalMemory(true);
-
-        long cleared = before - after;
-        logger.NewLog(Logger.Log.Level.Info, $"GC cleared: {cleared / 1024.0:F2} KB ({cleared:N0} bytes)");
-        logger.NewLog(Logger.Log.Level.Info, $"Initialized in {stopwatch.Elapsed.Milliseconds}ms");
-
-
         Thread.CurrentThread.IsBackground = false;
     }
 

@@ -27,7 +27,7 @@ public sealed class Graphics : Workspace.Service
         {
             this.bridge.SwapBuffers();
             var renderInfoBuffer = this.bridge.CurrentReadInfoBuffer;
-            if(renderInfoBuffer == null || !renderInfoBuffer.updated)
+            if(renderInfoBuffer == null || !renderInfoBuffer.Updated)
                 return;
 
             var accumulatedFrameCount = renderInfoBuffer.AccumulatedFrameCount;
@@ -69,49 +69,49 @@ public sealed class Graphics : Workspace.Service
 
     public int DrawCalls { get; private set; }
 
-    public Viewport Viewport { get; private set; } // TODO: create a way to get the viewport over the bridge
+    public Viewport Viewport { get; private set; }
 
     public Point Resolution { get; private set; }
     public int RefreshRate { get; private set; }
 
-    public void DrawSprite(TextureResource texture, Vector3 position)                                   => DrawSprite(null, texture, Color.White, position, Vector2.One, 0);
-    public void DrawSprite(TextureResource texture, Vector3 position, float rotation)                   => DrawSprite(null, texture, Color.White, position, Vector2.One, rotation);
-    public void DrawSprite(TextureResource texture, Vector3 position, Vector2 scale)                    => DrawSprite(null, texture, Color.White, position, scale, 0);
-    public void DrawSprite(TextureResource texture, Vector3 position, Vector2 scale, float rotation)    => DrawSprite(null, texture, Color.White, position, scale, rotation);
-    public void DrawSprite(ShaderResource shader, TextureResource texture, Color color, Vector3 position, Vector2 scale, float rotation)
+    public void DrawSprite(TextureResource texture, in Vector3 position)                                    => DrawSprite(null, texture, Color.White, new Transform(position));
+    public void DrawSprite(TextureResource texture, in Vector3 position, float rotation)                    => DrawSprite(null, texture, Color.White, new Transform(position, rotation));
+    public void DrawSprite(TextureResource texture, in Vector3 position, in Vector2 scale)                  => DrawSprite(null, texture, Color.White, new Transform(position, scale));
+    public void DrawSprite(TextureResource texture, in Transform transform)                                 => DrawSprite(null, texture, Color.White, transform);
+    public void DrawSprite(ShaderResource shader, TextureResource texture, Color color, in Transform transform)
     {
         if (!EnsureRenderBuffer()) return;
-        renderBuffer.PushSprite(shader, texture, color, position, scale, rotation);
+        renderBuffer.PushSprite(shader, texture, color, transform);
     }
 
-    public void DrawTSprite(TextureResource texture, Vector3 position0, Vector3 position)                                                                    => DrawTSprite(null, texture, Color.White, position0, position, Vector2.One, Vector2.One, 0, 0);
-    public void DrawTSprite(TextureResource texture, Vector3 position0, Vector3 position, float rotation0, float rotation)                                   => DrawTSprite(null, texture, Color.White, position0, position, Vector2.One, Vector2.One, rotation0, rotation);
-    public void DrawTSprite(TextureResource texture, Vector3 position0, Vector3 position, Vector2 scale0, Vector2 scale)                                     => DrawTSprite(null, texture, Color.White, position0, position, scale0, scale, 0, 0);
-    public void DrawTSprite(TextureResource texture, Vector3 position0, Vector3 position, Vector2 scale0, Vector2 scale, float rotation0, float rotation)    => DrawTSprite(null, texture, Color.White, position0, position, scale0, scale, rotation0, rotation);
-    public void DrawTSprite(ShaderResource shader, TextureResource texture, Color color, Vector3 position0, Vector3 position, Vector2 scale0, Vector2 scale, float rotation0, float rotation)
+    public void DrawTSprite(TextureResource texture, in Vector3 position0, in Vector3 position)                                                                     => DrawTSprite(null, texture, Color.White, new Transform(position0), new Transform(position));
+    public void DrawTSprite(TextureResource texture, in Vector3 position0, in Vector3 position, float rotation0, float rotation)                                    => DrawTSprite(null, texture, Color.White, new Transform(position0, rotation0), new Transform(position, rotation));
+    public void DrawTSprite(TextureResource texture, in Vector3 position0, in Vector3 position, in Vector2 scale0, Vector2 scale)                                   => DrawTSprite(null, texture, Color.White, new Transform(position0, scale0), new Transform(position, scale));
+    public void DrawTSprite(TextureResource texture, in Transform from, in Transform to)                                                                            => DrawTSprite(null, texture, Color.White, from, to);
+    public void DrawTSprite(ShaderResource shader, TextureResource texture, Color color, in Transform from, in Transform to)
     {
         if (!EnsureRenderBuffer()) return;
-        renderBuffer.PushInterpolatedSprite(shader, texture, color, position0, position, scale0, scale, rotation0, rotation);
+        renderBuffer.PushInterpolatedSprite(shader, texture, color, from, to);
     }
 
-    public void DrawText(FontResource font, string text, Vector3 position)                                  => DrawText(null, font, Color.White, text, position, Vector2.One, 0);
-    public void DrawText(FontResource font, string text, Vector3 position, float rotation)                  => DrawText(null, font, Color.White, text, position, Vector2.One, rotation);
-    public void DrawText(FontResource font, string text, Vector3 position, Vector2 scale)                   => DrawText(null, font, Color.White, text, position, scale, 0);
-    public void DrawText(FontResource font, string text, Vector3 position, Vector2 scale, float rotation)   => DrawText(null, font, Color.White, text, position, scale, rotation);
-    public void DrawText(ShaderResource shader, FontResource font, Color color, string text, Vector3 position, Vector2 scale, float rotation)
+    public void DrawText(FontResource font, string text, Vector3 position)                                  => DrawText(null, font, Color.White, text, new Transform(position));
+    public void DrawText(FontResource font, string text, Vector3 position, float rotation)                  => DrawText(null, font, Color.White, text, new Transform(position, rotation));
+    public void DrawText(FontResource font, string text, Vector3 position, Vector2 scale)                   => DrawText(null, font, Color.White, text, new Transform(position, scale));
+    public void DrawText(FontResource font, string text, in Transform transform)                            => DrawText(null, font, Color.White, text, transform);
+    public void DrawText(ShaderResource shader, FontResource font, Color color, string text, in Transform transform)
     {
         if (!EnsureRenderBuffer()) return;
-        renderBuffer.PushText(shader, font, color, text, position, scale, rotation);
+        renderBuffer.PushText(shader, font, color, text, transform);
     }
 
-    public void DrawTText(FontResource font, string text, Vector3 position0, Vector3 position)                                                                   => DrawTText(null, font, Color.White, text, position0, position, Vector2.One, Vector2.One, 0, 0);
-    public void DrawTText(FontResource font, string text, Vector3 position0, Vector3 position, float rotation0, float rotation)                                  => DrawTText(null, font, Color.White, text, position0, position, Vector2.One, Vector2.One, rotation0, rotation);
-    public void DrawTText(FontResource font, string text, Vector3 position0, Vector3 position, Vector2 scale0, Vector2 scale)                                    => DrawTText(null, font, Color.White, text, position0, position, scale0, scale, 0, 0);
-    public void DrawTText(FontResource font, string text, Vector3 position0, Vector3 position, Vector2 scale0, Vector2 scale, float rotation0, float rotation)   => DrawTText(null, font, Color.White, text, position0, position, scale0, scale, rotation0, rotation);
-    public void DrawTText(ShaderResource shader, FontResource font, Color color, string text, Vector3 position0, Vector3 position, Vector2 scale0, Vector2 scale, float rotation0, float rotation)
+    public void DrawTText(FontResource font, string text, Vector3 position0, Vector3 position)                                                                  => DrawTText(null, font, Color.White, text, new Transform(position0), new Transform(position));
+    public void DrawTText(FontResource font, string text, Vector3 position0, Vector3 position, float rotation0, float rotation)                                 => DrawTText(null, font, Color.White, text, new Transform(position0, rotation0), new Transform(position, rotation));
+    public void DrawTText(FontResource font, string text, Vector3 position0, Vector3 position, Vector2 scale0, Vector2 scale)                                   => DrawTText(null, font, Color.White, text, new Transform(position0, scale0), new Transform(position, scale));
+    public void DrawTText(FontResource font, string text, in Transform from, in Transform to)                                                                   => DrawTText(null, font, Color.White, text, from, to);
+    public void DrawTText(ShaderResource shader, FontResource font, Color color, string text, in Transform from, in Transform to)
     {
         if (!EnsureRenderBuffer()) return;
-        renderBuffer.PushInterpolatedText(shader, font, color, text, position0, position, scale0, scale, rotation0, rotation);
+        renderBuffer.PushInterpolatedText(shader, font, color, text, from, to);
     }
 
     public void DrawImage(TextureResource image, int x, int y, int width, int height)                   => DrawImage(null, image, Color.White, x, y, width, height, 0);

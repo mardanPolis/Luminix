@@ -13,7 +13,8 @@ public static class LuminixJsonUtility
         IncludeFields = true,
         Converters = 
         {
-            new TypedConverterFactory()
+            new TypedConverterFactory(),
+            new ResourceConverterFactory()
         }
     };
 
@@ -46,7 +47,7 @@ public static class LuminixJsonUtility
 
     public static JsonObject Parse(Dictionary<string, JsonElement> elements)
     {
-        return new JsonObject(elements.Select(kvp => new KeyValuePair<string, JsonNode?>(kvp.Key, JsonNode.Parse(kvp.Value.GetRawText()))));
+        return new JsonObject(elements.Select(kvp => new KeyValuePair<string, JsonNode>(kvp.Key, JsonNode.Parse(kvp.Value.GetRawText()))));
     }
 
 

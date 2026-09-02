@@ -70,39 +70,39 @@ public sealed class RenderBuffer
         cameraData = camera?.GetCameraSnapshot();
     }
 
-    internal void PushSprite(ShaderResource shader, TextureResource texture, Color color, Vector3 position, Vector2 scale, float rotation)
+    internal void PushSprite(ShaderResource shader, TextureResource texture, Color color, in Transform transform)
     {
         ulong key = BuildSpriteKey(shader, texture);
  
         int dataIndex = instanceSprites.Count;
-        instanceSprites.Add(new InstanceSprite(shader, texture, color, position, scale, rotation));
+        instanceSprites.Add(new InstanceSprite(shader, texture, color, transform));
         NewCommand(key, RenderObjectType.SpriteNonInterpolated, dataIndex);
     }
-    internal void PushInterpolatedSprite(ShaderResource shader, TextureResource texture, Color color, Vector3 position0, Vector3 position, Vector2 scale0, Vector2 scale, float rotation0, float rotation)
+    internal void PushInterpolatedSprite(ShaderResource shader, TextureResource texture, Color color, in Transform from, in Transform to)
     {
         ulong key = BuildSpriteKey(shader, texture);
  
         int dataIndex = interpolatedInstanceSprites.Count;
-        interpolatedInstanceSprites.Add(new InterpolatedInstanceSprite(shader, texture, color, position0, position, scale0, scale, rotation0, rotation));
+        interpolatedInstanceSprites.Add(new InterpolatedInstanceSprite(shader, texture, color, from, to));
         NewCommand(key, RenderObjectType.SpriteInterpolated, dataIndex);
     }
 
 
-    internal void PushText(ShaderResource shader, FontResource font, Color color, string text, Vector3 position, Vector2 scale, float rotation)
+    internal void PushText(ShaderResource shader, FontResource font, Color color, string text, in Transform transform)
     {
         ulong key = BuildFontKey(shader, font);
  
         int dataIndex = instanceTexts.Count;
-        instanceTexts.Add(new InstanceText(shader, font, color, text, position, scale, rotation));
+        instanceTexts.Add(new InstanceText(shader, font, color, text, transform));
         NewCommand(key, RenderObjectType.TextNonInterpolated, dataIndex);
     }
 
-    internal void PushInterpolatedText(ShaderResource shader, FontResource font, Color color, string text, Vector3 position0, Vector3 position, Vector2 scale0, Vector2 scale, float rotation0, float rotation)
+    internal void PushInterpolatedText(ShaderResource shader, FontResource font, Color color, string text, in Transform from, in Transform to)
     {
         ulong key = BuildFontKey(shader, font);
  
         int dataIndex = interpolatedInstanceTexts.Count;
-        interpolatedInstanceTexts.Add(new InterpolatedInstanceText(shader, font, color, text, position0, position, scale0, scale, rotation0, rotation));
+        interpolatedInstanceTexts.Add(new InterpolatedInstanceText(shader, font, color, text, from, to));
         NewCommand(key, RenderObjectType.TextInterpolated, dataIndex);
     }
 

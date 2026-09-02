@@ -152,7 +152,7 @@ internal sealed class MainRender : Microsoft.Xna.Framework.Game
         long endBytes = GC.GetAllocatedBytesForCurrentThread();
         allocated = endBytes - startBytes;
 
-        logger.NewLog(Logger.Log.Level.Info, $"RenderThread allocated {allocated / 1024.0:F2} KB ({allocated:N0}) bytes during initialization!");
+        logger.NewLog(Logger.Log.Level.Info, $"RenderThread allocated {allocated / 1024.0:F2} KB | ({allocated:N0} bytes) during initialization!");
     }
 
     protected override void Update(GameTime gameTime)
@@ -204,7 +204,7 @@ internal sealed class MainRender : Microsoft.Xna.Framework.Game
         renderInfoBuffer.FrameDeltaTime += time.ElapsedGameTime.TotalMilliseconds;
         renderInfoBuffer.FrameTime += frameTime;
 
-        renderInfoBuffer.updated = true;
+        renderInfoBuffer.Updated = true;
         
         allocated = GC.GetAllocatedBytesForCurrentThread() - startBytes;
         startBytes = GC.GetAllocatedBytesForCurrentThread();
