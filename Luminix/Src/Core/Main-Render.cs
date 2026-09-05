@@ -197,10 +197,8 @@ internal sealed class MainRender : Microsoft.Xna.Framework.Game
         
         renderInfoBuffer.Allocated += allocated;
         renderInfoBuffer.DrawCalls = renderingSystem.DrawCount;
-
         renderInfoBuffer.FrameCount = renderingSystem.FrameCount;
         renderInfoBuffer.AccumulatedFrameCount++;
-        // TODO : renderInfoBuffer.FrameRate;
         renderInfoBuffer.FrameDeltaTime += time.ElapsedGameTime.TotalMilliseconds;
         renderInfoBuffer.FrameTime += frameTime;
 

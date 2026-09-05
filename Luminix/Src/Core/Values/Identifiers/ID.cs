@@ -25,5 +25,5 @@ public readonly record struct ID : IEquatable<ID>
 
     public override int GetHashCode() => (int)value;
 
-    public override string ToString() => $"[ID:{value}]";
+    public override string ToString() => $"[EntityID:{value}]";
 }

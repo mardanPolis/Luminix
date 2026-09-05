@@ -13,9 +13,7 @@ internal partial class EntityContainer
         public MethodInfo Info { get; }
         public ParameterInfo[] Parameters { get; }
 
-        private Type[] elementTypes { get; }
-
-        public Method(MethodInfo methodInfo, EntitySystem entitySystem, Dictionary<Type, IStructContainer> structContainers, bool isByInOnly)
+        public Method(MethodInfo methodInfo, EntitySystem entitySystem, Dictionary<Type, IComponentContainer> componentContainers, bool isByInOnly)
         {
             Info = methodInfo;
             Parameters = methodInfo.GetParameters();
@@ -26,15 +24,13 @@ internal partial class EntityContainer
             var indexParam = Expression.Parameter(typeof(int), "i");
             var elementAccesses = new Expression[Parameters.Length];
 
-            elementTypes = new Type[Parameters.Length];
-
             for (int i = 0; i < Parameters.Length; i++)
             {
                 ParameterInfo parameterInfo = Parameters[i];
                 Type parameterType = parameterInfo.ParameterType;
                 Type elementType = parameterType.GetElementType();
 
-                if (!structContainers.TryGetValue(elementType, out var container))
+                if (!componentContainers.TryGetValue(elementType, out var container))
                     throw new InvalidOperationException($"EntityType has no component with Type {elementType.Name}!");
                 
                 if (parameterInfo.IsOut)
@@ -43,16 +39,16 @@ internal partial class EntityContainer
                 if(!parameterTypes.TryAdd(elementType))
                     throw new InvalidOperationException($"Repeating parameters with the same type {elementType.Name}!");
 
-                var structSize = container.StructSize;
+                var componentType = container.ComponentType;
 
-                if (elementType == typeof(ID))
+                if (elementType == typeof(EntityID))
                 {
                     if (parameterType.IsByRef)
                         throw new InvalidOperationException($"Parameter '{parameterInfo.Name}' on '{methodInfo.DeclaringType?.Name}.{methodInfo.Name}' must be passed by value.");
                 }
                 else
                 {
-                    if(!parameterType.IsByRef && structSize > 8)
+                    if(!parameterType.IsByRef && componentType.Size > 8)
                     {
                         if(isByInOnly)
                             throw new InvalidOperationException($"Parameter '{parameterInfo.Name}' on '{methodInfo.DeclaringType?.Name}.{methodInfo.Name}' must be passed by 'in' parameter modifier!");
@@ -60,18 +56,17 @@ internal partial class EntityContainer
                         throw new InvalidOperationException($"Parameter '{parameterInfo.Name}' on '{methodInfo.DeclaringType?.Name}.{methodInfo.Name}' must be passed by 'ref'/'in' parameter modifier!");
                     }
 
-                    if(isByInOnly && !parameterInfo.IsIn && structSize > 8)
+                    if(isByInOnly && !parameterInfo.IsIn && componentType.Size > 8)
                         throw new InvalidOperationException($"Parameter '{parameterInfo.Name}' on '{methodInfo.DeclaringType?.Name}.{methodInfo.Name}' must be passed by 'in' parameter modifier!");
 
-                    if (parameterInfo.IsIn && structSize <= 8)
+                    if (parameterInfo.IsIn && componentType.Size <= 8)
                     {
-                        Logger.Get().NewLog(Logger.Log.Level.Warning, $"Parameter '{parameterInfo.Name}' on '{methodInfo.DeclaringType?.Name}.{methodInfo.Name}' is 'in {elementType.Name}' ({structSize} bytes) — no benefit over pass-by-value below 8 bytes, consider removing 'in'.");
+                        Logger.Get().NewLog(Logger.Log.Level.Warning, $"Parameter '{parameterInfo.Name}' on '{methodInfo.DeclaringType?.Name}.{methodInfo.Name}' is 'in {elementType.Name}' ({componentType.Size} bytes) — no benefit over pass-by-value below 8 bytes, consider removing 'in'.");
                     }
                 }
 
-                var elemType = elementTypes[i];
-                var concreteContainerType = typeof(StructContainer<>).MakeGenericType(elemType);
-                var dataField = concreteContainerType.GetField(nameof(StructContainer<int>.Data))!;
+                var concreteContainerType = typeof(ComponentContainer<>).MakeGenericType(elementType);
+                var dataField = concreteContainerType.GetField(nameof(ComponentContainer<int>.Data))!;
                 var containerConst = Expression.Constant(container, concreteContainerType);
                 var arrayAccess = Expression.Field(containerConst, dataField);
                 elementAccesses[i] = Expression.ArrayAccess(arrayAccess, indexParam);

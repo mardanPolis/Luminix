@@ -156,6 +156,7 @@ internal sealed class Renderer
                     case RenderBuffer.RenderObjectType.SpriteNonInterpolated:
                     {
                         var instance = nonInterpolatedSprites[commandDataIndex];
+                        var transform = instance.Transform;
  
                         if (frustumCulledGroups.Contains(instance.Group))
                             continue;
@@ -189,9 +190,9 @@ internal sealed class Renderer
                         flushed = false;
                         dataArray[currentInstanceCount++] = new Data
                         {
-                            Position = instance.Position,
-                            Scale     = instance.Scale,
-                            Rotation = instance.Rotation,
+                            Position = transform.Position,
+                            Scale    = transform.Scale,
+                            Rotation = transform.Rotation,
                             RectPos  = new Vector2(textureRegion.X, textureRegion.Y),
                             RectSize = new Vector2(textureRegion.Width, textureRegion.Height)
                         };
@@ -207,6 +208,8 @@ internal sealed class Renderer
                     case RenderBuffer.RenderObjectType.SpriteInterpolated:
                     {
                         var instance = interpolatedSprites[commandDataIndex];
+                        var from = instance.From;
+                        var to = instance.To;
  
                         var textureResource = instance.Texture ?? defaultTexture;
                         var shaderResource  = instance.Shader ?? defaultShader;
@@ -231,9 +234,9 @@ internal sealed class Renderer
                         prevEffect  = effect;
                         prevTexture = textureSource;
  
-                        Vector3 position = Vector3.Lerp(instance.Position0, instance.Position, partialTick);
-                        Vector2 size     = Vector2.Lerp(instance.Scale0, instance.Scale, partialTick);
-                        float   rotation = MathHelper.Lerp(instance.Rotation0, instance.Rotation, partialTick);
+                        Vector3 position = Vector3.Lerp(from.Position, to.Position, partialTick);
+                        Vector2 size     = Vector2.Lerp(from.Scale, to.Scale, partialTick);
+                        float   rotation = MathHelper.Lerp(from.Rotation, to.Rotation, partialTick);
  
                         float texW = textureSource.Width;
                         float texH = textureSource.Height;
@@ -259,12 +262,13 @@ internal sealed class Renderer
                         //FIXME : Shader ignored
 
                         var instance = nonInterpolatedTexts[commandDataIndex];
- 
+                        var transform = instance.Transform;
+
                         if (frustumCulledGroups.Contains(instance.Group))
                             continue;
 
-                        spriteBatch.DrawString(instance.Font.Source, instance.Text, new Vector2(instance.Position.X, instance.Position.Y), Color.White,
-                        instance.Rotation, new Vector2(0, 0), instance.Scale, SpriteEffects.None, instance.Position.Z);
+                        spriteBatch.DrawString(instance.Font.Source, instance.Text, new Vector2(transform.Position.X, transform.Position.Y), Color.White,
+                        transform.Rotation, new Vector2(0, 0), transform.Scale, SpriteEffects.None, transform.Position.Z);
                         break;
                     }
  
@@ -273,13 +277,15 @@ internal sealed class Renderer
                         //FIXME : Shader ignored
 
                         var instance = interpolatedTexts[commandDataIndex];
+                        var from = instance.From;
+                        var to = instance.To;
 
-                        var position = Vector3.Lerp(instance.Position0, instance.Position, partialTick);
-                        var size = Vector2.Lerp(instance.Scale0, instance.Scale, partialTick);
-                        var rotation = MathHelper.Lerp(instance.Rotation0, instance.Rotation, partialTick);
+                        var position = Vector3.Lerp(from.Position, to.Position, partialTick);
+                        var size = Vector2.Lerp(from.Scale, to.Scale, partialTick);
+                        var rotation = MathHelper.Lerp(from.Rotation, to.Rotation, partialTick);
 
                         spriteBatch.DrawString(instance.Font.Source, instance.Text, new Vector2(position.X, position.Y), Color.White,
-                        instance.Rotation, new Vector2(0, 0), size, SpriteEffects.None, position.Z);
+                        rotation, new Vector2(0, 0), size, SpriteEffects.None, position.Z);
                         break;
                     }
                 }

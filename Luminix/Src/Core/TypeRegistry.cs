@@ -2,6 +2,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Linq;
 using System.Reflection;
+using Luminix;
 
 namespace Luminix;
 
@@ -9,6 +10,11 @@ public static class TypeRegistry
 {
     private static readonly ConcurrentDictionary<string, Type> types = new();
     private static readonly ConcurrentDictionary<Type, string> typeNames = new();
+
+    private static readonly ConcurrentDictionary<Type, (Type, bool)> defaultSubTypes = new();
+    
+    private static readonly ConcurrentDictionary<(Type BaseType, LargeHash), Type> closedGenericTypes = new();
+
     public static Type GetType(string name)
     {
         if (types.TryGetValue(name, out var type))
@@ -44,30 +50,113 @@ public static class TypeRegistry
 
     public static void Add(Type type, string name)
     {
-        if(typeNames.ContainsKey(type))
+        if(types.ContainsKey(name))
             return;
 
         types.TryAdd(name, type);
-        typeNames.TryAdd(type, name);
         return;
     }
+
+    //SubTypes
+    public static void SetDefaultSubType(Type baseType, Type subType, bool forced = false)
+    {
+        if (baseType == null)
+            throw new ArgumentNullException(nameof(baseType), "Base type cannot be null.");
+
+        if (subType == null)
+            throw new ArgumentNullException(nameof(subType), "Subtype cannot be null.");
+
+        if (!baseType.IsClass && !baseType.IsInterface)
+            throw new ArgumentException($"Base type '{baseType.FullName}' must be a reference class or interface.", nameof(baseType));
+
+        if (!subType.IsClass)
+            throw new ArgumentException($"Subtype '{subType.FullName}' must be a reference class.", nameof(subType));
+
+        if (subType.IsAbstract)
+            throw new ArgumentException($"Subtype '{subType.FullName}' must not be abstract.", nameof(subType));
+
+        if (!baseType.IsAssignableFrom(subType))
+            throw new InvalidOperationException($"Type '{subType.FullName}' is not assignable to '{baseType.FullName}'.");
+
+        defaultSubTypes[baseType] = (subType, forced);
+
+        Add(baseType);
+        Add(subType);
+    }
+    public static Type GetDefaultSubType(Type baseType)
+    {
+        if (defaultSubTypes.TryGetValue(baseType, out var genericType))
+            return genericType.Item1;
+
+        throw new ArgumentException($"No default sub type registered for base type '{baseType.FullName}'.", nameof(baseType));
+    }
+    public static bool IsDefaultSubTypeForced(Type baseType)
+    {
+        if (defaultSubTypes.TryGetValue(baseType, out var genericType))
+            return genericType.Item2;
+
+        throw new ArgumentException($"No default sub type registered for base type '{baseType.FullName}'.", nameof(baseType));
+    }
+    public static bool TryGetDefaultSubType(Type baseType, out Type subType)
+    {
+        if (defaultSubTypes.TryGetValue(baseType, out var entry))
+        {
+            subType = entry.Item1;
+            return true;
+        }
+
+        subType = null!;
+        return false;
+    }
+    public static bool TryGetDefaultSubtype(Type baseType, out Type subType, out bool forced)
+    {
+        if (defaultSubTypes.TryGetValue(baseType, out var entry))
+        {
+            subType = entry.Item1;
+            forced = entry.Item2;
+            return true;
+        }
+
+        subType = null!;
+        forced = false;
+        return false;
+    }
+
+    //Generic
+    public static Type GetClosedGenericType(Type baseType, params ReadOnlySpan<Type> typeArguments)
+    {
+        if (!baseType.IsGenericTypeDefinition)
+            throw new ArgumentException("baseType must be an open generic type definition.", nameof(baseType));
+        
+        var hash = LargeHash.GetHash(typeArguments);
+        var key = (baseType, hash);
+
+        if (closedGenericTypes.TryGetValue(key, out var cached))
+            return cached;
+
+        var closedType = baseType.MakeGenericType(typeArguments.ToArray());
+        Add(closedType);
+
+        if (!closedGenericTypes.TryAdd(key, closedType))
+            closedGenericTypes.TryGetValue(key, out closedType);
+
+        return closedType!;
+    }
+
 
     private static Type Resolve(string name)
     {
         int firstDot = name.IndexOf('.');
         if (firstDot < 0)
             throw new ArgumentException(
-                $"'{name}' is not valid. Expected format: 'Namespace.ClassName'. First namespace - assembly name.",
+                $"'{name}' is not valid. Expected format: 'Namespace.ClassName'. Root namespace must be assembly name.",
                 nameof(name));
 
         string assemblyName = name[..firstDot];
 
         var assembly = LuminixManifest.GetAssembly(assemblyName);
 
-        var type = assembly.GetType(name, throwOnError: false)
-            ?? assembly.GetTypes().FirstOrDefault(t => t.Name == name);
-
-        if (type == null) throw new ArgumentException($"'{name}' — assembly '{assemblyName}' was found, but no type named '{name}' exists in it.", nameof(name));
+        var type = assembly.GetType(name, throwOnError: false) ?? throw new ArgumentException($"'{name}' — assembly '{assemblyName}' was found, but no type named '{name}' exists in it.", nameof(name));
 
         return type;
     }

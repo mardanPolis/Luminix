@@ -3,16 +3,22 @@ using System.Runtime.CompilerServices;
 
 namespace Luminix.Collections;
 
-internal class StructContainer<T> : IStructContainer where T : struct
+internal class ComponentContainer<T> : IComponentContainer where T : struct
 {
-    public Type StructType => typeof(T);
-    public int StructSize => Unsafe.SizeOf<T>();
+    public ComponentContainer(ComponentType<T> componentType)
+    {
+        this.componentType = componentType;
+    }
+
+    public IComponentType ComponentType => componentType;
     public int Length => data.Length;
 
+    private ComponentType<T> componentType;
+
     public T[] Data => data;
+
     private T[] data;
 
-    private T defaultValue = default;
 
     public ref T this[int index] {
         get => ref data[index];
@@ -22,18 +28,15 @@ internal class StructContainer<T> : IStructContainer where T : struct
     {
         return Data;
     }
+
     public void Resize(int newLength)
     {
         Array.Resize(ref data, newLength);
     }
+    
     public void Default(int index)
     {
-        data[index] = defaultValue;
-    }
-
-    public void SetDefaultValue(T defaultValue)
-    {
-        this.defaultValue = defaultValue;
+        data[index] = componentType.Default;
     }
 
     public void Swap(int index, int otherIndex)

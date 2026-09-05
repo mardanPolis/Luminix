@@ -14,7 +14,8 @@ public static class LuminixJsonUtility
         Converters = 
         {
             new TypedConverterFactory(),
-            new ResourceConverterFactory()
+            new ResourceConverterFactory(),
+            new DefRefConverterFactory()
         }
     };
 

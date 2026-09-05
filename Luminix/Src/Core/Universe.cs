@@ -77,9 +77,9 @@ public sealed partial class Universe : Workspace.Service
     public double TickDeltaTime { get; private set; }
     public long TickAllocated { get; private set; }
 
-    private ID entityID;
+    private EntityID entityID;
 
-    private Dictionary<ID, EntityType> entities;
+    private Dictionary<EntityID, EntityType> entities;
 
     private Dictionary<EntityType, EntityContainer> typeContainers;
     private EntityContainer[] entityContainers;
@@ -98,24 +98,24 @@ public sealed partial class Universe : Workspace.Service
             container.EntitySystem.Initialize(container.Type);
     }
 
-    public ID CreateEntity(EntityType entityType)
+    public EntityID CreateEntity(EntityType entityType)
     {
         if(!typeContainers.TryGetValue(entityType, out EntityContainer container))
         {
             throw new ArgumentException("Unknown entity type", nameof(entityType));
         }
 
-        entityID = new ID(entityID.Value + 1);
+        entityID = new EntityID(entityID.Value + 1);
         container.Create(entityID);
         entities[entityID] = entityType; 
 
         return entityID;
     }
-    public bool EntityExists(ID entityID)
+    public bool EntityExists(EntityID entityID)
     {
         return entities.ContainsKey(entityID);
     }
-    public bool DestroyEntity(ID entityID)
+    public bool DestroyEntity(EntityID entityID)
     {
         if (!entities.TryGetValue(entityID, out EntityType entityType))
         {
@@ -132,7 +132,7 @@ public sealed partial class Universe : Workspace.Service
         return true;
     }
 
-    public ref T GetEntityComponent<T>(ID entityID) where T : struct
+    public ref T GetEntityComponent<T>(EntityID entityID) where T : struct
     {
         if (!entities.TryGetValue(entityID, out EntityType entityType))
         {
@@ -141,7 +141,7 @@ public sealed partial class Universe : Workspace.Service
 
         return ref typeContainers[entityType].GetComponent<T>(entityID);
     }
-    public EntityType GetEntityType(ID entityID)
+    public EntityType GetEntityType(EntityID entityID)
     {
         if (!entities.TryGetValue(entityID, out EntityType entityType))
         {

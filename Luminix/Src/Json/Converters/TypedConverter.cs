@@ -14,12 +14,17 @@ public class TypedConverterFactory : JsonConverterFactory
 
     public override JsonConverter CreateConverter(Type typeToConvert, JsonSerializerOptions options)
     {
-        Type converterType = typeof(TypedConverter<>).MakeGenericType(typeToConvert);
+        Type converterType = TypeRegistry.GetClosedGenericType(typeof(Converter<>), typeToConvert);
         return (JsonConverter)Activator.CreateInstance(converterType)!;
     }
 
-    public class TypedConverter<T> : JsonConverter<T> where T : class
+    public class Converter<T> : JsonConverter<T> where T : class
     {
+        public override bool CanConvert(Type typeToConvert)
+        {
+            return typeToConvert.IsAbstract || typeToConvert.IsInterface;
+        }
+
         public override T Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {
             if(reader.TokenType == JsonTokenType.Null) return null;
@@ -30,19 +35,50 @@ public class TypedConverterFactory : JsonConverterFactory
             if(root.ValueKind != JsonValueKind.Object)
                 return JsonSerializer.Deserialize<T>(root.GetRawText(), options);
 
-            bool isAbstractOrInterface = typeof(T).IsAbstract || typeof(T).IsInterface;
-            bool hasTypeProperty = root.TryGetProperty("Type", out JsonElement typeProp) || root.TryGetProperty("type", out typeProp);
-
-            Type targetType = typeof(T);
-
-            if (hasTypeProperty)
+            if(!TypeRegistry.TryGetDefaultSubtype(typeToConvert, out var targetType, out var forced) || !forced)
             {
-                string typeName = typeProp.GetString()!;
-                targetType = TypeRegistry.GetType(typeName) ?? throw new JsonException($"Could not resolve type for string: '{typeName}'");
+                if (root.TryGetProperty("Type", out JsonElement typeProp) || root.TryGetProperty("type", out typeProp))
+                {
+                    string typeName = typeProp.GetString()!;
+                    targetType = TypeRegistry.GetType(typeName);
+
+                    if(typeToConvert.IsAssignableFrom(targetType))
+                        throw new InvalidOperationException($"Type '{targetType.FullName}' is not assignable to '{typeToConvert.FullName}'.");
+                }
             }
-            else if (isAbstractOrInterface)
+
+            if(targetType == null)
+                return null;
+
+            if(targetType.IsGenericTypeDefinition)
             {
-                throw new JsonException($"Cannot instantiate abstract type '{typeof(T).Name}' without a 'Type' discriminator.");
+                var genericArguments = targetType.GetGenericArguments();
+                
+                Type GetTypeArg(string key)
+                {
+                    if(!root.TryGetProperty(key, out var T))
+                        throw new JsonException($"Missing type-argument property '{key}'.");
+
+                    string typeName = T.GetString()!;
+                    var typeArg = TypeRegistry.GetType(typeName);
+                    return typeArg;
+                }
+
+                if(genericArguments.Length > 1)
+                {
+                    for(int i = 0; i < genericArguments.Length; i++)
+                    {
+                        string key = $"Type{i + 1}";
+                        genericArguments[i] = GetTypeArg(key);
+                    }
+                }
+                else
+                {
+                    string key = $"Type";
+                    genericArguments[0] = GetTypeArg(key);
+                }
+
+                targetType = TypeRegistry.GetClosedGenericType(targetType, genericArguments);
             }
 
             return (T)JsonSerializer.Deserialize(root.GetRawText(), targetType, options);
@@ -50,6 +86,8 @@ public class TypedConverterFactory : JsonConverterFactory
 
         public override void Write(Utf8JsonWriter writer, T value, JsonSerializerOptions options)
         {
+
+            //FIXME
             if (value == null)
             {
                 writer.WriteNullValue();

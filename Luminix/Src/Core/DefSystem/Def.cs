@@ -9,7 +9,4 @@ public abstract class Def
     protected virtual void Initialize() {}
 
     public required string Name { get; init; }
-
-    [JsonExtensionData]
-    internal Dictionary<string, JsonElement> LeftOvers { get; init; }
 }

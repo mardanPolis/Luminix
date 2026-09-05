@@ -47,6 +47,8 @@ public sealed class Graphics : Workspace.Service
 
         internal void StopRender()
         {
+            controlled.renderBuffer.Resolution = controlled.Resolution;
+            controlled.renderBuffer.Fullscreen = controlled.Fullscreen;
             controlled.renderBuffer = null;
         }
     }
@@ -71,8 +73,12 @@ public sealed class Graphics : Workspace.Service
 
     public Viewport Viewport { get; private set; }
 
-    public Point Resolution { get; private set; }
     public int RefreshRate { get; private set; }
+
+    public int TargetFrameRate { get; set; }
+    public bool VSync { get; set; }
+    public bool Fullscreen { get; set; }
+    public Point Resolution { get; set; }
 
     public void DrawSprite(TextureResource texture, in Vector3 position)                                    => DrawSprite(null, texture, Color.White, new Transform(position));
     public void DrawSprite(TextureResource texture, in Vector3 position, float rotation)                    => DrawSprite(null, texture, Color.White, new Transform(position, rotation));

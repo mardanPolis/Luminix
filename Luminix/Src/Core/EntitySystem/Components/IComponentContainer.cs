@@ -2,10 +2,9 @@ using System;
 
 namespace Luminix.Collections;
 
-internal interface IStructContainer
+internal interface IComponentContainer
 {
-    public Type StructType { get; }
-    public int StructSize { get; }
+    public IComponentType ComponentType { get; }
     public int Length { get; }
     public Array GetArray();
     public void Resize(int newLength);

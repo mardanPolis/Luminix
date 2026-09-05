@@ -13,12 +13,17 @@ public class ResourceConverterFactory : JsonConverterFactory
 
     public override JsonConverter CreateConverter(Type typeToConvert, JsonSerializerOptions options)
     {
-        Type converterType = typeof(ResourceConverter<>).MakeGenericType(typeToConvert);
+        Type converterType = TypeRegistry.GetClosedGenericType(typeof(Converter<>), typeToConvert);
         return (JsonConverter)Activator.CreateInstance(converterType)!;
     }
 
-    public class ResourceConverter<T> : JsonConverter<T> where T : Resource
+    public class Converter<T> : JsonConverter<T> where T : Resource
     {
+        public override bool CanConvert(Type typeToConvert)
+        {
+            return typeToConvert == typeof(T);
+        }
+
         public override T Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {
             if (reader.TokenType == JsonTokenType.Null)

@@ -4,8 +4,6 @@ namespace Luminix;
 
 public abstract class EntitySystem
 {
-    public abstract Type[] GetComponentTypes();
-
     protected Graphics Graphics { get; private set; }
     protected EntityType Type { get; private set; } = null!;
 

@@ -11,38 +11,6 @@ public sealed partial class Universe
     
     internal EntityContainer[] CreateEntityContainers(ReadOnlySpan<EntityType> entityTypes)
     {
-        IStructContainer[] GetStructContainers(Type[] structTypes)
-        {
-            List<IStructContainer> structContainers = new List<IStructContainer>(structTypes.Length);
-
-            IStructContainer idContainer = (IStructContainer)Activator.CreateInstance(typeof(StructContainer<ID>));
-            structContainers.Add(idContainer);
-
-            IStructContainer boolContainer = (IStructContainer)Activator.CreateInstance(typeof(StructContainer<bool>));
-            structContainers.Add(boolContainer);
-
-            foreach(Type structType in structTypes)
-            {
-                if(!structType.IsValueType)
-                {
-                    Logger.Get().NewLog(Logger.Log.Level.Error, $"Unable to create component container for type '{structType.FullName}', reason: Provided type is not a ValueType!");
-                    continue;
-                }
-
-                if(structType == typeof(ID) || structType == typeof(bool))
-                {
-                    Logger.Get().NewLog(Logger.Log.Level.Error, $"Unable to create component container for type '{structType.FullName}', reason: Provided type is built in!");
-                    continue;
-                }
-
-                Type closedType = typeof(StructContainer<>).MakeGenericType(structType);
-                IStructContainer structContainer = (IStructContainer)Activator.CreateInstance(closedType);
-
-                structContainers.Add(structContainer);
-            }
-
-            return structContainers.ToArray();
-        }
         List<MethodInfo> GetMethodInfos(EntitySystem entitySystem, string methodName)
         {
             var result = new List<MethodInfo>();
@@ -77,7 +45,7 @@ public sealed partial class Universe
 
             return result;
         }
-        List<EntityContainer.Method> GetMethods(EntitySystem entitySystem, string methodName, Dictionary<Type, IStructContainer> structContainerMap, bool isByInOnly)
+        List<EntityContainer.Method> GetMethods(EntitySystem entitySystem, string methodName, Dictionary<Type, IComponentContainer> componentContainerMap, bool isByInOnly)
         {
             try
             {
@@ -88,7 +56,7 @@ public sealed partial class Universe
                 {
                     try
                     {
-                        EntityContainer.Method method = new EntityContainer.Method(methodInfos[m], entitySystem, structContainerMap, isByInOnly);
+                        EntityContainer.Method method = new EntityContainer.Method(methodInfos[m], entitySystem, componentContainerMap, isByInOnly);
                         updateMethods ??= new List<EntityContainer.Method>(methodInfos.Count);
                         updateMethods.Add(method);
                     }
@@ -115,39 +83,23 @@ public sealed partial class Universe
         uint entryIndex = 0;
         foreach(EntityType entityType in entityTypes)
         {
-            EntitySystem entitySystem = entityType.EntitySystem;
-            Type[] structTypes = entitySystem.GetComponentTypes();
+            EntitySystem entitySystem = entityType.GetEntitySystem();
 
-            IStructContainer[] structContainerArray = GetStructContainers(structTypes);
+            IComponentContainer[] componentContainerArray = entityType.GetComponentContainers();
 
-            Dictionary<Type, IStructContainer> structContainerMap = new Dictionary<Type, IStructContainer>();
-            for(int i = 0; i < structContainerArray.Length; i++)
+            Dictionary<Type, IComponentContainer> componentContainerMap = new Dictionary<Type, IComponentContainer>();
+            for(int i = 0; i < componentContainerArray.Length; i++)
             {
-                structContainerMap ??= [];
-                structContainerMap.Add(structContainerArray[i].StructType, structContainerArray[i]);
+                componentContainerMap ??= [];
+                componentContainerMap.Add(componentContainerArray[i].ComponentType.Type, componentContainerArray[i]);
             }
 
-            // var components = entityType.ComponentTypes;
-            // foreach(var component in components)
-            // {
-            //     if(component.Type == typeof(ID) || component.Type == typeof(int))
-            //         continue;
+            List<EntityContainer.Method> startMethods = GetMethods(entitySystem, "Start", componentContainerMap, false);
+            List<EntityContainer.Method> updateMethods = GetMethods(entitySystem, "Update", componentContainerMap, false);
+            List<EntityContainer.Method> renderMethods = GetMethods(entitySystem, "Render", componentContainerMap, true);
+            List<EntityContainer.Method> destroyMethods = GetMethods(entitySystem, "OnDestroy", componentContainerMap, false);
 
-            //     if(!structContainerMap.ContainsKey(component.Type, out var container)) 
-            //     {
-            //         logger.NewLog(Logger.Log.Level.Warning, $"EntityType {entityType.Name} does not have component of type {component.Type}"); 
-            //         continue;
-            //     }
-
-            //     component.ApplyTo(container);
-            // }
-
-            List<EntityContainer.Method> startMethods = GetMethods(entitySystem, "Start", structContainerMap, false);
-            List<EntityContainer.Method> updateMethods = GetMethods(entitySystem, "Update", structContainerMap, false);
-            List<EntityContainer.Method> renderMethods = GetMethods(entitySystem, "Render", structContainerMap, true);
-            List<EntityContainer.Method> destroyMethods = GetMethods(entitySystem, "OnDestroy", structContainerMap, false);
-
-            entityContainers.Add(new EntityContainer(entityType, entitySystem, startMethods.ToArray(), updateMethods.ToArray(), renderMethods.ToArray(), destroyMethods.ToArray(), structContainerArray));
+            entityContainers.Add(new EntityContainer(entityType, entitySystem, startMethods.ToArray(), updateMethods.ToArray(), renderMethods.ToArray(), destroyMethods.ToArray(), componentContainerArray));
             entryIndex++;
         }
 

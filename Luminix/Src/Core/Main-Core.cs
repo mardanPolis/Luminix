@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics;
+using Luminix.Collections;
 using Luminix.IO;
 using Luminix.Threading;
 using Luminix.Threading.Bridges;
@@ -43,6 +44,14 @@ internal sealed class MainCore
 
         Thread.CurrentThread.IsBackground = true;
 
+        TypeRegistry.Add(typeof(EntityType));
+        TypeRegistry.Add(typeof(EntityType), "EntityType");
+
+        TypeRegistry.SetDefaultSubType(typeof(IComponentType), typeof(ComponentType<>), true);
+
+        logger.NewLog(Logger.Log.Level.Info, $"Build-Vers: {LuminixManifest.BuildVers}");
+        logger.NewLog(Logger.Log.Level.Info, $"Build-Date: {LuminixManifest.BuildDate}");
+
         logger.NewLog(Logger.Log.Level.Info, $"Started initialization");
 
         universe           = new Universe(out universeController);
@@ -51,11 +60,6 @@ internal sealed class MainCore
         defs               = new Defs();
         assets             = new Assets(assetBridge);
         resources          = new Resources();
-
-        var stopwatch = Stopwatch.StartNew();
-
-        logger.NewLog(Logger.Log.Level.Info, $"Build-Vers: {LuminixManifest.BuildVers}");
-        logger.NewLog(Logger.Log.Level.Info, $"Build-Date: {LuminixManifest.BuildDate}");
 
         defs.NewDefType<EntityType>(); // built in
 

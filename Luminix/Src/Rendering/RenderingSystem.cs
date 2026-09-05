@@ -51,10 +51,8 @@ public sealed class RenderingSystem : Workspace.Service
     private Matrix? viewMatrix;
     private Matrix projectionMatrix;
 
-    private bool changedResolution = false;
-    private bool changedFullscreen = false;
-
     public bool IsFullScreen => graphics.IsFullScreen;
+    public bool IsVSync => graphics.SynchronizeWithVerticalRetrace;
 
     public ResourceManager ResourceManager => resourceManager;
     public GraphicsDeviceManager GraphicsDeviceManager => graphics;
@@ -93,6 +91,34 @@ public sealed class RenderingSystem : Workspace.Service
         if (renderBridge.CurrentReadBuffer != renderBuffer)
         {
             renderBuffer = renderBridge.CurrentReadBuffer;
+            
+            var settingsChanged = false;
+
+            var resolution = renderBuffer.Resolution;
+            var fullscreen = renderBuffer.Fullscreen;
+            var vSync = renderBuffer.VSync;
+
+            if(this.resolution.X != resolution.X || this.resolution.Y != resolution.Y)
+            {
+                this.resolution = new Rectangle(0, 0, resolution.X, resolution.Y);
+                settingsChanged = true;
+            }
+
+            if(this.IsFullScreen != fullscreen)
+            {
+                this.graphics.IsFullScreen = fullscreen;
+                settingsChanged = true;
+            }
+
+            if(this.IsVSync != vSync)
+            {
+                this.graphics.SynchronizeWithVerticalRetrace = vSync;
+                settingsChanged = true;
+            }
+
+            if(settingsChanged)
+                Apply();
+
             renderBuffer.Sort();
         }
 
@@ -209,18 +235,6 @@ public sealed class RenderingSystem : Workspace.Service
         }
     }
 
-    public void SetResolution(int width, int height)
-    {
-        resolution = new Rectangle(0, 0, width, height);
-        changedResolution = true;
-    }
-
-    public void Fullscreen(bool enable)
-    {
-        graphics.IsFullScreen = enable;
-        changedFullscreen = true;
-    }
-
     public void Apply()
     {
         var prevWindowPos = new Vector2(window.ClientBounds.X, window.ClientBounds.Y);
@@ -228,23 +242,15 @@ public sealed class RenderingSystem : Workspace.Service
 
         graphics.ApplyChanges();
 
-        if(changedResolution && (resolution.Width != renderTarget.Width || resolution.Height != renderTarget.Height))
+        if(resolution.Width != renderTarget.Width || resolution.Height != renderTarget.Height)
         {
             renderTarget.Dispose();
             renderTarget = new RenderTarget2D(GraphicsDevice, resolution.Width, resolution.Height);
         }
 
-        if(changedFullscreen)
-        {
-            var currWindowPos = new Vector2(window.ClientBounds.X, window.ClientBounds.Y);
-
-            var pos = prevWindowPos - currWindowPos;
-
-            Mouse.SetPosition((int)(pos.X + mouse.X), (int)(pos.Y + mouse.Y));
-        }
-
-        changedResolution = false;
-        changedFullscreen = false;
+        var currWindowPos = new Vector2(window.ClientBounds.X, window.ClientBounds.Y);
+        var pos = prevWindowPos - currWindowPos;
+        Mouse.SetPosition((int)(pos.X + mouse.X), (int)(pos.Y + mouse.Y));
     }
 
     private Matrix? GetViewMatrix(Camera.Data? cameraData, Viewport viewport, float partialTick)

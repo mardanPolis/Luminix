@@ -65,7 +65,12 @@ public sealed class RenderBuffer
     private readonly List<RenderCommand> worldRenderCommands;
     private readonly List<UiRenderCommand> uiRenderCommands;
 
-    internal void Set(Camera camera)
+    public int TargetFrameRate { get; set; }
+    public bool VSync { get; set; }
+    public bool Fullscreen { get; set; }
+    public Point Resolution { get; set; }
+
+    internal void SetCam(Camera camera)
     {
         cameraData = camera?.GetCameraSnapshot();
     }

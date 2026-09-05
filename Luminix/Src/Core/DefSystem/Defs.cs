@@ -17,11 +17,6 @@ public sealed class Defs : Workspace.Service
 {
     internal Defs()
     {
-        serializerOptions = new JsonSerializerOptions
-        {
-            PropertyNameCaseInsensitive = true
-        };
-
         defTypes = new Dictionary<string, Type>();
         patchTypes = new Dictionary<string, Type>();
 
@@ -32,8 +27,6 @@ public sealed class Defs : Workspace.Service
         defList = [];
     }
 
-    private JsonSerializerOptions serializerOptions;
-
     private IDictionary<string, Type> defTypes;
     private IDictionary<string, Type> patchTypes;
 
@@ -43,6 +36,8 @@ public sealed class Defs : Workspace.Service
     private List<Def> defList;
     private IDictionary<Type, IList> defContainers;
     private IDictionary<(Type, string), Def> defs;
+
+    public bool IsFinalized { get; private set; }
 
     public void NewPatchType<T>() where T : PatchNode
     {
@@ -95,13 +90,13 @@ public sealed class Defs : Workspace.Service
             if (root.TryGetProperty("defType", out JsonElement type))
             {
                 var defType = defTypes[type.GetProperty("defType").GetString()];
-                var defNode = type.Deserialize(LuminixJsonContext.Default.DefNode);
+                var defNode = LuminixJsonUtility.Deserialize<DefNode>(root);
                 defNodes[(defType, defNode.DefName)] = defNode;
             }
             else if (root.TryGetProperty("patchType", out type))
             {
                 var patchType = patchTypes[type.GetString()];
-                var patchNode = (PatchNode)root.Deserialize(patchType, serializerOptions);
+                var patchNode = LuminixJsonUtility.Deserialize<PatchNode>(root);
                 patchNodes.Add(patchNode);
             }
             else
@@ -360,6 +355,8 @@ public sealed class Defs : Workspace.Service
     {
         defContainers = defContainers.ToFrozenDictionary();
         defs = defs.ToFrozenDictionary();
+
+        IsFinalized = true;
 
         MethodInfo initializeMethodInfo = typeof(Def).GetMethod("Initialize", BindingFlags.NonPublic | BindingFlags.Instance);
         Action<Def> initializeMethod = (Action<Def>)Delegate.CreateDelegate(typeof(Action<Def>), initializeMethodInfo);

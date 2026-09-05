@@ -5,7 +5,6 @@ namespace Luminix.Threading.Buffers;
 
 internal sealed class RenderInfoBuffer
 {
-    public uint FrameRate { get; set; }
     public ulong FrameCount { get; set; }
     public short AccumulatedFrameCount { get; set; }
     public double FrameTime { get; set; }
@@ -17,7 +16,6 @@ internal sealed class RenderInfoBuffer
 
     public void Reset()
     {
-        FrameRate = 0;
         FrameCount = 0;
         AccumulatedFrameCount = 0;
         FrameTime = 0;

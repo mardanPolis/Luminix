@@ -9,7 +9,7 @@ internal partial class EntityContainer
 {
     private const int DEFAULT_ENTITY_CAPACITY = 16;
 
-    internal EntityContainer(EntityType type, EntitySystem entitySystem, Method[] startMethods, Method[] updateMethods, Method[] renderMethods, Method[] destroyMethods, IStructContainer[] structContainers)
+    internal EntityContainer(EntityType type, EntitySystem entitySystem, Method[] startMethods, Method[] updateMethods, Method[] renderMethods, Method[] destroyMethods, IComponentContainer[] componentContainers)
     {
         this.Type = type;
         this.EntitySystem = entitySystem;
@@ -23,33 +23,15 @@ internal partial class EntityContainer
         this.renderMethods = renderMethods ?? [];
         this.destroyMethods = destroyMethods ?? [];
 
-        this.structContainers = structContainers;
+        this.componentContainers = componentContainers;
 
         this.componentTypeMap = new Dictionary<Type, int>();
-        for(int i = 0; i < structContainers.Length; i++)
+        for(int i = 0; i < componentContainers.Length; i++)
         {
-            var structContainer = structContainers[i];
-            componentTypeMap.Add(structContainer.StructType, i);
-            if(structContainer.StructType == typeof(ID))
-                entityContainer = (StructContainer<ID>)structContainer;
-        }
-
-        if(entityContainer == null)
-        {
-            IStructContainer[] replacement = new IStructContainer[structContainers.Length + 2];
-            for(int i = 0; i < structContainers.Length; i++)
-            {
-                var container = structContainers[i];
-                replacement[i] = container;
-            }
-
-            replacement[^2] = new StructContainer<ID>();
-            replacement[^1] = new StructContainer<bool>();
-
-            componentTypeMap.Add(replacement[^2].StructType, replacement.Length - 2);
-            componentTypeMap.Add(replacement[^1].StructType, replacement.Length - 1);
-
-            entityContainer = (StructContainer<ID>)replacement[^2];
+            var componentContainer = componentContainers[i];
+            componentTypeMap.Add(componentContainer.ComponentType.Type, i);
+            if(componentContainer.ComponentType.Type == typeof(EntityID))
+                entityContainer = (ComponentContainer<EntityID>)componentContainer;
         }
         
         this.entityLocation = [];
@@ -59,6 +41,8 @@ internal partial class EntityContainer
 
         this.createdEntitiesBuffer = [];
         this.destroyedEntitiesBuffer = [];
+
+        //TODO create default component values
     }
 
     public EntityType Type { get; }
@@ -74,32 +58,32 @@ internal partial class EntityContainer
     private readonly Method[] renderMethods;
     private readonly Method[] destroyMethods;
 
-    private readonly Dictionary<ID, int> entityLocation;
+    private readonly Dictionary<EntityID, int> entityLocation;
     private readonly Dictionary<Type, int> componentTypeMap;
-    private readonly IStructContainer[] structContainers;
-    private readonly StructContainer<ID> entityContainer;
+    private readonly IComponentContainer[] componentContainers;
+    private readonly ComponentContainer<EntityID> entityContainer;
 
-    private Dictionary<ID, int> createdEntities;
-    private HashSet<ID> destroyedEntities;
+    private Dictionary<EntityID, int> createdEntities;
+    private HashSet<EntityID> destroyedEntities;
 
-    private Dictionary<ID, int> createdEntitiesBuffer;
-    private HashSet<ID> destroyedEntitiesBuffer;
+    private Dictionary<EntityID, int> createdEntitiesBuffer;
+    private HashSet<EntityID> destroyedEntitiesBuffer;
 
     public int EntityCount => publicEntityCount;
 
-    public void Create(ID entityID)
+    public void Create(EntityID entityID)
     {
         if(entityLocation.TryAdd(entityID, entityCount))
         {
             if(entityCount >= entityContainer.Length)
             {
                 int newLength = entityContainer.Length * 2;
-                for(int i = 0; i < structContainers.Length; i++)
-                    structContainers[i].Resize(newLength);
+                for(int i = 0; i < componentContainers.Length; i++)
+                    componentContainers[i].Resize(newLength);
             }
             
-            for(int i = 0; i < structContainers.Length; i++)
-                structContainers[i].Default(entityCount);
+            for(int i = 0; i < componentContainers.Length; i++)
+                componentContainers[i].Default(entityCount);
             
             entityContainer[entityCount] = entityID;
             createdEntities.Add(entityID, entityCount);
@@ -109,7 +93,7 @@ internal partial class EntityContainer
         }
     }
 
-    public void Destroy(ID entityID)
+    public void Destroy(EntityID entityID)
     {
         if(!entityLocation.ContainsKey(entityID))
             return;
@@ -120,8 +104,8 @@ internal partial class EntityContainer
 
     public void Clear()
     {
-        for(int i = 0; i < structContainers.Length; i++)
-            structContainers[i].Reset(DEFAULT_ENTITY_CAPACITY);
+        for(int i = 0; i < componentContainers.Length; i++)
+            componentContainers[i].Reset(DEFAULT_ENTITY_CAPACITY);
 
         entityCount = 0;
         publicEntityCount = 0;
@@ -132,7 +116,7 @@ internal partial class EntityContainer
         return componentTypeMap.ContainsKey(typeof(T));
     }
 
-    public ref T GetComponent<T>(ID entityID) where T : struct
+    public ref T GetComponent<T>(EntityID entityID) where T : struct
     {
         var type = typeof(T);
 
@@ -142,7 +126,7 @@ internal partial class EntityContainer
         if(!componentTypeMap.TryGetValue(type, out int containerIndex))
             throw new KeyNotFoundException($"Component of type '{type.Name}' not found!");
 
-        return ref ((T[])structContainers[containerIndex].GetArray())[entityIndex];
+        return ref ((T[])componentContainers[containerIndex].GetArray())[entityIndex];
     }
 
     public void Tick()
@@ -161,7 +145,7 @@ internal partial class EntityContainer
         int stillbornCount = 0;
         Span<int> stillbornIndices = stackalloc int[destroyedEntitiesBuffer.Count];
 
-        foreach (ID destroyedEntityID in destroyedEntitiesBuffer)
+        foreach (EntityID destroyedEntityID in destroyedEntitiesBuffer)
         {
             entityCount--;
             int destroyedEntityIndex = entityLocation[destroyedEntityID];
@@ -178,7 +162,7 @@ internal partial class EntityContainer
             {
                 while (destroyedEntityIndex < lastEntityIndex)
                 {
-                    ID lastEntityID = entityContainer[lastEntityIndex];
+                    EntityID lastEntityID = entityContainer[lastEntityIndex];
 
                     if (destroyedEntitiesBuffer.Contains(lastEntityID))
                     {
@@ -186,8 +170,8 @@ internal partial class EntityContainer
                         continue;
                     }
 
-                    for (int i = 0; i < structContainers.Length; i++)
-                        structContainers[i].Swap(destroyedEntityIndex, lastEntityIndex);
+                    for (int i = 0; i < componentContainers.Length; i++)
+                        componentContainers[i].Swap(destroyedEntityIndex, lastEntityIndex);
 
                     entityLocation[lastEntityID] = destroyedEntityIndex;
 
@@ -209,8 +193,8 @@ internal partial class EntityContainer
             int from = stillbornIndices[s];
             if (from != tailTop)
             {
-                for (int i = 0; i < structContainers.Length; i++)
-                    structContainers[i].Swap(from, tailTop);
+                for (int i = 0; i < componentContainers.Length; i++)
+                    componentContainers[i].Swap(from, tailTop);
             }
             tailTop--;
         }
