@@ -20,7 +20,6 @@ public abstract class ManagedThread : Thread
             {
                 running = true;
                 threadAction();
-                OnStop();
             }
             catch(Exception ex)
             {
@@ -46,8 +45,5 @@ public abstract class ManagedThread : Thread
     public void Stop()
     {
         running = false;
-        OnStop();
     }
-
-    protected virtual void OnStop() { }
 }

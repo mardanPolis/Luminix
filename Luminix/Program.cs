@@ -9,7 +9,8 @@ try
     {
         mainCore.Update();
         mainCore.Render();
-    });
+    },
+    mainCore.OnStop);
     coreThread.Priority = System.Threading.ThreadPriority.AboveNormal;
     coreThread.IsBackground = false;
 
@@ -34,5 +35,5 @@ finally
         foreach (var thread in Thread.Threads)
             if(thread is ManagedThread managedThread)
                 managedThread?.Stop();
-    Logger.Get().Flush();
+    Logger.Shutdown();
 }

@@ -7,49 +7,10 @@ namespace Luminix.Threading;
 public sealed class TickedThread : ManagedThread
 {
     //constructor
-    public TickedThread(string name, Action init, Action tick, uint tickRate = 60) : base(name)
+    public TickedThread(string name, Action init, Action tick, Action onStop, uint tickRate = 60) : base(name)
     {
         TickRate = tickRate;
-        threadAction = ThreadAction();
-
-        this.init = init;
-        this.tick = tick;
-    }
-
-    private Stopwatch stopwatch;
-    private Stopwatch internalStopwatch;
-
-    private Workspace workspace;
-    private Workspace.Controller workspaceController;
-
-    private long tickIntervalInTicks = 0;
-    private long lastTickDate = 0;
-
-    private uint tickRate = 0;
-    private long tickCount = 0;
-    private double tickTime = 0;
-    private double tickDeltaTime = 0;
-    private long tickAllocated = 0;
-
-    private readonly Action init;
-    private readonly Action tick;
-
-    public uint TickRate
-    {
-        get { return tickRate; }
-        set { tickRate = value; Interlocked.Exchange(ref tickIntervalInTicks, (uint)(Stopwatch.Frequency / value)); }
-    }
-    public long TickCount => tickCount;
-    public double TickTime => tickTime;
-    public double TickDeltaTime => tickDeltaTime;
-    public long TickAllocated => tickAllocated;
-
-    public long CurrentElapsedTicks => internalStopwatch.ElapsedTicks;
-    public float PartialTick => (float)(stopwatch.ElapsedTicks - Volatile.Read(ref lastTickDate)) / Interlocked.Read(ref tickIntervalInTicks);
-
-    private Action ThreadAction()
-    {
-        return () =>
+        threadAction = () =>
         {
             long startBytes = 0;
             long endBytes = 0;
@@ -119,6 +80,36 @@ public sealed class TickedThread : ManagedThread
 
                 tickTime = internalStopwatch.Elapsed.TotalMicroseconds;
             }
+
+            onStop();
         };
     }
+
+    private Stopwatch stopwatch;
+    private Stopwatch internalStopwatch;
+
+    private Workspace workspace;
+    private Workspace.Controller workspaceController;
+
+    private long tickIntervalInTicks = 0;
+    private long lastTickDate = 0;
+
+    private uint tickRate = 0;
+    private long tickCount = 0;
+    private double tickTime = 0;
+    private double tickDeltaTime = 0;
+    private long tickAllocated = 0;
+
+    public uint TickRate
+    {
+        get { return tickRate; }
+        set { tickRate = value; Interlocked.Exchange(ref tickIntervalInTicks, (uint)(Stopwatch.Frequency / value)); }
+    }
+    public long TickCount => tickCount;
+    public double TickTime => tickTime;
+    public double TickDeltaTime => tickDeltaTime;
+    public long TickAllocated => tickAllocated;
+
+    public long CurrentElapsedTicks => internalStopwatch.ElapsedTicks;
+    public float PartialTick => (float)(stopwatch.ElapsedTicks - Volatile.Read(ref lastTickDate)) / Interlocked.Read(ref tickIntervalInTicks);
 }

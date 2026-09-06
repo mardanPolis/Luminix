@@ -149,4 +149,9 @@ internal sealed class MainCore
             throw;
         }
     }
+
+    internal void OnStop()
+    {
+        
+    }
 }
