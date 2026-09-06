@@ -14,6 +14,8 @@ public static class TypeRegistry
     private static readonly ConcurrentDictionary<Type, (Type, bool)> defaultSubTypes = new();
     
     private static readonly ConcurrentDictionary<(Type BaseType, LargeHash), Type> closedGenericTypes = new();
+    private static readonly ConcurrentDictionary<Type, Type[]> closedGenericTypeArguments = new();
+
 
     public static Type GetType(string name)
     {
@@ -45,7 +47,6 @@ public static class TypeRegistry
         var name = Resolve(type);
         types.TryAdd(name, type);
         typeNames.TryAdd(type, name);
-        return;
     }
 
     public static void Add(Type type, string name)
@@ -54,7 +55,6 @@ public static class TypeRegistry
             return;
 
         types.TryAdd(name, type);
-        return;
     }
 
     //SubTypes
@@ -123,9 +123,22 @@ public static class TypeRegistry
     }
 
     //Generic
+    public static bool IsGenericType(Type type)
+    {
+        return type.IsGenericType;
+    }
+    public static bool IsClosedGenericType(Type type)
+    {
+        return type.IsGenericType && !type.ContainsGenericParameters;
+    }
+    public static bool IsOpenGenericType(Type type)
+    {
+        return type.IsGenericType && type.ContainsGenericParameters;
+    }
+
     public static Type GetClosedGenericType(Type baseType, params ReadOnlySpan<Type> typeArguments)
     {
-        if (!baseType.IsGenericTypeDefinition)
+        if (!IsOpenGenericType(baseType))
             throw new ArgumentException("baseType must be an open generic type definition.", nameof(baseType));
         
         var hash = LargeHash.GetHash(typeArguments);
@@ -141,6 +154,24 @@ public static class TypeRegistry
             closedGenericTypes.TryGetValue(key, out closedType);
 
         return closedType!;
+    }
+    public static ReadOnlySpan<Type> GetGenericArguments(Type type)
+    {
+        if(closedGenericTypeArguments.TryGetValue(type, out var arguments))
+            return arguments;
+
+        arguments = type.GetGenericArguments();
+        closedGenericTypeArguments.TryAdd(type, arguments);
+        return arguments;
+    }
+    public static Type[] GetGenericArgumentsClone(Type type)
+    {
+        if(closedGenericTypeArguments.TryGetValue(type, out var arguments))
+            return (Type[])arguments.Clone();
+
+        arguments = type.GetGenericArguments();
+        closedGenericTypeArguments.TryAdd(type, arguments);
+        return arguments;
     }
 
 

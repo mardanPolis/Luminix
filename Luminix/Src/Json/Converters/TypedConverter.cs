@@ -42,7 +42,7 @@ public class TypedConverterFactory : JsonConverterFactory
                     string typeName = typeProp.GetString()!;
                     targetType = TypeRegistry.GetType(typeName);
 
-                    if(typeToConvert.IsAssignableFrom(targetType))
+                    if(!typeToConvert.IsAssignableFrom(targetType))
                         throw new InvalidOperationException($"Type '{targetType.FullName}' is not assignable to '{typeToConvert.FullName}'.");
                 }
             }
@@ -50,13 +50,13 @@ public class TypedConverterFactory : JsonConverterFactory
             if(targetType == null)
                 return null;
 
-            if(targetType.IsGenericTypeDefinition)
+            if(TypeRegistry.IsOpenGenericType(targetType))
             {
-                var genericArguments = targetType.GetGenericArguments();
+                var genericArguments = TypeRegistry.GetGenericArgumentsClone(targetType);
                 
                 Type GetTypeArg(string key)
                 {
-                    if(!root.TryGetProperty(key, out var T))
+                    if(!root.TryGetProperty(key, out var T) && !root.TryGetProperty(key.ToLower(), out T))
                         throw new JsonException($"Missing type-argument property '{key}'.");
 
                     string typeName = T.GetString()!;

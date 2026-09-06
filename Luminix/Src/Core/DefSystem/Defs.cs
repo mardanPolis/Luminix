@@ -87,13 +87,13 @@ public sealed class Defs : Workspace.Service
 
         try
         {
-            if (root.TryGetProperty("defType", out JsonElement type))
+            if (root.TryGetProperty("DefType", out JsonElement type) || root.TryGetProperty("defType", out type))
             {
-                var defType = defTypes[type.GetProperty("defType").GetString()];
+                var defType = defTypes[type.GetString()];
                 var defNode = LuminixJsonUtility.Deserialize<DefNode>(root);
                 defNodes[(defType, defNode.DefName)] = defNode;
             }
-            else if (root.TryGetProperty("patchType", out type))
+            else if (root.TryGetProperty("PatchType", out type) || root.TryGetProperty("patchType", out type))
             {
                 var patchType = patchTypes[type.GetString()];
                 var patchNode = LuminixJsonUtility.Deserialize<PatchNode>(root);

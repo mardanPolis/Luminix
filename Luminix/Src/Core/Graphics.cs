@@ -31,7 +31,6 @@ public sealed class Graphics : Workspace.Service
                 return;
 
             var accumulatedFrameCount = renderInfoBuffer.AccumulatedFrameCount;
-            controlled.FrameRate = renderInfoBuffer.FrameRate;
             controlled.FrameCount = renderInfoBuffer.FrameCount;
             controlled.FrameTime = renderInfoBuffer.FrameTime / accumulatedFrameCount;
             controlled.FrameDeltaTime = renderInfoBuffer.FrameDeltaTime / accumulatedFrameCount;

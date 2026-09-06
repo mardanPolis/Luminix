@@ -29,6 +29,9 @@ public class ResourceConverterFactory : JsonConverterFactory
             if (reader.TokenType == JsonTokenType.Null)
                 return null;
 
+            if (reader.TokenType != JsonTokenType.String)
+                throw new JsonException($"Expected string for {typeof(T).Name}, got {reader.TokenType}.");
+
             string path = reader.GetString();
             return path == null ? null : Workspace.Current.GetService<Resources>().GetResource<T>(path);
         }

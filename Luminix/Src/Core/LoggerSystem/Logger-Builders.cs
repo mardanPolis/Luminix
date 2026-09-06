@@ -74,6 +74,9 @@ public sealed partial class Logger
         {
             if (logger == null || !canLog || value == null) return false;
 
+            if(value is Type type)
+                return AddType(type);
+
             return Add(value.ToString());
         }
         public bool AppendFormatted(ReadOnlySpan<char> value)
@@ -82,6 +85,17 @@ public sealed partial class Logger
 
             return Add(value);
         }
+
+        public bool AppendFormatted(ReadOnlySpan<char> value, uint length)
+        {
+            if (logger == null || !canLog) return false;
+
+            if (length < value.Length)
+                value = value[..(int)length];
+
+            return Add(value);
+        }
+
 
         public void End()
         {
@@ -138,6 +152,37 @@ public sealed partial class Logger
             return false;
         }
         
+        private bool AddType(Type type)
+        {
+            if (TypeRegistry.IsGenericType(type))
+            {
+                HandleGenericType(type);
+                return true;
+            }
+
+            return Add(type.Name);
+        }
+        private void HandleGenericType(Type type)
+        {
+            AppendFormatted(type.Name, (uint)(type.Name.Length - 2));
+            AppendFormatted('<');
+
+            var genericArgs = TypeRegistry.GetGenericArguments(type);
+            for (int i = 0; i < genericArgs.Length; i++)
+            {
+                if (i > 0)
+                    AppendFormatted(", ");
+
+                Type argType = genericArgs[i];
+                if (argType.IsGenericType)
+                    HandleGenericType(argType); // recurse for nested generics
+                else
+                    AppendFormatted(argType.Name);
+            }
+
+            AppendFormatted('>');
+        }
+
         private void LengthError()
         {
             ReadOnlySpan<char> chars = "...[Length Error -> log exceeded length of 16384 characters]";

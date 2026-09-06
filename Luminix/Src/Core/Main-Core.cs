@@ -35,90 +35,118 @@ internal sealed class MainCore
         logger = Logger.Get();
         logger.EchoToConsole = true;
 
-        renderBridge = ThreadBridges.GetBridge<RenderBridge>("RenderThread");
-        inputBridge = ThreadBridges.GetBridge<InputBridge>("RenderThread");
-        resourceBridge = ThreadBridges.GetBridge<ResourceBridge>("RenderThread");
-        assetBridge = ThreadBridges.GetBridge<AssetBridge>("RenderThread");
-        
-        coreThread = (TickedThread)Thread.CurrentThread;
+        try
+        {
+            renderBridge = ThreadBridges.GetBridge<RenderBridge>("RenderThread");
+            inputBridge = ThreadBridges.GetBridge<InputBridge>("RenderThread");
+            resourceBridge = ThreadBridges.GetBridge<ResourceBridge>("RenderThread");
+            assetBridge = ThreadBridges.GetBridge<AssetBridge>("RenderThread");
+            
+            coreThread = (TickedThread)Thread.CurrentThread;
 
-        Thread.CurrentThread.IsBackground = true;
+            Thread.CurrentThread.IsBackground = true;
 
-        TypeRegistry.Add(typeof(EntityType));
-        TypeRegistry.Add(typeof(EntityType), "EntityType");
+            TypeRegistry.Add(typeof(EntityType));
+            TypeRegistry.Add(typeof(EntityType), "EntityType");
 
-        TypeRegistry.SetDefaultSubType(typeof(IComponentType), typeof(ComponentType<>), true);
+            TypeRegistry.SetDefaultSubType(typeof(IComponentType), typeof(ComponentType<>), true);
 
-        logger.NewLog(Logger.Log.Level.Info, $"Build-Vers: {LuminixManifest.BuildVers}");
-        logger.NewLog(Logger.Log.Level.Info, $"Build-Date: {LuminixManifest.BuildDate}");
+            logger.NewLog(Logger.Log.Level.Info, $"Build-Vers: {LuminixManifest.BuildVers}");
+            logger.NewLog(Logger.Log.Level.Info, $"Build-Date: {LuminixManifest.BuildDate}");
 
-        logger.NewLog(Logger.Log.Level.Info, $"Started initialization");
+            logger.NewLog(Logger.Log.Level.Info, $"Started initialization");
 
-        universe           = new Universe(out universeController);
-        graphics           = new Graphics(renderBridge, out graphicsController);
-        input              = new Input(inputBridge, out inputController);
-        defs               = new Defs();
-        assets             = new Assets(assetBridge);
-        resources          = new Resources();
+            universe           = new Universe(out universeController);
+            graphics           = new Graphics(renderBridge, out graphicsController);
+            input              = new Input(inputBridge, out inputController);
+            defs               = new Defs();
+            assets             = new Assets(assetBridge);
+            resources          = new Resources();
 
-        defs.NewDefType<EntityType>(); // built in
+            defs.NewDefType<EntityType>(); // built in
 
-        defs.FinalizeTypes();
+            defs.FinalizeTypes();
 
-        var bootAssetInfos = assets.GetAssetIO().EnumerateAssetInfos(boot: true);
-        foreach(var info in bootAssetInfos)
-            assets.HandleAsset(info);
+            var bootAssetInfos = assets.GetAssetIO().EnumerateAssetInfos(boot: true);
+            foreach(var info in bootAssetInfos)
+                assets.HandleAsset(info);
 
-        assets.FinalizeAssets(false);
+            assets.FinalizeAssets(false);
 
-        var nonBootAssetInfos = assets.GetAssetIO().EnumerateAssetInfos(boot: false);
-        foreach(var info in nonBootAssetInfos)
-            assets.HandleAsset(info);
+            logger.NewLog(Logger.Log.Level.Info, "Loaded boot assets!");
 
-        assets.FinalizeAssets(true);
+            var nonBootAssetInfos = assets.GetAssetIO().EnumerateAssetInfos(boot: false);
+            foreach(var info in nonBootAssetInfos)
+                assets.HandleAsset(info);
 
-        defs.PatchNodes();
-        defs.InheritNodes();
-        defs.DeserializeNodes();
+            assets.FinalizeAssets(true);
 
-        defs.FinalizeDefs();
+            defs.PatchNodes();
+            defs.InheritNodes();
+            defs.DeserializeNodes();
 
-        Thread.CurrentThread.IsBackground = false;
+            defs.FinalizeDefs();
+
+            Thread.CurrentThread.IsBackground = false;
+        }
+        catch(Exception ex)
+        {
+            logger.NewLog(Logger.Log.Level.Error, $"Fatal Initialization Error: {ex}");
+            logger.Flush();
+            throw;
+        }
     }
 
     internal void Update()
     {
-        logger.Refresh();
+        try
+        {
+            logger.Refresh();
 
-        graphicsController.SwapBuffers();
+            graphicsController.SwapBuffers();
 
-        inputController.UpdateData();
+            inputController.UpdateData();
 
-        resources.Set(resourceBridge.Get());
+            resources.Set(resourceBridge.Get());
 
-        uint tickRate = coreThread.TickRate;
+            uint tickRate = coreThread.TickRate;
 
-        universeController.TickRate = tickRate;
-        universeController.TickTime = coreThread.TickTime;
-        universeController.TickCount = coreThread.TickCount;
-        universeController.TickDeltaTime = coreThread.TickDeltaTime;
-        universeController.TickAllocated = coreThread.TickAllocated;
+            universeController.TickRate = tickRate;
+            universeController.TickTime = coreThread.TickTime;
+            universeController.TickCount = coreThread.TickCount;
+            universeController.TickDeltaTime = coreThread.TickDeltaTime;
+            universeController.TickAllocated = coreThread.TickAllocated;
 
-        // var mousePosition = input.MousePosition;
-        // inputController.IsMouseOverUI = uiManagerController.isMouseColliding((int)mousePosition.X, (int)mousePosition.Y);
+            // var mousePosition = input.MousePosition;
+            // inputController.IsMouseOverUI = uiManagerController.isMouseColliding((int)mousePosition.X, (int)mousePosition.Y);
 
 
-        if(tickRate != universeController.TickRate)
-            coreThread.TickRate = tickRate;
-
+            if(tickRate != universeController.TickRate)
+                coreThread.TickRate = tickRate;
+        }
+        catch(Exception ex)
+        {
+            logger.NewLog(Logger.Log.Level.Error, $"Fatal Update Error: {ex}");
+            logger.Flush();
+            throw;
+        }
     }
     
     internal void Render()
     {
-        graphicsController.BeginRender();
+        try
+        {
+            graphicsController.BeginRender();
 
-        // entity rendering
+            // entity rendering
 
-        graphicsController.StopRender();
+            graphicsController.StopRender();
+        }
+        catch(Exception ex)
+        {
+            logger.NewLog(Logger.Log.Level.Error, $"Fatal Render Error: {ex}");
+            logger.Flush();
+            throw;
+        }
     }
 }

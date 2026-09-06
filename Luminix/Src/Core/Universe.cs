@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using Luminix.Game;
 
 namespace Luminix;
 
@@ -90,12 +91,19 @@ public sealed partial class Universe : Workspace.Service
         var entityTypes = defs.GetDefs<EntityType>();
         entityContainers = CreateEntityContainers(entityTypes);
         entities = [];
+        typeContainers = [];
         
         foreach(EntityContainer container in entityContainers)
-            typeContainers[container.Type] = container;
+            typeContainers[container.EntityType] = container;
 
         foreach(EntityContainer container in entityContainers)
-            container.EntitySystem.Initialize(container.Type);
+            container.EntitySystem.Initialize(container.EntityType);
+
+        foreach(EntityContainer container in entityContainers)
+        {
+            logger.NewLog(Logger.Log.Level.Info, $"EntityType: {container.EntityType.Name}, EntitySystem: {container.EntitySystem}");
+            logger.NewLog<Dictionary<Type, IComponentType>, Type, IComponentType>(Logger.Log.Level.Info, container.EntityType.GetComponentTypes());
+        }
     }
 
     public EntityID CreateEntity(EntityType entityType)

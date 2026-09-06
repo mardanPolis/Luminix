@@ -114,7 +114,7 @@ public sealed partial class Logger
         var builder = new LogBuilder(this, logLevel, out bool canLog);
         if (!canLog) return;
 
-        builder.AppendFormatted(collection.GetType().Name);
+        builder.AppendFormatted(collection.GetType());
         if(collection.Count > 0)
         {
             builder.AppendFormatted(" contains: \n");
@@ -143,27 +143,40 @@ public sealed partial class Logger
         var builder = new LogBuilder(this, logLevel, out bool canLog);
         if (!canLog) return;
 
-        builder.AppendFormatted(collection.GetType().Name);
+        var collectionType = typeof(TDictionary);
+        builder.AppendFormatted(collectionType);
         if(collection.Count > 0)
         {
-            builder.AppendFormatted(" contains: \n");
+            builder.AppendFormatted(" contains:");
             foreach(var pair in collection)
             {
-                builder.AppendFormatted(" - [");
+                builder.AppendFormatted('\n');
+                builder.AppendFormatted("- (");
+                builder.AppendFormatted(typeof(T1));
+                builder.AppendFormatted(")");
 
                 if (pair.Key is ISpanFormattable key)
                     builder.AppendFormatted(key);
                 else
                     builder.AppendFormatted(pair.Key.ToString() ?? "null");
 
-                builder.AppendFormatted("] : ");
+                builder.AppendFormatted(" : (");
+                builder.AppendFormatted(typeof(T2));
+                builder.AppendFormatted(")[");
 
                 if (pair.Value is ISpanFormattable value)
+                {
+                    builder.AppendFormatted(pair.Value.GetType());
+                    builder.AppendFormatted(" - ");
                     builder.AppendFormatted(value);
+                }
                 else
-                    builder.AppendFormatted(pair.Value.ToString() ?? "null");
-
-                builder.AppendFormatted('\n');
+                {
+                    builder.AppendFormatted(pair.Value.GetType());
+                    builder.AppendFormatted(" - ");
+                    builder.AppendFormatted(pair.Value?.ToString() ?? "null");
+                }
+                builder.AppendFormatted(']');
             }
         }
         else

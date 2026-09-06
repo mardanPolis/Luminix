@@ -11,7 +11,7 @@ internal partial class EntityContainer
 
     internal EntityContainer(EntityType type, EntitySystem entitySystem, Method[] startMethods, Method[] updateMethods, Method[] renderMethods, Method[] destroyMethods, IComponentContainer[] componentContainers)
     {
-        this.Type = type;
+        this.EntityType = type;
         this.EntitySystem = entitySystem;
 
         MethodInfo method = typeof(EntitySystem).GetMethod(
@@ -45,7 +45,7 @@ internal partial class EntityContainer
         //TODO create default component values
     }
 
-    public EntityType Type { get; }
+    public EntityType EntityType { get; }
     public EntitySystem EntitySystem { get; }
 
     private int entityCount;
@@ -223,7 +223,7 @@ internal partial class EntityContainer
         if(publicEntityCount != entityCount)
         {
             publicEntityCount = entityCount;
-            Logger.Get().NewLog(Logger.Log.Level.Error, $"Public entity count and internal entity count went out of sync for {Type}.EntityContainer");
+            Logger.Get().NewLog(Logger.Log.Level.Error, $"Public entity count and internal entity count went out of sync for {EntityType}.EntityContainer");
         }
 
         for (int i = 0; i < updateMethods.Length; i++)

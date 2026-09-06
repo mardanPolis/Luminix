@@ -11,5 +11,5 @@ public sealed class DefNode
     public bool Abstract { get; }
     public string Parent { get; }
     [JsonExtensionData]
-    public required Dictionary<string, JsonElement> Properties { get; init; }
+    public Dictionary<string, JsonElement> Properties { get; init; }
 }

@@ -1,6 +1,6 @@
 using System;
 
-namespace SurvivalGame;
+namespace Luminix.Game;
 public class Main
 {
     

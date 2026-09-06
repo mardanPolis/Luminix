@@ -11,7 +11,7 @@ public sealed partial class Universe
     
     internal EntityContainer[] CreateEntityContainers(ReadOnlySpan<EntityType> entityTypes)
     {
-        List<MethodInfo> GetMethodInfos(EntitySystem entitySystem, string methodName)
+        MethodInfo[] GetMethodInfos(EntitySystem entitySystem, string methodName)
         {
             var result = new List<MethodInfo>();
             var seenVirtualSlots = new HashSet<MethodInfo>();
@@ -43,21 +43,21 @@ public sealed partial class Universe
                 current = current.BaseType;
             }
 
-            return result;
+            return result.ToArray();
         }
-        List<EntityContainer.Method> GetMethods(EntitySystem entitySystem, string methodName, Dictionary<Type, IComponentContainer> componentContainerMap, bool isByInOnly)
+        EntityContainer.Method[] GetMethods(EntitySystem entitySystem, string methodName, Dictionary<Type, IComponentContainer> componentContainerMap, bool isByInOnly)
         {
             try
             {
-                List<MethodInfo> methodInfos = GetMethodInfos(entitySystem, methodName);
+                MethodInfo[] methodInfos = GetMethodInfos(entitySystem, methodName);
                 List<EntityContainer.Method> updateMethods = null;
 
-                for(int m = 0; m < methodInfos.Count; m++)
+                for(int m = 0; m < methodInfos.Length; m++)
                 {
                     try
                     {
                         EntityContainer.Method method = new EntityContainer.Method(methodInfos[m], entitySystem, componentContainerMap, isByInOnly);
-                        updateMethods ??= new List<EntityContainer.Method>(methodInfos.Count);
+                        updateMethods ??= new List<EntityContainer.Method>(methodInfos.Length);
                         updateMethods.Add(method);
                     }
                     catch(Exception ex)
@@ -69,7 +69,7 @@ public sealed partial class Universe
                     }
                 }
 
-                return updateMethods;
+                return updateMethods?.ToArray() ?? null;
             }
             catch(Exception ex)
             {
@@ -86,7 +86,7 @@ public sealed partial class Universe
             EntitySystem entitySystem = entityType.GetEntitySystem();
 
             IComponentContainer[] componentContainerArray = entityType.GetComponentContainers();
-
+        
             Dictionary<Type, IComponentContainer> componentContainerMap = new Dictionary<Type, IComponentContainer>();
             for(int i = 0; i < componentContainerArray.Length; i++)
             {
@@ -94,12 +94,12 @@ public sealed partial class Universe
                 componentContainerMap.Add(componentContainerArray[i].ComponentType.Type, componentContainerArray[i]);
             }
 
-            List<EntityContainer.Method> startMethods = GetMethods(entitySystem, "Start", componentContainerMap, false);
-            List<EntityContainer.Method> updateMethods = GetMethods(entitySystem, "Update", componentContainerMap, false);
-            List<EntityContainer.Method> renderMethods = GetMethods(entitySystem, "Render", componentContainerMap, true);
-            List<EntityContainer.Method> destroyMethods = GetMethods(entitySystem, "OnDestroy", componentContainerMap, false);
+            EntityContainer.Method[] startMethods = GetMethods(entitySystem, "Start", componentContainerMap, false);
+            EntityContainer.Method[] updateMethods = GetMethods(entitySystem, "Update", componentContainerMap, false);
+            EntityContainer.Method[] renderMethods = GetMethods(entitySystem, "Render", componentContainerMap, true);
+            EntityContainer.Method[] destroyMethods = GetMethods(entitySystem, "OnDestroy", componentContainerMap, false);
 
-            entityContainers.Add(new EntityContainer(entityType, entitySystem, startMethods.ToArray(), updateMethods.ToArray(), renderMethods.ToArray(), destroyMethods.ToArray(), componentContainerArray));
+            entityContainers.Add(new EntityContainer(entityType, entitySystem, startMethods, updateMethods, renderMethods, destroyMethods, componentContainerArray));
             entryIndex++;
         }
 

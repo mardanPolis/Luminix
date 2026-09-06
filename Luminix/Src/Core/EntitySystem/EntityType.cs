@@ -8,6 +8,7 @@ namespace Luminix;
 
 public sealed class EntityType : Def
 {
+    [JsonConstructor]
     internal EntityType()
     {
         componentTypes = [];
@@ -21,6 +22,7 @@ public sealed class EntityType : Def
     [JsonInclude]
     private IComponentType[] components
     {
+        get => componentTypes.Values.ToArray();
         set
         {
             componentTypes.Clear();
@@ -85,5 +87,10 @@ public sealed class EntityType : Def
         }
 
         return containers.ToArray();
+    }
+
+    internal Dictionary<Type, IComponentType> GetComponentTypes()
+    {
+        return componentTypes;
     }
 }

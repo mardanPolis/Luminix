@@ -26,7 +26,7 @@ try
 }
 catch(Exception ex)
 {
-    Console.WriteLine($"{ex}");
+    Logger.Get().NewLog(Logger.Log.Level.Error, $"Fatal Error: {ex}");
 }
 finally
 {
