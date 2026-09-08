@@ -46,6 +46,8 @@ internal sealed class MainCore
             resourceBridge          = ThreadBridges.GetBridge<ResourceBridge>("RenderThread");
             windowBridge            = ThreadBridges.GetBridge<CommandBridge<WindowCommand>>("RenderThread");
             
+            inputBridge.PopulateIfEmpty();
+
             coreThread = (TickedThread)Thread.CurrentThread;
 
             Thread.CurrentThread.IsBackground = true;
@@ -120,6 +122,8 @@ internal sealed class MainCore
             universeController.TickCount = coreThread.TickCount;
             universeController.TickDeltaTime = coreThread.TickDeltaTime;
             universeController.TickAllocated = coreThread.TickAllocated;
+
+            universeController.Time = coreThread.Time;
 
             // var mousePosition = input.MousePosition;
             // inputController.IsMouseOverUI = uiManagerController.isMouseColliding((int)mousePosition.X, (int)mousePosition.Y);

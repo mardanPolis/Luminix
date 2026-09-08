@@ -106,8 +106,7 @@ internal sealed class MainRender : Microsoft.Xna.Framework.Game
             resourceBridge          = ThreadBridges.GetBridge<ResourceBridge>("CoreThread");
             windowBridge            = ThreadBridges.GetBridge<CommandBridge<WindowCommand>>("CoreThread");
             
-            inputBridge.Populate();
-            
+            inputBridge.PopulateIfEmpty();
 
             startBytes = GC.GetAllocatedBytesForCurrentThread();
             

@@ -1,4 +1,5 @@
 using System;
+using System.Threading;
 
 namespace Luminix.Threading.Bridges;
 
@@ -11,11 +12,11 @@ internal sealed class TripleBufferBridge<TBuffer> where TBuffer : class, new()
     public TBuffer WriteBuffer => buffer1;
     public TBuffer ReadBuffer => buffer2;
 
-    public void Populate()
+    public void PopulateIfEmpty()
     {
-        buffer1 = new TBuffer();
-        buffer2 = new TBuffer();
-        buffer3 = new TBuffer();
+        Interlocked.Exchange(ref buffer1, new TBuffer());
+        Interlocked.Exchange(ref buffer2, new TBuffer());
+        Interlocked.Exchange(ref buffer3, new TBuffer());
     }
 
     public TBuffer GetNewBuffer()

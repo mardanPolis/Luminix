@@ -66,7 +66,7 @@ public sealed class TickedThread : ManagedThread
                 Interlocked.Exchange(ref lastTickDate, nextTick);
                 nextTick += Interlocked.Read(ref tickIntervalInTicks);
 
-                tickDeltaTime = internalStopwatch.Elapsed.TotalMilliseconds;
+                tickDeltaTime = internalStopwatch.Elapsed.TotalSeconds;
                 
                 internalStopwatch.Restart(); // NEW TICK
 
@@ -76,7 +76,7 @@ public sealed class TickedThread : ManagedThread
 
                 tickAllocated = GC.GetAllocatedBytesForCurrentThread() - startBytes;
 
-                tickTime = internalStopwatch.Elapsed.TotalMicroseconds;
+                tickTime = internalStopwatch.Elapsed.TotalSeconds;
             }
 
             onStop();
@@ -104,6 +104,7 @@ public sealed class TickedThread : ManagedThread
     public double TickTime => tickTime;
     public double TickDeltaTime => tickDeltaTime;
     public long TickAllocated => tickAllocated;
+    public double Time => stopwatch.Elapsed.TotalSeconds;
 
     public long CurrentElapsedTicks => internalStopwatch.ElapsedTicks;
     public float PartialTick => (float)(stopwatch.ElapsedTicks - Volatile.Read(ref lastTickDate)) / Interlocked.Read(ref tickIntervalInTicks);

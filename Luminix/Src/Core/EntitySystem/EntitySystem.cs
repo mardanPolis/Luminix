@@ -4,6 +4,7 @@ namespace Luminix;
 
 public abstract class EntitySystem
 {
+    protected Universe Universe { get; private set; }
     protected Graphics Graphics { get; private set; }
     protected EntityType Type { get; private set; } = null!;
 
@@ -13,6 +14,7 @@ public abstract class EntitySystem
             throw new InvalidOperationException("EntitySystem has already been initialized.");
         
         Graphics = Workspace.Current.GetService<Graphics>();
+        Universe = Workspace.Current.GetService<Universe>();
         Type = type;
     }
 

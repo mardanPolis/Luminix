@@ -26,6 +26,8 @@ public sealed partial class Universe : Workspace.Service
         public double TickDeltaTime { get => controlled.TickDeltaTime; set => controlled.TickDeltaTime = value; }
         public long TickAllocated { get => controlled.TickAllocated; set => controlled.TickAllocated = value; }
 
+        public double Time { get => controlled.Time; set => controlled.Time = value; }
+
         public readonly void StartCreatedEntities()
         {
             var containers = controlled.entityContainers;
@@ -77,6 +79,8 @@ public sealed partial class Universe : Workspace.Service
     public double TickTime { get; private set; }
     public double TickDeltaTime { get; private set; }
     public long TickAllocated { get; private set; }
+
+    public double Time { get; private set; }
 
     private EntityID entityID;
 
