@@ -8,8 +8,8 @@ namespace Luminix.Threading.Bridges;
 internal sealed class ResourceBridge
 {
     private readonly TaskCommandBridge<ResourceCommand> commands = new();
-    private FrozenDictionary<(Type, string), Resource> resources = null;
-    private bool changedResources;
+    private volatile FrozenDictionary<(Type, string), Resource> resources = null;
+    private volatile bool changedResources;
 
     public Task NewCommand(ResourceCommand command) => commands.NewCommand(command);
 

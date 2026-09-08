@@ -33,6 +33,7 @@ public abstract class Thread
     public string LogPath { get; private set; }
 
     public abstract void Start();
+    public abstract void Stop();
 
     public override string ToString() => Name;
 }

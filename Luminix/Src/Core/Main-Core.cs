@@ -23,8 +23,8 @@ internal sealed class MainCore
 
     private Logger logger;
 
-    private Universe universe;
-    private Universe.Controller universeController;
+    private World world;
+    private World.Controller worldController;
     private Graphics graphics;
     private Graphics.Controller graphicsController;
     private Input input;
@@ -57,12 +57,12 @@ internal sealed class MainCore
 
             TypeRegistry.SetDefaultSubType(typeof(IComponentType), typeof(ComponentType<>), true);
 
-            logger.NewLog(Logger.Log.Level.Info, $"Build-Vers: {LuminixManifest.BuildVers}");
-            logger.NewLog(Logger.Log.Level.Info, $"Build-Date: {LuminixManifest.BuildDate}");
+            logger.NewLog(Logger.Log.Level.Info, $"Build-Vers: {Application.BuildVers}");
+            logger.NewLog(Logger.Log.Level.Info, $"Build-Date: {Application.BuildDate}");
 
             logger.NewLog(Logger.Log.Level.Info, $"Started initialization");
 
-            universe           = new Universe(out universeController);
+            world           = new World(out worldController);
             graphics           = new Graphics(renderBridge, renderInfoBridge, out graphicsController);
             input              = new Input(inputBridge, out inputController);
             defs               = new Defs();
@@ -87,6 +87,8 @@ internal sealed class MainCore
 
             assets.FinalizeAssets(true);
 
+            resources.TrySet();
+
             defs.PatchNodes();
             defs.InheritNodes();
             defs.DeserializeNodes();
@@ -103,6 +105,12 @@ internal sealed class MainCore
         }
     }
 
+    internal void Tick()
+    {
+        Update();
+        Render();
+    }
+
     internal void Update()
     {
         try
@@ -115,22 +123,9 @@ internal sealed class MainCore
 
             resources.TrySet();
 
-            uint tickRate = coreThread.TickRate;
-
-            universeController.TickRate = tickRate;
-            universeController.TickTime = coreThread.TickTime;
-            universeController.TickCount = coreThread.TickCount;
-            universeController.TickDeltaTime = coreThread.TickDeltaTime;
-            universeController.TickAllocated = coreThread.TickAllocated;
-
-            universeController.Time = coreThread.Time;
 
             // var mousePosition = input.MousePosition;
             // inputController.IsMouseOverUI = uiManagerController.isMouseColliding((int)mousePosition.X, (int)mousePosition.Y);
-
-
-            if(tickRate != universeController.TickRate)
-                coreThread.TickRate = tickRate;
         }
         catch(Exception ex)
         {

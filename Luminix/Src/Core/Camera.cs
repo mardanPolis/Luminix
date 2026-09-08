@@ -9,12 +9,10 @@ public class Camera
     public record struct Data(Vector2 Position0, Vector2 Position, float OrthographicSize0, float OrthographicSize);
     public Camera()
     {
-        universe = Workspace.Current.GetService<Universe>();
         graphics = Workspace.Current.GetService<Graphics>();
         //TODO : complete Constructor Method
     }
 
-    protected readonly Universe universe;
     protected readonly Graphics graphics;
 
     private Vector2 position0 = Vector2.Zero;

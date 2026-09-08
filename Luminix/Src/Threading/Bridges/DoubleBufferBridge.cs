@@ -5,31 +5,28 @@ namespace Luminix.Threading.Bridges;
 
 internal sealed class DoubleBufferBridge<TBuffer> where TBuffer : class, new()
 {
-    private TBuffer buffer1;
-    private TBuffer buffer2;
+    private volatile TBuffer buffer1;
+    private volatile TBuffer buffer2;
 
     public TBuffer WriteBuffer => buffer1;
     public TBuffer ReadBuffer => buffer2;
 
     public void PopulateIfEmpty()
     {
-        Interlocked.Exchange(ref buffer1, new TBuffer());
-        Interlocked.Exchange(ref buffer2, new TBuffer());
+        Interlocked.CompareExchange(ref buffer1, new TBuffer(), null);
+        Interlocked.CompareExchange(ref buffer2, new TBuffer(), null);
     }
 
     public TBuffer GetNewBuffer()
     {
-        if (buffer1 != null)
-            throw new InvalidOperationException("All buffer slots are already populated. SwapAndCreateBuffer should only be called during initial setup. Use WriteBuffer/Swap for steady-state operation.");
-
-        buffer1 = new TBuffer();
-        return buffer1;
+        var newBuf = new TBuffer();
+        if (Interlocked.CompareExchange(ref buffer1, newBuf, null) != null)
+            throw new InvalidOperationException("All buffer slots are already populated. GetNewBuffer should only be called during initial setup. Use WriteBuffer/Swap for steady-state operation.");
+        return newBuf;
     }
 
     public void Swap()
     {
-        var temp = buffer1;
-        buffer1 = buffer2;
-        buffer2 = temp;
+        (buffer2, buffer1) = (buffer1, buffer2);
     }
 }

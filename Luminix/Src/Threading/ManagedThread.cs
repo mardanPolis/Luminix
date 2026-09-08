@@ -24,6 +24,8 @@ public abstract class ManagedThread : Thread
             }
             catch(Exception ex)
             {
+                Application.Exit();
+
                 logger.NewLog(Logger.Log.Level.Error, $"Fatal Error: {ex}");
             }
             finally
@@ -43,7 +45,7 @@ public abstract class ManagedThread : Thread
     public override bool IsAlive => running;
 
     public override void Start() => SystemThread.Start();
-    public void Stop()
+    public override void Stop()
     {
         running = false;
     }

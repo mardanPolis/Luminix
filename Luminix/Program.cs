@@ -4,21 +4,15 @@ using Luminix.Threading;
 
 try
 {
+    Logger.Initialize();
+    
     var mainCore = new Luminix.MainCore();
-    var coreThread = new TickedThread("CoreThread", mainCore.Initialize, () =>
-    {
-        mainCore.Update();
-        mainCore.Render();
-    },
-    mainCore.OnStop);
+    var coreThread = new TickedThread("CoreThread", mainCore.Initialize, mainCore.Tick, mainCore.OnStop);
     coreThread.Priority = System.Threading.ThreadPriority.AboveNormal;
     coreThread.IsBackground = false;
 
-    var renderThread = new UnmanagedThread("RenderThread", () =>
-    {
-        using var mainRender = new Luminix.MainRender(coreThread);
-        mainRender.Run();
-    });
+    var mainRender = new Luminix.MainRender(coreThread);
+    var renderThread = new UnmanagedThread("RenderThread", mainRender.Run, mainRender.Stop);
     renderThread.Priority = System.Threading.ThreadPriority.AboveNormal;
     renderThread.IsBackground = false;
 
@@ -31,9 +25,7 @@ catch(Exception ex)
 }
 finally
 {
-    if (Thread.Threads != null)
-        foreach (var thread in Thread.Threads)
-            if(thread is ManagedThread managedThread)
-                managedThread?.Stop();
+    Application.Exit();
+
     Logger.Shutdown();
 }

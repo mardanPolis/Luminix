@@ -15,9 +15,6 @@ internal sealed class MainRender : Microsoft.Xna.Framework.Game
 {
     internal MainRender(TickedThread coreThread)
     {
-        logger = Logger.Get();
-        logger.EchoToConsole = true;
-
         //workspace
         workspace = new Workspace(out workspaceController);
 
@@ -34,10 +31,7 @@ internal sealed class MainRender : Microsoft.Xna.Framework.Game
         resourceManager = new ResourceManager(this);
         IsMouseVisible = true;
 
-        this.mainThread = Thread.CurrentThread;
         this.coreThread = coreThread;
-
-        logger.NewLog(Logger.Log.Level.Info, $"RenderThread bootstrap in {stopwatch.Elapsed.Milliseconds}ms");
     }
 
     //Core Bridges
@@ -48,11 +42,13 @@ internal sealed class MainRender : Microsoft.Xna.Framework.Game
     private CommandBridge<WindowCommand> windowBridge;
 
     //RenderThread
-    private readonly Thread mainThread;
-    private readonly TickedThread coreThread = null;
+    private Thread mainThread;
+    private TickedThread coreThread = null;
 
-    private long startBytes = 0;
-    private long allocated = 0;
+    private volatile bool shouldStop = false;
+
+    private long startBytes;
+    private long allocated;
     private double frameTime;
 
     private Point windowPosition;
@@ -93,10 +89,20 @@ internal sealed class MainRender : Microsoft.Xna.Framework.Game
         init => base.Content = value;
     }
 
+    public void Stop()
+    {
+        shouldStop = true;
+    }
+
     protected override void Initialize()
     {
         try
         {
+            this.mainThread = Thread.CurrentThread;
+
+            logger = Logger.Get();
+            logger.EchoToConsole = true;
+
             logger.NewLog(Logger.Log.Level.Info, $"Started initialization in {stopwatch.Elapsed.Milliseconds}ms");
 
             //thread bridges
@@ -127,10 +133,10 @@ internal sealed class MainRender : Microsoft.Xna.Framework.Game
             resourceManager.CreateResource(nullTextureAsset);
             resourceManager.CreateResource(pixelTextureAsset);
 
-            resourceManager.CreateResource(assetIO.LoadXnbAsset(LuminixManifest.Assembly, "Assets.Built-In.Fonts.IBMPlexMono-Bold.xnb"));
-            resourceManager.CreateResource(assetIO.LoadXnbAsset(LuminixManifest.Assembly, "Assets.Built-In.Fonts.IBMPlexMono-Medium.xnb"));
-            resourceManager.CreateResource(assetIO.LoadXnbAsset(LuminixManifest.Assembly, "Assets.Built-In.Fonts.IBMPlexMono-Regular.xnb"));
-            resourceManager.CreateResource(assetIO.LoadXnbAsset(LuminixManifest.Assembly, "Assets.Built-In.Shaders.GenericShader.xnb"));
+            resourceManager.CreateResource(assetIO.LoadXnbAsset(Application.Assembly, "Assets.Built-In.Fonts.IBMPlexMono-Bold.xnb"));
+            resourceManager.CreateResource(assetIO.LoadXnbAsset(Application.Assembly, "Assets.Built-In.Fonts.IBMPlexMono-Medium.xnb"));
+            resourceManager.CreateResource(assetIO.LoadXnbAsset(Application.Assembly, "Assets.Built-In.Fonts.IBMPlexMono-Regular.xnb"));
+            resourceManager.CreateResource(assetIO.LoadXnbAsset(Application.Assembly, "Assets.Built-In.Shaders.GenericShader.xnb"));
 
             resourceCommandHandler = HandleResourceCommand;
 
@@ -160,6 +166,9 @@ internal sealed class MainRender : Microsoft.Xna.Framework.Game
 
     protected override void Update(GameTime gameTime)
     {
+        if(shouldStop)
+            Exit();
+
         stopwatch.Restart();
         renderInfoBuffer = renderInfoBridge.WriteBuffer ?? renderInfoBridge.GetNewBuffer();
 

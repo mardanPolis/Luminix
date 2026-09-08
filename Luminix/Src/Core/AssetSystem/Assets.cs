@@ -233,7 +233,7 @@ public sealed class Assets : Workspace.Service
         assets.AddRange(fontAssets.Values);
 
         var pending = new List<Task> { audioTask, textureTask };
-        Task.WhenAll(pending).GetAwaiter().GetResult();;
+        Task.WhenAll(pending).GetAwaiter().GetResult();
 
         assets.AddRange(audioResults);
         assets.AddRange(makeAtlases ? CreateAtlasAssets(textureResults) : textureResults);
@@ -248,6 +248,8 @@ public sealed class Assets : Workspace.Service
         {
             assetTasks.Add(resources.CreateResourceFromAsset(asset));
         }
+
+        Task.WhenAll(assetTasks).GetAwaiter().GetResult();
 
         textureAssetInfos.Clear();
         audioAssetInfos.Clear(); 

@@ -65,10 +65,10 @@ internal partial class EntityContainer
                     }
                 }
 
-                var concreteContainerType = typeof(ComponentContainer<>).MakeGenericType(elementType);
-                var dataField = concreteContainerType.GetField(nameof(ComponentContainer<int>.Data))!;
+                var concreteContainerType = TypeRegistry.GetClosedGenericType(typeof(ComponentContainer<>), elementType);
+                var dataField = concreteContainerType.GetProperty(nameof(ComponentContainer<int>.Data), BindingFlags.Instance | BindingFlags.Public);
                 var containerConst = Expression.Constant(container, concreteContainerType);
-                var arrayAccess = Expression.Field(containerConst, dataField);
+                var arrayAccess = Expression.Property(containerConst, dataField);
                 elementAccesses[i] = Expression.ArrayAccess(arrayAccess, indexParam);
             }
 

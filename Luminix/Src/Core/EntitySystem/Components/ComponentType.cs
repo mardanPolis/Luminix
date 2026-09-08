@@ -13,7 +13,7 @@ internal class ComponentType<T> : IComponentType where T : struct
     public int Size => Unsafe.SizeOf<T>();
     public T Default { get { return data; } set { data = value; } }
     [JsonInclude]
-    internal required T data;
+    internal T data;
 
     public IComponentContainer GetComponentContainer()
     {

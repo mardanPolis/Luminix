@@ -1,6 +1,6 @@
 using System;
 
-namespace Luminix.Collections;
+namespace Luminix;
 
 internal interface IComponentContainer
 {

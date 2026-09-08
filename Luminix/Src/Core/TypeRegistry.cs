@@ -185,7 +185,7 @@ public static class TypeRegistry
 
         string assemblyName = name[..firstDot];
 
-        var assembly = LuminixManifest.GetAssembly(assemblyName);
+        var assembly = Application.GetAssembly(assemblyName);
 
         var type = assembly.GetType(name, throwOnError: false) ?? throw new ArgumentException($"'{name}' — assembly '{assemblyName}' was found, but no type named '{name}' exists in it.", nameof(name));
 

@@ -1,12 +1,14 @@
 using System;
+using System.Reflection;
 
 namespace Luminix.Threading;
 
 internal sealed class UnmanagedThread : Thread
 {
-    private Action threadAction;
+    private Action threadRun;
+    private Action threadStop;
 
-    public UnmanagedThread(string name, Action action)
+    public UnmanagedThread(string name, Action run, Action stop)
     {
         if(thread.Value != null)
             throw new InvalidOperationException("The current thread already has an UnmanagedThread instance associated with it.");
@@ -15,10 +17,12 @@ internal sealed class UnmanagedThread : Thread
         this.Name = name;
 
         thread.Value = this;
-        logger = Logger.Initialize();
+        logger = Logger.Get();
 
-        threadAction = action;
+        threadRun = run;
+        threadStop = stop;
     }
 
-    public override void Start() => threadAction();
+    public override void Start() => threadRun();
+    public override void Stop() => threadStop();
 }

@@ -63,6 +63,9 @@ public sealed partial class Logger
 
     public static Logger Get()
     {
+        if(instance.Value == null)
+            throw new InvalidOperationException("Logger instance has not been initialized. Call Initialize() first.");
+
         return instance.Value;
     }
     public static Logger[] GetAll()

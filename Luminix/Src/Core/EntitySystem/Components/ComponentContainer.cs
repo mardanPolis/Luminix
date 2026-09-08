@@ -1,6 +1,6 @@
 using System;
 
-namespace Luminix.Collections;
+namespace Luminix;
 
 internal class ComponentContainer<T> : IComponentContainer where T : struct
 {
