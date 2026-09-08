@@ -3,6 +3,9 @@ using System.Collections;
 using System.Collections.Frozen;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Threading.Tasks;
+using Luminix.Threading.Bridges;
+using Luminix.Threading.Commands;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Audio;
 using Microsoft.Xna.Framework.Graphics;
@@ -37,11 +40,13 @@ public sealed class Resources : Workspace.Service, IEnumerable<Resource>
             }
         }
     }
-    internal Resources() { }
+    internal Resources(ResourceBridge resourceBridge) { this.resourceBridge = resourceBridge; }
  
     public int ResourceCount => resources != null ? resources.Count : 0;
  
     private FrozenDictionary<(Type, string), Resource> resources;
+
+    private ResourceBridge resourceBridge;
 
     public T GetResource<T>(string identifier) where T : Resource
     {
@@ -55,38 +60,10 @@ public sealed class Resources : Workspace.Service, IEnumerable<Resource>
         return null;
     }
 
-    internal void Set(
-    IReadOnlyDictionary<string, TextureResource> textures,
-    IReadOnlyDictionary<string, AudioResource> audios,
-    IReadOnlyDictionary<string, FontResource> fonts,
-    IReadOnlyDictionary<string, ShaderResource> shaders)
+    internal void TrySet()
     {
-        var combined = new Dictionary<(Type, string), Resource>(
-            textures.Count + audios.Count + fonts.Count + shaders.Count);
-
-        var textureType = typeof(TextureResource);
-        var audioType = typeof(AudioResource);
-        var fontType = typeof(FontResource);
-        var shaderType = typeof(ShaderResource);
-
-        foreach (var (key, value) in textures)
-            combined[(textureType, key)] = value;
-
-        foreach (var (key, value) in audios)
-            combined[(audioType, key)] = value;
-
-        foreach (var (key, value) in fonts)
-            combined[(fontType, key)] = value;
-
-        foreach (var (key, value) in shaders)
-            combined[(shaderType, key)] = value;
-
-        resources = combined.ToFrozenDictionary();
-    }
-
-    internal void Set(FrozenDictionary<(Type, string), Resource> resources)
-    {
-        this.resources = resources;
+        if(resourceBridge.ChangedResources)
+            this.resources = resourceBridge.GetResourceContainer();
     }
 
     internal FrozenDictionary<(Type, string), Resource> GetResources() => resources;
@@ -104,17 +81,34 @@ public sealed class Resources : Workspace.Service, IEnumerable<Resource>
     {
         return GetEnumerator();
     }
+
+    public Task CreateResourceFromAsset(Asset asset)
+    {
+        var command = new ResourceCommand();
+        command.Asset = asset;
+        command.Identifier = asset.Identifier;
+        command.Kind = ResourceCommand.Type.create;
+        return resourceBridge.NewCommand(command);
+    }
+
+    public Task UnloadResource(Resource resource)
+    {
+        var command = new ResourceCommand();
+        command.Identifier = resource.Identifier;
+        command.Kind = ResourceCommand.Type.unload;
+        return resourceBridge.NewCommand(command);
+    }
 }
 
 
 public abstract class Resource
 {
-    public readonly string Name;
+    public readonly string Identifier;
     internal Resource(string name)
     {
         ArgumentNullException.ThrowIfNullOrWhiteSpace(name, nameof(name));
 
-        Name = name;
+        Identifier = name;
     }
 }
 
@@ -144,7 +138,7 @@ public sealed class TextureResource : Resource
 
     public bool IsDisposed => Source.IsDisposed;
 
-    public sealed override string ToString() => $"{Name} {Rectangle}";
+    public sealed override string ToString() => $"{Identifier} {Rectangle}";
 }
 
 public sealed class FontResource : Resource
@@ -163,7 +157,7 @@ public sealed class FontResource : Resource
 
     public bool IsDisposed => Source.Texture.IsDisposed;
 
-    public sealed override string ToString() => Name;
+    public sealed override string ToString() => Identifier;
 }
 
 public sealed class ShaderResource : Resource

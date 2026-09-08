@@ -56,3 +56,9 @@ internal static class ThreadBridges
         return (TBridge)lazyBridge.Value;
     }
 }
+
+//RenderBridge : TripleBufferBridge
+//RenderInfoBridge : DoubleBufferBridge
+//InputBridge : DoubleBufferBridge
+//WindowBridge : CommandBridge
+//ResourceBridge : TaskCommandBridge

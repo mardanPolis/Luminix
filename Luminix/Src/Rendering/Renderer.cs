@@ -35,7 +35,7 @@ internal sealed class Renderer
     public Renderer()
     {
         renderingSystem = Workspace.Current.GetService<RenderingSystem>();
-        resources = renderingSystem.ResourceManager.Resources;
+        resources = renderingSystem.ResourceManager;
         spriteBatch = renderingSystem.SpriteBatch;
 
         defaultShader = resources.GetResource<ShaderResource>("Assets.Built-In.Shaders.GenericShader.xnb");
@@ -71,7 +71,7 @@ internal sealed class Renderer
     }
 
     private readonly RenderingSystem  renderingSystem;
-    private readonly Resources resources;
+    private readonly ResourceManager resources;
     private readonly SpriteBatch      spriteBatch;
 
     private readonly ShaderResource  defaultShader;

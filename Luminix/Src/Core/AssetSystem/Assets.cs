@@ -6,15 +6,16 @@ using System.Linq;
 using System.Threading.Tasks;
 using Luminix.IO;
 using Luminix.Threading.Bridges;
+using Luminix.Threading.Commands;
 
 namespace Luminix;
 
 public sealed class Assets : Workspace.Service
 {
-    internal Assets(AssetBridge assetBridge)
+    internal Assets(Resources resources)
     {
         this.assetIO = new AssetIO();
-        this.assetBridge = assetBridge;
+        this.resources = resources;
 
         this.textureAssetInfos = [];
         this.audioAssetInfos = [];
@@ -29,7 +30,7 @@ public sealed class Assets : Workspace.Service
     }
 
     private readonly AssetIO assetIO;
-    private readonly AssetBridge assetBridge;
+    private readonly Resources resources;
 
     private readonly SortedDictionary<string, AssetIO.AssetInfo> textureAssetInfos;
     private readonly Dictionary<string, AssetIO.AssetInfo> audioAssetInfos;
@@ -242,7 +243,11 @@ public sealed class Assets : Workspace.Service
             defs.ParseDataAsset(dataAssets[i]);
         }
 
-        assetBridge.Register(assets).GetAwaiter().GetResult();
+        var assetTasks = new List<Task>();
+        foreach(var asset in assets)
+        {
+            assetTasks.Add(resources.CreateResourceFromAsset(asset));
+        }
 
         textureAssetInfos.Clear();
         audioAssetInfos.Clear(); 

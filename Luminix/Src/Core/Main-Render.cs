@@ -1,16 +1,14 @@
 using System;
 using System.Diagnostics;
-using System.Threading.Tasks;
-using System.Collections.Generic;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
-using Microsoft.Xna.Framework.Graphics;
 using Luminix.Rendering;
 using Luminix.Threading;
 using Luminix.Threading.Bridges;
 using Luminix.InputSystem.Handlers;
 using Luminix.Threading.Buffers;
 using Luminix.IO;
+using Luminix.Threading.Commands;
 
 namespace Luminix;
 internal sealed class MainRender : Microsoft.Xna.Framework.Game
@@ -43,10 +41,11 @@ internal sealed class MainRender : Microsoft.Xna.Framework.Game
     }
 
     //Core Bridges
-    private RenderBridge renderBridge;
-    private InputBridge coreInputBridge;
-    private ResourceBridge coreResourceBridge;
-    private AssetBridge coreAssetBridge;
+    private TripleBufferBridge<RenderBuffer> renderBridge;
+    private DoubleBufferBridge<RenderInfoBuffer> renderInfoBridge;
+    private DoubleBufferBridge<InputBuffer> inputBridge;
+    private ResourceBridge resourceBridge;
+    private CommandBridge<WindowCommand> windowBridge;
 
     //RenderThread
     private readonly Thread mainThread;
@@ -87,6 +86,8 @@ internal sealed class MainRender : Microsoft.Xna.Framework.Game
 
     public GameTime GameTime => time;
 
+    public Action<ResourceCommand> resourceCommandHandler;
+
     public new ContentManager Content
     {
         init => base.Content = value;
@@ -98,11 +99,16 @@ internal sealed class MainRender : Microsoft.Xna.Framework.Game
         {
             logger.NewLog(Logger.Log.Level.Info, $"Started initialization in {stopwatch.Elapsed.Milliseconds}ms");
 
-            renderBridge = ThreadBridges.GetBridge<RenderBridge>("CoreThread");
-            coreInputBridge = ThreadBridges.GetBridge<InputBridge>("CoreThread");
-            coreResourceBridge = ThreadBridges.GetBridge<ResourceBridge>("CoreThread");
-            coreAssetBridge = ThreadBridges.GetBridge<AssetBridge>("CoreThread");
+            //thread bridges
+            renderBridge            = ThreadBridges.GetBridge<TripleBufferBridge<RenderBuffer>>("CoreThread");
+            renderInfoBridge        = ThreadBridges.GetBridge<DoubleBufferBridge<RenderInfoBuffer>>("CoreThread");
+            inputBridge             = ThreadBridges.GetBridge<DoubleBufferBridge<InputBuffer>>("CoreThread");
+            resourceBridge          = ThreadBridges.GetBridge<ResourceBridge>("CoreThread");
+            windowBridge            = ThreadBridges.GetBridge<CommandBridge<WindowCommand>>("CoreThread");
             
+            inputBridge.Populate();
+            
+
             startBytes = GC.GetAllocatedBytesForCurrentThread();
             
             AssetIO assetIO = new AssetIO();
@@ -111,7 +117,7 @@ internal sealed class MainRender : Microsoft.Xna.Framework.Game
             renderingSystem = new RenderingSystem(this, renderBridge);
 
             //handlers
-            inputHandler = new InputHandler(coreInputBridge);
+            inputHandler = new InputHandler(inputBridge);
             
             //base initialization
             base.Initialize();
@@ -127,9 +133,7 @@ internal sealed class MainRender : Microsoft.Xna.Framework.Game
             resourceManager.CreateResource(assetIO.LoadXnbAsset(LuminixManifest.Assembly, "Assets.Built-In.Fonts.IBMPlexMono-Regular.xnb"));
             resourceManager.CreateResource(assetIO.LoadXnbAsset(LuminixManifest.Assembly, "Assets.Built-In.Shaders.GenericShader.xnb"));
 
-            resourceManager.Resources.Set(resourceManager.TextureResources, resourceManager.AudioResources, resourceManager.FontResources, resourceManager.ShaderResources);
-
-            //Adapters
+            resourceCommandHandler = HandleResourceCommand;
 
             //Renderer initialization   
             renderingSystem.Initialize();
@@ -137,7 +141,7 @@ internal sealed class MainRender : Microsoft.Xna.Framework.Game
             TargetElapsedTime = TimeSpan.FromSeconds(1d / 144d);
             IsFixedTimeStep = true;
 
-            windowPosition = Window.ClientBounds.Location;
+            windowPosition = Window.Position;
         }
         catch
         {
@@ -158,28 +162,14 @@ internal sealed class MainRender : Microsoft.Xna.Framework.Game
     protected override void Update(GameTime gameTime)
     {
         stopwatch.Restart();
-        renderInfoBuffer = renderBridge.CurrentWriteInfoBuffer ?? renderBridge.CreateInfoBuffer();
+        renderInfoBuffer = renderInfoBridge.WriteBuffer ?? renderInfoBridge.GetNewBuffer();
 
         inputHandler.Update(IsActive);
 
-        /*| Resources */
-        if(coreAssetBridge.AssetsPassing)
-        {
-            coreAssetBridge.ConsumeAssets(resourceManager.CreateResource, out List<TaskCompletionSource> tsks);
-            resourceManager.Resources.Set(resourceManager.TextureResources, resourceManager.AudioResources, resourceManager.FontResources, resourceManager.ShaderResources);
-            coreResourceBridge.Set(resourceManager.Resources.GetResources());
+        if(resourceBridge.ResourceCommandsIncoming)
+            resourceBridge.ConsumeCommands(resourceCommandHandler);
 
-            for(int i = 0; i < tsks.Count; i++)
-                tsks[i].SetResult();
-                
-        }
-        /* Resources END |*/
-
-        var windowPos = Window.ClientBounds.Location;
-        if(windowPos != windowPosition)
-            OnWindowMove(windowPos);
-
-        windowPosition = windowPos;
+        windowPosition = Window.ClientBounds.Location;
 
         base.Update(gameTime);
     }
@@ -207,9 +197,19 @@ internal sealed class MainRender : Microsoft.Xna.Framework.Game
         allocated = GC.GetAllocatedBytesForCurrentThread() - startBytes;
         startBytes = GC.GetAllocatedBytesForCurrentThread();
     }
-
-    private void OnWindowMove(Point position)
+    
+    private void HandleResourceCommand(ResourceCommand command)
     {
-        
+        switch (command.Kind)
+        {
+            case ResourceCommand.Type.create:
+                resourceManager.CreateResource(command.Asset);
+            break;
+            case ResourceCommand.Type.update:
+                throw new NotImplementedException("update resource");
+            case ResourceCommand.Type.unload:
+                resourceManager.UnloadAsset(command.Asset.Identifier);
+            break;
+        }
     }
 }

@@ -1,12 +1,9 @@
-using System;
-using Microsoft.Xna.Framework.Graphics;
-
 namespace Luminix.Threading.Buffers;
 
 internal sealed class RenderInfoBuffer
 {
-    public ulong FrameCount { get; set; }
-    public short AccumulatedFrameCount { get; set; }
+    public ushort AccumulatedFrameCount { get; set; }
+    public long FrameCount { get; set; }
     public double FrameTime { get; set; }
     public double FrameDeltaTime { get; set; }
     public long Allocated { get; set; }
@@ -16,8 +13,8 @@ internal sealed class RenderInfoBuffer
 
     public void Reset()
     {
-        FrameCount = 0;
         AccumulatedFrameCount = 0;
+        FrameCount = 0;
         FrameTime = 0;
         FrameDeltaTime = 0;
         Allocated = 0;

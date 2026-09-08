@@ -10,7 +10,7 @@ namespace Luminix.Rendering;
 
 public sealed class RenderingSystem : Workspace.Service
 {
-    internal RenderingSystem(MainRender main, RenderBridge renderBridge)
+    internal RenderingSystem(MainRender main, TripleBufferBridge<RenderBuffer> renderBridge)
     {
         ArgumentNullException.ThrowIfNull(main);
         ArgumentNullException.ThrowIfNull(main.GraphicsDeviceManager);
@@ -31,7 +31,7 @@ public sealed class RenderingSystem : Workspace.Service
     private GameWindow window;
     private ResourceManager resourceManager;
 
-    private RenderBridge renderBridge;
+    private TripleBufferBridge<RenderBuffer> renderBridge;
     private RenderBuffer renderBuffer;
 
     private SpriteBatch spriteBatch;
@@ -43,7 +43,7 @@ public sealed class RenderingSystem : Workspace.Service
     private Rectangle resolution;
     private Rectangle screenBounds;
 
-    private ulong frameCount = 0;
+    private long frameCount = 0;
     private long drawCount = 0;
 
     private Viewport viewport;
@@ -57,7 +57,7 @@ public sealed class RenderingSystem : Workspace.Service
     public ResourceManager ResourceManager => resourceManager;
     public GraphicsDeviceManager GraphicsDeviceManager => graphics;
     public GraphicsDevice GraphicsDevice => graphics.GraphicsDevice;
-    public ulong FrameCount => frameCount;
+    public long FrameCount => frameCount;
     public long DrawCount => drawCount;
     public Viewport Viewport => viewport;
 
@@ -88,25 +88,23 @@ public sealed class RenderingSystem : Workspace.Service
 
     internal void NewFrame(float partialTick)
     {
-        if (renderBridge.CurrentReadBuffer != renderBuffer)
-        {
-            renderBuffer = renderBridge.CurrentReadBuffer;
+        if (renderBridge.ReadBuffer != renderBuffer)
+        {       
+            renderBuffer = renderBridge.ReadBuffer;
             
             var settingsChanged = false;
 
-            var resolution = renderBuffer.Resolution;
-            var fullscreen = renderBuffer.Fullscreen;
-            var vSync = renderBuffer.VSync;
+            ref RenderSettings renderSettings = ref renderBuffer.RenderSettings;
+
+            var resolution = renderSettings.Resolution;
+            var frameRate = renderSettings.FrameRate;
+            var vSync = renderSettings.VSync;
+
+            //TODO framerate
 
             if(this.resolution.X != resolution.X || this.resolution.Y != resolution.Y)
             {
                 this.resolution = new Rectangle(0, 0, resolution.X, resolution.Y);
-                settingsChanged = true;
-            }
-
-            if(this.IsFullScreen != fullscreen)
-            {
-                this.graphics.IsFullScreen = fullscreen;
                 settingsChanged = true;
             }
 
@@ -233,6 +231,11 @@ public sealed class RenderingSystem : Workspace.Service
         {
             Logger.Get().NewLog(Logger.Log.Level.Error, $"RenderingSystem: failed to produce a screenshot, reason: {e.Message}");
         }
+    }
+
+    public void SetWindowMode(Window.Mode windowMode)
+    {
+        this.graphics.IsFullScreen = windowMode == Window.Mode.Fullscreen;
     }
 
     public void Apply()

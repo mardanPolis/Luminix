@@ -4,6 +4,8 @@ using Luminix.Collections;
 using Luminix.IO;
 using Luminix.Threading;
 using Luminix.Threading.Bridges;
+using Luminix.Threading.Buffers;
+using Luminix.Threading.Commands;
 
 namespace Luminix;
 
@@ -13,10 +15,11 @@ internal sealed class MainCore
 
     private TickedThread coreThread;
 
-    private RenderBridge renderBridge;
-    private InputBridge inputBridge;
+    private TripleBufferBridge<RenderBuffer> renderBridge;
+    private DoubleBufferBridge<RenderInfoBuffer> renderInfoBridge;
+    private DoubleBufferBridge<InputBuffer> inputBridge;
     private ResourceBridge resourceBridge;
-    private AssetBridge assetBridge;
+    private CommandBridge<WindowCommand> windowBridge;
 
     private Logger logger;
 
@@ -37,10 +40,11 @@ internal sealed class MainCore
 
         try
         {
-            renderBridge = ThreadBridges.GetBridge<RenderBridge>("RenderThread");
-            inputBridge = ThreadBridges.GetBridge<InputBridge>("RenderThread");
-            resourceBridge = ThreadBridges.GetBridge<ResourceBridge>("RenderThread");
-            assetBridge = ThreadBridges.GetBridge<AssetBridge>("RenderThread");
+            renderBridge            = ThreadBridges.GetBridge<TripleBufferBridge<RenderBuffer>>("RenderThread");
+            renderInfoBridge        = ThreadBridges.GetBridge<DoubleBufferBridge<RenderInfoBuffer>>("RenderThread");
+            inputBridge             = ThreadBridges.GetBridge<DoubleBufferBridge<InputBuffer>>("RenderThread");
+            resourceBridge          = ThreadBridges.GetBridge<ResourceBridge>("RenderThread");
+            windowBridge            = ThreadBridges.GetBridge<CommandBridge<WindowCommand>>("RenderThread");
             
             coreThread = (TickedThread)Thread.CurrentThread;
 
@@ -57,11 +61,11 @@ internal sealed class MainCore
             logger.NewLog(Logger.Log.Level.Info, $"Started initialization");
 
             universe           = new Universe(out universeController);
-            graphics           = new Graphics(renderBridge, out graphicsController);
+            graphics           = new Graphics(renderBridge, renderInfoBridge, out graphicsController);
             input              = new Input(inputBridge, out inputController);
             defs               = new Defs();
-            assets             = new Assets(assetBridge);
-            resources          = new Resources();
+            resources          = new Resources(resourceBridge);
+            assets             = new Assets(resources);
 
             defs.NewDefType<EntityType>(); // built in
 
@@ -107,7 +111,7 @@ internal sealed class MainCore
 
             inputController.UpdateData();
 
-            resources.Set(resourceBridge.Get());
+            resources.TrySet();
 
             uint tickRate = coreThread.TickRate;
 

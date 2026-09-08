@@ -19,6 +19,7 @@ public abstract class ManagedThread : Thread
             try
             {
                 running = true;
+                workspace = new Workspace(out workspaceController);
                 threadAction();
             }
             catch(Exception ex)

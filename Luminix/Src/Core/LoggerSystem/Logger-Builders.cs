@@ -72,7 +72,10 @@ public sealed partial class Logger
 
         public bool AppendFormatted(object value)
         {
-            if (logger == null || !canLog || value == null) return false;
+            if (logger == null || !canLog ) return false;
+
+            if(value == null)
+                return Add("null".AsSpan());
 
             if(value is Type type)
                 return AddType(type);

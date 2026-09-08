@@ -1,12 +1,13 @@
 using System;
 using Luminix.Threading.Bridges;
+using Luminix.Threading.Buffers;
 using Microsoft.Xna.Framework.Input;
 
 namespace Luminix.InputSystem.Handlers;
 
 internal sealed class InputHandler
 {
-    internal InputHandler(InputBridge inputBridge)
+    internal InputHandler(DoubleBufferBridge<InputBuffer> inputBridge)
     {
         this.keyboardHandler = new KeyboardHandler();
         this.mouseHandler = new MouseHandler();
@@ -17,7 +18,7 @@ internal sealed class InputHandler
     private KeyboardHandler keyboardHandler;
     private MouseHandler mouseHandler;
 
-    private InputBridge inputBridge;
+    private DoubleBufferBridge<InputBuffer> inputBridge;
 
     public void Update(bool WindowActive)
     {

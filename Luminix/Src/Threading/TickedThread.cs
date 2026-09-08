@@ -26,8 +26,6 @@ public sealed class TickedThread : ManagedThread
     
             startBytes = GC.GetAllocatedBytesForCurrentThread();
 
-            workspace = new Workspace(out workspaceController);
-
             init();
             
             workspaceController.Start();
@@ -87,9 +85,6 @@ public sealed class TickedThread : ManagedThread
 
     private Stopwatch stopwatch;
     private Stopwatch internalStopwatch;
-
-    private Workspace workspace;
-    private Workspace.Controller workspaceController;
 
     private long tickIntervalInTicks = 0;
     private long lastTickDate = 0;

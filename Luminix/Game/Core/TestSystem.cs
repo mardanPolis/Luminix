@@ -12,4 +12,8 @@ public class TestSystem : EntitySystem
     {
         return $"TestSystem, [MaxHealth: {MaxHealth}, MaxStamina: {MaxStamina}]";
     }
+
+    private void Render()
+    {
+    }
 }

@@ -98,12 +98,6 @@ public sealed partial class Universe : Workspace.Service
 
         foreach(EntityContainer container in entityContainers)
             container.EntitySystem.Initialize(container.EntityType);
-
-        foreach(EntityContainer container in entityContainers)
-        {
-            logger.NewLog(Logger.Log.Level.Info, $"EntityType: {container.EntityType.Name}, EntitySystem: {container.EntitySystem}");
-            logger.NewLog<Dictionary<Type, IComponentType>, Type, IComponentType>(Logger.Log.Level.Info, container.EntityType.GetComponentTypes());
-        }
     }
 
     public EntityID CreateEntity(EntityType entityType)

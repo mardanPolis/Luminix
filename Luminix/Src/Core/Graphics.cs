@@ -4,6 +4,8 @@ using Microsoft.Xna.Framework;
 using Luminix.Threading.Bridges;
 using Luminix.Threading.Buffers;
 using System.Runtime.CompilerServices;
+using Luminix.Rendering;
+using System.Diagnostics;
 
 namespace Luminix;
 
@@ -11,73 +13,102 @@ public sealed class Graphics : Workspace.Service
 {
     internal readonly struct Controller
     {
-        internal Controller(Graphics controlled, RenderBridge renderBridge)
+        internal Controller(Graphics controlled, TripleBufferBridge<RenderBuffer> renderBridge, DoubleBufferBridge<RenderInfoBuffer> renderInfoBridge)
         {
             if(controlled.controllerIssued)
                 throw new ArgumentException("Cant create a Graphics.Controller, the provided graphics is already initialized!");
             
-            this.bridge = renderBridge;
+            this.renderBridge = renderBridge;
+            this.renderInfoBridge = renderInfoBridge;
             this.controlled = controlled;
         }
 
-        private readonly RenderBridge bridge;
+        private readonly TripleBufferBridge<RenderBuffer> renderBridge;
+        private readonly DoubleBufferBridge<RenderInfoBuffer> renderInfoBridge;
         private readonly Graphics controlled;
 
         internal void SwapBuffers()
         {
-            this.bridge.SwapBuffers();
-            var renderInfoBuffer = this.bridge.CurrentReadInfoBuffer;
+            this.renderBridge.Swap();
+            var renderInfoBuffer = this.renderInfoBridge.ReadBuffer;
             if(renderInfoBuffer == null || !renderInfoBuffer.Updated)
                 return;
 
             var accumulatedFrameCount = renderInfoBuffer.AccumulatedFrameCount;
-            controlled.FrameCount = renderInfoBuffer.FrameCount;
-            controlled.FrameTime = renderInfoBuffer.FrameTime / accumulatedFrameCount;
-            controlled.FrameDeltaTime = renderInfoBuffer.FrameDeltaTime / accumulatedFrameCount;
-            controlled.FrameAllocated = renderInfoBuffer.Allocated;
+            ref FrameInfo frameInfo = ref controlled.frameInfo;
+            frameInfo = new FrameInfo(
+                renderInfoBuffer.FrameCount,
+                renderInfoBuffer.FrameTime / accumulatedFrameCount,
+                renderInfoBuffer.FrameDeltaTime / accumulatedFrameCount,
+                renderInfoBuffer.Allocated,
+                renderInfoBuffer.DrawCalls
+            );
             renderInfoBuffer.Reset();
         }
 
         internal void BeginRender()
         {
-            controlled.renderBuffer = bridge.CurrentWriteBuffer ?? bridge.CreateBuffer();
+            controlled.renderBuffer = renderBridge.WriteBuffer ?? renderBridge.GetNewBuffer();
             controlled.renderBuffer.Reset();
         }
 
         internal void StopRender()
         {
-            controlled.renderBuffer.Resolution = controlled.Resolution;
-            controlled.renderBuffer.Fullscreen = controlled.Fullscreen;
+            ref RenderSettings settings = ref controlled.RenderSettings;
+            var renderBuffer = controlled.renderBuffer;
+
+            renderBuffer.RenderSettings = controlled.renderSettings;
+
             controlled.renderBuffer = null;
         }
     }
 
-    internal Graphics(RenderBridge renderBridge, out Controller controller)
+    public class Resolution
+    {        
+        internal Resolution(Point point, int refreshRate)
+        {
+            Point = point;
+            RefreshRate = refreshRate;
+        }
+
+        internal Point Point { get; }
+        internal int RefreshRate { get; }
+        public int X => Point.X;
+        public int Y => Point.Y;
+    }
+
+    internal Graphics(TripleBufferBridge<RenderBuffer> renderBridge, DoubleBufferBridge<RenderInfoBuffer> renderInfoBridge, out Controller controller)
     {
-        controller = new Controller(this, renderBridge);
+        controller = new Controller(this, renderBridge, renderInfoBridge);
         this.controllerIssued = true;
+
+        var adapters = GraphicsAdapter.Adapters;
+
+        Screen[] screens = new Screen[adapters.Count];
+
+        for(int adapterIndex = 0; adapterIndex < adapters.Count; adapterIndex++)
+            screens[adapterIndex] = new Screen(adapters[adapterIndex]);
+
+        this.screens = screens;
+        renderSettings.Resolution = screens[0].Resolutions[0];
+
+        window = new Window();
     }
     
     private readonly bool controllerIssued;
 
     private RenderBuffer renderBuffer;
 
-    public uint FrameRate { get; private set; }
-    public ulong FrameCount { get; private set; }
-    public double FrameTime { get; private set; }
-    public double FrameDeltaTime { get; private set; }
-    public long FrameAllocated { get; private set; }
+    private Screen[] screens;
+    private Window window;
 
-    public int DrawCalls { get; private set; }
+    private Viewport viewport;
+    private FrameInfo frameInfo;
+    private RenderSettings renderSettings;
 
-    public Viewport Viewport { get; private set; }
-
-    public int RefreshRate { get; private set; }
-
-    public int TargetFrameRate { get; set; }
-    public bool VSync { get; set; }
-    public bool Fullscreen { get; set; }
-    public Point Resolution { get; set; }
+    public ref readonly Viewport Viewport => ref viewport;
+    public ref readonly FrameInfo FrameInfo => ref frameInfo;
+    public ref RenderSettings RenderSettings => ref renderSettings;
 
     public void DrawSprite(TextureResource texture, in Vector3 position)                                    => DrawSprite(null, texture, Color.White, new Transform(position));
     public void DrawSprite(TextureResource texture, in Vector3 position, float rotation)                    => DrawSprite(null, texture, Color.White, new Transform(position, rotation));
@@ -136,6 +167,10 @@ public sealed class Graphics : Workspace.Service
         renderBuffer.PushLabel(shader, font, color, text, x, y, width, height, rotation);
     }
 
+    public Screen GetScreen() => screens[GraphicsAdapter.GetWindowGraphicsAdapter(window.Handle).DisplayIndex];
+    public Window GetWindow() => window;
+    
+    
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private bool EnsureRenderBuffer([CallerMemberName] string caller = "")
     {

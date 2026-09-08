@@ -38,7 +38,7 @@ public class ResourceConverterFactory : JsonConverterFactory
 
         public override void Write(Utf8JsonWriter writer, T value, JsonSerializerOptions options)
         {
-            writer.WriteStringValue(value?.Name);
+            writer.WriteStringValue(value?.Identifier);
         }
     }
 }

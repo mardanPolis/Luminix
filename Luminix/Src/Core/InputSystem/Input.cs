@@ -2,6 +2,7 @@ using System;
 using Microsoft.Xna.Framework.Input;
 using Luminix.Threading.Bridges;
 using System.Numerics;
+using Luminix.Threading.Buffers;
 
 namespace Luminix;
 
@@ -9,7 +10,7 @@ public sealed class Input : Workspace.Service
 {
     internal readonly struct Controller
     {
-        internal Controller(Input controlled, InputBridge inputBridge)
+        internal Controller(Input controlled, DoubleBufferBridge<InputBuffer> inputBridge)
         {
             if(controlled.controllerIssued)
                 throw new ArgumentException("Cant create a Input.Controller, the provided input is already initialized!");
@@ -19,7 +20,7 @@ public sealed class Input : Workspace.Service
         }
 
         private readonly Input controlled;
-        private readonly InputBridge bridge;
+        private readonly DoubleBufferBridge<InputBuffer> bridge;
 
         internal void UpdateData()
         {
@@ -67,7 +68,7 @@ public sealed class Input : Workspace.Service
     }
     internal record struct MouseData(byte Buttons = 0, int Position = 0);
 
-    internal Input(InputBridge inputBridge, out Controller controller)
+    internal Input(DoubleBufferBridge<InputBuffer> inputBridge, out Controller controller)
     {
         this.controllerIssued = false;
         controller = new Controller(this, inputBridge);

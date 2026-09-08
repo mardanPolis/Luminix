@@ -2,12 +2,13 @@ using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using Luminix.Rendering;
 using Luminix.Rendering.RenderInstances;
 using Microsoft.Xna.Framework;
 
 namespace Luminix.Threading.Buffers;
 
-public sealed class RenderBuffer
+internal sealed class RenderBuffer
 {
     internal enum RenderObjectType : byte
     {
@@ -30,7 +31,7 @@ public sealed class RenderBuffer
    
     internal readonly record struct RenderGroup(Vector2 topLeft, Vector2 btmRight);
 
-    internal RenderBuffer()
+    public RenderBuffer()
     {
         instanceSprites = new(2560);
         instanceTexts = new(128);
@@ -65,10 +66,7 @@ public sealed class RenderBuffer
     private readonly List<RenderCommand> worldRenderCommands;
     private readonly List<UiRenderCommand> uiRenderCommands;
 
-    public int TargetFrameRate { get; set; }
-    public bool VSync { get; set; }
-    public bool Fullscreen { get; set; }
-    public Point Resolution { get; set; }
+    public RenderSettings RenderSettings;
 
     internal void SetCam(Camera camera)
     {
