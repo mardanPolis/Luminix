@@ -143,7 +143,7 @@ public sealed class Assets : Workspace.Service
             
             for(int i = 0; i < atlasResults.Length; i++)
                 resultBag.Add(atlasResults[i]);
-        });
+        }).GetAwaiter().GetResult();
 
         return resultBag.ToArray();
     }
@@ -186,12 +186,12 @@ public sealed class Assets : Workspace.Service
             
             for(int i = 0; i < atlasResults.Length; i++)
                 resultBag.Add(atlasResults[i]);
-        });
+        }).GetAwaiter().GetResult();
 
         return resultBag.ToArray();
     }
 
-    internal void FinalizeAssets(bool makeAtlases)
+    internal void FinalizeAssets(bool makeAtlases, out bool hadAssets)
     {
         var defs = Workspace.Current.GetService<Defs>();
         var assets = new List<Asset>();
@@ -260,5 +260,7 @@ public sealed class Assets : Workspace.Service
         shaderAssets.Clear();
         fontAssets.Clear();
         dataAssets.Clear();
+
+        hadAssets = assetTasks.Count > 0;
     }
 }

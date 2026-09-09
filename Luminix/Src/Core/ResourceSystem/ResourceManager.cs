@@ -8,7 +8,7 @@ using Luminix.IO;
 using Microsoft.Xna.Framework.Audio;
 using Luminix.Collections;
 using Luminix.Extensions;
-using System.Diagnostics;
+using System.Collections.Frozen;
 
 namespace Luminix;
 
@@ -29,6 +29,7 @@ public sealed class ResourceManager : Microsoft.Xna.Framework.Content.ContentMan
     }
 
     public new string RootDirectory => AssetIO.ASSET_DIRECTORY;
+    public FrozenDictionary<(Type, string), Resource> Resources => resources.ToFrozenDictionary();
     private Action<IDisposable> recordDisposable;
 
     private MainRender main;
@@ -36,19 +37,15 @@ public sealed class ResourceManager : Microsoft.Xna.Framework.Content.ContentMan
 
     private Stream openedStream = null; 
 
-    private Dictionary<string, Texture2D> sourceTextures;
-    private Dictionary<Texture2D, DenseList<string>> sourceTextureResources;
+    private readonly Dictionary<string, Texture2D> sourceTextures;
+    private readonly Dictionary<Texture2D, DenseList<string>> sourceTextureResources;
 
-    private Dictionary<(Type, string), Resource> resources;
-
-    private Stopwatch stopwatch = new Stopwatch();
+    private readonly Dictionary<(Type, string), Resource> resources;
 
     //TODO : make 2 separate resource handles one for RenderThread other more lightweight for logical
 
     public void CreateResource(Asset asset)
     {
-        stopwatch.Restart();
-
         if (disposed)
             throw new ObjectDisposedException(nameof(ResourceManager), "Unable to create a Resource: ResourceManager is disposed.");
 

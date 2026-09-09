@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Frozen;
 using Luminix.Threading;
 using Luminix.Threading.Bridges;
 using Luminix.Threading.Buffers;
@@ -71,17 +72,23 @@ internal sealed class MainCore
             foreach(var info in bootAssetInfos)
                 assets.HandleAsset(info);
 
-            assets.FinalizeAssets(false);
+            assets.FinalizeAssets(false, out bool hadAssets);
 
             Logger.NewLog(Logger.Log.Level.Info, "Loaded boot assets!");
+
+            if(hadAssets)
+                resources.Set();
 
             var nonBootAssetInfos = assets.GetAssetIO().EnumerateAssetInfos(boot: false);
             foreach(var info in nonBootAssetInfos)
                 assets.HandleAsset(info);
 
-            assets.FinalizeAssets(true);
+            assets.FinalizeAssets(true, out hadAssets);
 
-            resources.TrySet();
+            Logger.NewLog(Logger.Log.Level.Info, "Loaded assets!");
+
+            if(hadAssets)
+                resources.Set();
 
             defs.PatchNodes();
             defs.InheritNodes();

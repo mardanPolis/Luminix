@@ -9,6 +9,7 @@ using Luminix.InputSystem.Handlers;
 using Luminix.Threading.Buffers;
 using Luminix.IO;
 using Luminix.Threading.Commands;
+using System.Collections.Frozen;
 
 namespace Luminix;
 internal sealed class MainRender : Microsoft.Xna.Framework.Game
@@ -172,7 +173,10 @@ internal sealed class MainRender : Microsoft.Xna.Framework.Game
         inputHandler.Update(IsActive);
 
         if(resourceBridge.ResourceCommandsIncoming)
+        {
             resourceBridge.ConsumeCommands(resourceCommandHandler);
+            resourceBridge.SetResourceContainer(resourceManager.Resources);
+        }
 
         windowPosition = Window.ClientBounds.Location;
 

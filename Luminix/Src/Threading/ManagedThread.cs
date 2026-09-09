@@ -44,8 +44,8 @@ public abstract class ManagedThread : Thread
 
     public override bool IsAlive => running;
 
-    public override void Start() => SystemThread.Start();
-    public override void Stop()
+    protected override void OnStart() => SystemThread.Start();
+    protected override void OnStop()
     {
         running = false;
     }

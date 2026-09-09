@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.IO;
 using System.Threading;
 
 namespace Luminix.Threading;
@@ -43,7 +42,6 @@ public abstract class Thread
                 threads.TryRemove(Name, out _);
             }
 
-            Name = value;
             SystemThread.Name = value;
         }
     }
@@ -60,8 +58,17 @@ public abstract class Thread
     }
     public static bool TryGetThreadByName(string name, out Thread thread) => threads.TryGetValue(name, out thread);
 
-    public abstract void Start();
-    public abstract void Stop();
+    public void Start()
+    {
+        OnStart();
+    }
+    public void Stop()
+    {
+        OnStop();
+    }
+
+    protected abstract void OnStart();
+    protected abstract void OnStop();
 
     public override string ToString() => Name;
 }

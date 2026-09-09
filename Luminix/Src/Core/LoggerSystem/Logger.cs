@@ -69,40 +69,75 @@ public static partial class Logger
     {
         message.End();
     }
-    public static void NewLog<T>(Log.Level logLevel, IReadOnlyList<T> collection)
+    public static void NewLog<T>(Log.Level logLevel, IEnumerable<T> collection)
     {
         var builder = new LogBuilder(logLevel);
 
         builder.AppendFormatted(collection.GetType());
-        if(collection.Count > 0)
+
+
+        if (collection is IReadOnlyList<T> list)
         {
+            if (list.Count == 0)
+            {
+                builder.AppendFormatted(" is empty");
+                builder.End();
+                return;
+            }
+
             builder.AppendFormatted(" contains: \n");
-            for (int i = 0; i < collection.Count; i++)
+
+            for (int i = 0; i < list.Count; i++)
             {
                 builder.AppendFormatted(i);
                 builder.AppendFormatted(" - ");
 
-                if (collection[i] is ISpanFormattable formattable)
+                if (list[i] is ISpanFormattable formattable)
                     builder.AppendFormatted(formattable);
                 else
-                    builder.AppendFormatted(collection[i]?.ToString() ?? "null");
+                    builder.AppendFormatted(list[i]?.ToString() ?? "null");
 
                 builder.AppendFormatted('\n');
             }
         }
         else
         {
-            builder.AppendFormatted(" is empty");
+            int i = 0;
+            foreach (var item in collection)
+            {
+                if(i == 0)
+                    builder.AppendFormatted(" contains: \n");
+
+                builder.AppendFormatted(i++);
+                builder.AppendFormatted(" - ");
+
+                if (item is ISpanFormattable formattable)
+                    builder.AppendFormatted(formattable);
+                else
+                    builder.AppendFormatted(item?.ToString() ?? "null");
+
+                builder.AppendFormatted('\n');
+            }
+
+            if(i == 0)
+                builder.AppendFormatted(" is empty");
         }
+
         builder.End();
     }
+
+
     public static void NewLog<TDictionary, T1, T2>(Log.Level logLevel, TDictionary collection) where TDictionary : IReadOnlyDictionary<T1, T2>
     {
         var builder = new LogBuilder(logLevel);
 
         var collectionType = typeof(TDictionary);
         builder.AppendFormatted(collectionType);
-        if(collection.Count > 0)
+        if(collection == null || collection.Count <= 0)
+        {
+            builder.AppendFormatted(" is empty");
+        }
+        else
         {
             builder.AppendFormatted(" contains:");
             foreach(var pair in collection)
@@ -135,10 +170,7 @@ public static partial class Logger
                 }
                 builder.AppendFormatted(']');
             }
-        }
-        else
-        {
-            builder.AppendFormatted(" is empty");
+        
         }
         builder.End();
     }
