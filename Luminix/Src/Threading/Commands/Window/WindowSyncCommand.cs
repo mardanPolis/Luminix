@@ -5,9 +5,9 @@ namespace Luminix.Threading.Commands;
 
 internal struct WindowSyncCommand
 {
-    public IntPtr Handle;
-    public Point Position;
-    public Rectangle ClientBound;
-    public bool IsMinimized;
-    public bool IsFocused;
+    public required IntPtr Handle;
+    public required Point Position;
+    public required Rectangle ClientBound;
+    public required bool IsMinimized;
+    public required bool IsFocused;
 } 

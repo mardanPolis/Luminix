@@ -60,5 +60,5 @@ internal static class ThreadBridges
 //RenderBridge : TripleBufferBridge
 //RenderInfoBridge : DoubleBufferBridge
 //InputBridge : DoubleBufferBridge
-//WindowBridge : CommandBridge
-//ResourceBridge : TaskCommandBridge
+//WindowBridge : WindowBridge
+//ResourceBridge : ResourceBridge

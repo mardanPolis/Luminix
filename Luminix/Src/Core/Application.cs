@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using Luminix;
 using Luminix.Threading;
 
 public static class Application
@@ -10,6 +11,8 @@ public static class Application
     public static string BuildVers { get; }
     public static string BuildDate { get; }
     
+    public static string Name { get; private set; }
+
     public static string OSDescription{ get; } = RuntimeInformation.OSDescription;
     public static Architecture ProcessArchitecture { get; } = RuntimeInformation.ProcessArchitecture;
     public static Architecture OSArchitecture { get; } = RuntimeInformation.OSArchitecture;
@@ -27,6 +30,9 @@ public static class Application
 
     private static string[] namespaces;
     public static ReadOnlySpan<string> Namespaces => namespaces.AsSpan();
+
+    private static TickedThread coreThread;
+    private static Thread renderThread;
 
     static Application()
     {
@@ -63,6 +69,42 @@ public static class Application
         }
 
         throw new ArgumentException($"There is no loaded Assembly named '{name}'", nameof(name));
+    }
+
+    public static void Create(string name)
+    {
+        try
+        {
+            Application.Name = name;
+
+            var mainCore = new Luminix.MainCore();
+            coreThread = new TickedThread("CoreThread", mainCore.Initialize, mainCore.Tick, mainCore.OnStop);
+            coreThread.Priority = System.Threading.ThreadPriority.AboveNormal;
+            coreThread.IsBackground = false;
+
+            var mainRender = new Luminix.MainRender();
+            renderThread = new UnmanagedThread("RenderThread", mainRender.Run, mainRender.Stop);
+            renderThread.Priority = System.Threading.ThreadPriority.AboveNormal;
+            renderThread.IsBackground = false;
+
+            var someThread = new TickedThread("CoreThread", mainCore.Initialize, mainCore.Tick, mainCore.OnStop);
+        }
+        catch(Exception ex)
+        {
+            Logger.NewLog(Logger.Log.Level.Error, $"RenderThread encountered a fatal error: {ex}");
+        }
+        finally
+        {
+            Application.Exit();
+
+            Logger.Flush();
+        }
+    }
+
+    public static void Run()
+    {
+        coreThread.Start();
+        renderThread.Start();
     }
 
     public static void Restart() => throw new NotImplementedException(nameof(Restart));

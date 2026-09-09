@@ -22,6 +22,8 @@ internal sealed class CommandBridge<TCommand>
         }
     }
 
+    public void ClearCommands() => commands.Clear();
+
     public bool CommandsIncoming => !commands.IsEmpty;
 }
 
@@ -54,6 +56,8 @@ internal sealed class TaskCommandBridge<TCommand>
         }
     }
 
+    public void ClearCommands() => commands.Clear();
+
     public bool CommandsIncoming => !commands.IsEmpty;
 }
 
@@ -85,6 +89,8 @@ internal sealed class TaskCommandBridge<TCommand, TResponse>
             }
         }
     }
+    
+    public void ClearCommands() => commands.Clear();
 
     public bool CommandsIncoming => !commands.IsEmpty;
 }

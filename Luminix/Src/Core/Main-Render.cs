@@ -38,7 +38,7 @@ internal sealed class MainRender : Microsoft.Xna.Framework.Game
     private DoubleBufferBridge<RenderInfoBuffer> renderInfoBridge;
     private DoubleBufferBridge<InputBuffer> inputBridge;
     private ResourceBridge resourceBridge;
-    private CommandBridge<WindowCommand> windowBridge;
+    private WindowBridge windowBridge;
 
     //RenderThread
     private Thread mainThread;
@@ -66,6 +66,9 @@ internal sealed class MainRender : Microsoft.Xna.Framework.Game
 
     private RenderInfoBuffer renderInfoBuffer;
 
+    private Action<ResourceCommand> resourceCommandHandler;
+    private Action<WindowCommand> windowCommandHandler;
+
     public Thread MainThread => mainThread;
     public TickedThread CoreThread => coreThread;
 
@@ -80,7 +83,6 @@ internal sealed class MainRender : Microsoft.Xna.Framework.Game
 
     public GameTime GameTime => time;
 
-    public Action<ResourceCommand> resourceCommandHandler;
 
     public new ContentManager Content
     {
@@ -99,8 +101,6 @@ internal sealed class MainRender : Microsoft.Xna.Framework.Game
             this.mainThread = Thread.CurrentThread;
             this.coreThread = (TickedThread)Thread.GetThreadByName("CoreThread");
 
-            Logger.EchoToConsole = true;
-
             Logger.NewLog(Logger.Log.Level.Info, $"Started initialization in {stopwatch.Elapsed.Milliseconds}ms");
 
             //thread bridges
@@ -108,7 +108,7 @@ internal sealed class MainRender : Microsoft.Xna.Framework.Game
             renderInfoBridge        = ThreadBridges.GetBridge<DoubleBufferBridge<RenderInfoBuffer>>("CoreThread");
             inputBridge             = ThreadBridges.GetBridge<DoubleBufferBridge<InputBuffer>>("CoreThread");
             resourceBridge          = ThreadBridges.GetBridge<ResourceBridge>("CoreThread");
-            windowBridge            = ThreadBridges.GetBridge<CommandBridge<WindowCommand>>("CoreThread");
+            windowBridge            = ThreadBridges.GetBridge<WindowBridge>("CoreThread");
             
             inputBridge.PopulateIfEmpty();
 
@@ -122,6 +122,8 @@ internal sealed class MainRender : Microsoft.Xna.Framework.Game
             //handlers
             inputHandler = new InputHandler(inputBridge);
             
+            windowBridge.ConsumeCreateCommands(HandleWindowCreateCommand);
+
             //base initialization
             base.Initialize();
 
@@ -137,6 +139,7 @@ internal sealed class MainRender : Microsoft.Xna.Framework.Game
             resourceManager.CreateResource(assetIO.LoadXnbAsset(Application.Assembly, "Assets.Built-In.Shaders.GenericShader.xnb"));
 
             resourceCommandHandler = HandleResourceCommand;
+            windowCommandHandler = HandleWindowCommand;
 
             //Renderer initialization   
             renderingSystem.Initialize();
@@ -178,7 +181,13 @@ internal sealed class MainRender : Microsoft.Xna.Framework.Game
             resourceBridge.SetResourceContainer(resourceManager.Resources);
         }
 
-        windowPosition = Window.ClientBounds.Location;
+        if(windowBridge.CommandsIncoming) // TODO : look into the window clunky syncing where 
+        {
+            windowBridge.ConsumeCommands(windowCommandHandler);
+            windowBridge.ClearSyncCommands();
+        }
+
+        SendWindowSyncCommand();
 
         base.Update(gameTime);
     }
@@ -220,5 +229,50 @@ internal sealed class MainRender : Microsoft.Xna.Framework.Game
                 resourceManager.UnloadAsset(command.Asset.Identifier);
             break;
         }
+    }
+
+    private WindowCreateCommandResponse HandleWindowCreateCommand(WindowCreateCommand command)
+    {
+        Window.Title = command.Title;
+        if(command.Position.HasValue) Window.Position = command.Position.Value;
+        if(command.WindowMode.HasValue) renderingSystem.SetWindowMode(command.WindowMode.Value);
+
+        var response = new WindowCreateCommandResponse
+        {
+            Handle = Window.Handle,
+            Position = Window.Position,
+            WindowMode = renderingSystem.IsFullScreen ? Luminix.Window.Mode.Fullscreen : Luminix.Window.Mode.Windowed
+        };
+        return response;
+    }
+
+    private void HandleWindowCommand(WindowCommand command)
+    {
+        switch(command.Kind)
+        {
+            case WindowCommand.Type.SetTitle:
+                Window.Title = command.Title;
+            break;
+            case WindowCommand.Type.SetPosition:
+                Window.Position = command.Position;
+            break;
+            case WindowCommand.Type.SetMode:
+                renderingSystem.SetWindowMode(command.WindowMode);
+            break;
+        }
+    }
+
+    private void SendWindowSyncCommand()
+    {
+        var command = new WindowSyncCommand
+        {
+            Handle = Window.Handle,
+            Position = Window.Position,
+            ClientBound = Window.ClientBounds,
+            IsFocused = IsActive,
+            IsMinimized = Window.IsMinimized
+        };
+
+        windowBridge.NewCommand(command);
     }
 }

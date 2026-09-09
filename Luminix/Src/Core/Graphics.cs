@@ -5,7 +5,7 @@ using Luminix.Threading.Bridges;
 using Luminix.Threading.Buffers;
 using System.Runtime.CompilerServices;
 using Luminix.Rendering;
-using System.Diagnostics;
+using Luminix.Threading.Commands;
 
 namespace Luminix;
 
@@ -13,19 +13,25 @@ public sealed class Graphics : Workspace.Service
 {
     internal readonly struct Controller
     {
-        internal Controller(Graphics controlled, TripleBufferBridge<RenderBuffer> renderBridge, DoubleBufferBridge<RenderInfoBuffer> renderInfoBridge)
+        internal Controller(Graphics controlled, WindowBridge windowBridge, TripleBufferBridge<RenderBuffer> renderBridge, DoubleBufferBridge<RenderInfoBuffer> renderInfoBridge)
         {
             if(controlled.controllerIssued)
                 throw new ArgumentException("Cant create a Graphics.Controller, the provided graphics is already initialized!");
             
             this.renderBridge = renderBridge;
             this.renderInfoBridge = renderInfoBridge;
+            this.windowBridge = windowBridge;
             this.controlled = controlled;
+
+            syncWindowCommandHandler = HandleSyncWindowCommand;
         }
 
         private readonly TripleBufferBridge<RenderBuffer> renderBridge;
         private readonly DoubleBufferBridge<RenderInfoBuffer> renderInfoBridge;
+        private readonly WindowBridge windowBridge;
         private readonly Graphics controlled;
+
+        private readonly Action<WindowSyncCommand> syncWindowCommandHandler;
 
         internal void SwapBuffers()
         {
@@ -44,6 +50,63 @@ public sealed class Graphics : Workspace.Service
                 renderInfoBuffer.DrawCalls
             );
             renderInfoBuffer.Reset();
+
+            var window = controlled.window;
+            var windowTitle = window.Title;
+            var windowPosition = window.Position;
+            var windowMode = window.CurrentMode;
+
+            if(windowTitle != controlled.windowTitle)
+            {
+                var command = new WindowCommand
+                {
+                    Kind = WindowCommand.Type.SetTitle,
+                    Title = windowTitle,
+                };
+                windowBridge.NewCommand(command);
+                windowBridge.ClearSyncCommands();
+            }
+
+            if(windowPosition != controlled.windowPosition)
+            {
+                var command = new WindowCommand
+                {
+                    Kind = WindowCommand.Type.SetPosition,
+                    Position = windowPosition,
+                };
+                windowBridge.NewCommand(command);
+                windowBridge.ClearSyncCommands();
+            }
+
+            if(windowMode != controlled.windowMode)
+            {
+                var command = new WindowCommand
+                {
+                    Kind = WindowCommand.Type.SetMode,
+                    WindowMode = windowMode,
+                };
+                windowBridge.NewCommand(command);
+                windowBridge.ClearSyncCommands();
+            }
+
+            SyncWindows();
+        }
+
+        internal void SyncWindows()
+        {
+            windowBridge.ConsumeSyncCommand(syncWindowCommandHandler);
+        }
+
+        internal void HandleSyncWindowCommand(WindowSyncCommand command)
+        {
+            var window = controlled.window;
+            if(command.Handle != window.Handle)
+                return;
+            
+            window.Position = command.Position;
+            window.ClientBounds = command.ClientBound;
+            window.IsFocused = command.IsFocused;
+            window.IsMinimized = command.IsMinimized;
         }
 
         internal void BeginRender()
@@ -77,9 +140,9 @@ public sealed class Graphics : Workspace.Service
         public int Y => Point.Y;
     }
 
-    internal Graphics(TripleBufferBridge<RenderBuffer> renderBridge, DoubleBufferBridge<RenderInfoBuffer> renderInfoBridge, out Controller controller)
+    internal Graphics(WindowBridge windowBridge, TripleBufferBridge<RenderBuffer> renderBridge, DoubleBufferBridge<RenderInfoBuffer> renderInfoBridge, out Controller controller)
     {
-        controller = new Controller(this, renderBridge, renderInfoBridge);
+        controller = new Controller(this, windowBridge, renderBridge, renderInfoBridge);
         this.controllerIssued = true;
 
         var adapters = GraphicsAdapter.Adapters;
@@ -93,6 +156,23 @@ public sealed class Graphics : Workspace.Service
         renderSettings.Resolution = screens[0].Resolutions[0];
 
         window = new Window();
+        var createCommand = new WindowCreateCommand();
+        createCommand.Title = Application.Name;
+         // TODO : load settings.
+        createCommand.Position = null;
+        createCommand.WindowMode = null;
+
+        var task = windowBridge.NewCommand(createCommand);
+        var result = task.GetAwaiter().GetResult().Item2;
+        window.Handle = result.Handle;
+
+        windowTitle = createCommand.Title;
+        windowPosition = result.Position;
+        windowMode = result.WindowMode;
+
+        window.Title = createCommand.Title;
+        window.Position = result.Position;
+        window.CurrentMode = result.WindowMode;
     }
     
     private readonly bool controllerIssued;
@@ -101,6 +181,10 @@ public sealed class Graphics : Workspace.Service
 
     private Screen[] screens;
     private Window window;
+
+    private string windowTitle;
+    private Point windowPosition;
+    private Window.Mode windowMode;
 
     private Viewport viewport;
     private FrameInfo frameInfo;
@@ -169,7 +253,6 @@ public sealed class Graphics : Workspace.Service
 
     public Screen GetScreen() => screens[GraphicsAdapter.GetWindowGraphicsAdapter(window.Handle).DisplayIndex];
     public Window GetWindow() => window;
-    
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private bool EnsureRenderBuffer([CallerMemberName] string caller = "")

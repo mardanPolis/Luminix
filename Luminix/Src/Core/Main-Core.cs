@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Frozen;
 using Luminix.Threading;
 using Luminix.Threading.Bridges;
 using Luminix.Threading.Buffers;
@@ -17,7 +16,7 @@ internal sealed class MainCore
     private DoubleBufferBridge<RenderInfoBuffer> renderInfoBridge;
     private DoubleBufferBridge<InputBuffer> inputBridge;
     private ResourceBridge resourceBridge;
-    private CommandBridge<WindowCommand> windowBridge;
+    private WindowBridge windowBridge;
 
     private World world;
     private World.Controller worldController;
@@ -31,15 +30,13 @@ internal sealed class MainCore
 
     internal void Initialize()
     {
-        Logger.EchoToConsole = true;
-
         try
         {
             renderBridge            = ThreadBridges.GetBridge<TripleBufferBridge<RenderBuffer>>("RenderThread");
             renderInfoBridge        = ThreadBridges.GetBridge<DoubleBufferBridge<RenderInfoBuffer>>("RenderThread");
             inputBridge             = ThreadBridges.GetBridge<DoubleBufferBridge<InputBuffer>>("RenderThread");
             resourceBridge          = ThreadBridges.GetBridge<ResourceBridge>("RenderThread");
-            windowBridge            = ThreadBridges.GetBridge<CommandBridge<WindowCommand>>("RenderThread");
+            windowBridge            = ThreadBridges.GetBridge<WindowBridge>("RenderThread");
             
             inputBridge.PopulateIfEmpty();
 
@@ -57,14 +54,16 @@ internal sealed class MainCore
 
             Logger.NewLog(Logger.Log.Level.Info, $"Started initialization");
 
-            world           = new World(out worldController);
-            graphics           = new Graphics(renderBridge, renderInfoBridge, out graphicsController);
-            input              = new Input(inputBridge, out inputController);
-            defs               = new Defs();
-            resources          = new Resources(resourceBridge);
-            assets             = new Assets(resources);
+            world       = new World(out worldController);
+            graphics    = new Graphics(windowBridge, renderBridge, renderInfoBridge, out graphicsController);
+            input       = new Input(inputBridge, out inputController);
+            defs        = new Defs();
+            resources   = new Resources(resourceBridge);
+            assets      = new Assets(resources);
 
             defs.NewDefType<EntityType>(); // built in
+
+            // Module 
 
             defs.FinalizeTypes();
 
@@ -78,6 +77,8 @@ internal sealed class MainCore
 
             if(hadAssets)
                 resources.Set();
+
+            //
 
             var nonBootAssetInfos = assets.GetAssetIO().EnumerateAssetInfos(boot: false);
             foreach(var info in nonBootAssetInfos)
