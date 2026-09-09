@@ -16,12 +16,14 @@ try
     renderThread.Priority = System.Threading.ThreadPriority.AboveNormal;
     renderThread.IsBackground = false;
 
+    var someThread = new TickedThread("CoreThread", mainCore.Initialize, mainCore.Tick, mainCore.OnStop);
+
     coreThread.Start();
     renderThread.Start();
 }
 catch(Exception ex)
 {
-    Logger.Get().NewLog(Logger.Log.Level.Error, $"Fatal Error: {ex}");
+    Logger.Global.NewLog(Logger.Log.Level.Error, $"RenderThread encountered a fatal error: {ex}");
 }
 finally
 {

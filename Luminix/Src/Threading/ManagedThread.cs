@@ -14,7 +14,6 @@ public abstract class ManagedThread : Thread
                 throw new InvalidOperationException($"Thread action cannot be null, thread: {ThreadID} {Name} ");
 
             thread.Value = this;
-            logger = Logger.Initialize();
 
             try
             {
@@ -26,7 +25,7 @@ public abstract class ManagedThread : Thread
             {
                 Application.Exit();
 
-                logger.NewLog(Logger.Log.Level.Error, $"Fatal Error: {ex}");
+                Logger.Global.NewLog(Logger.Log.Level.Error, $"{this.Name} encountered a fatal error: {ex}");
             }
             finally
             {
@@ -35,6 +34,7 @@ public abstract class ManagedThread : Thread
                 running = false;
             }
         });
+
         this.Name = name;
     }
 

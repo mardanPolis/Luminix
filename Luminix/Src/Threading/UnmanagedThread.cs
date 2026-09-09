@@ -17,7 +17,6 @@ internal sealed class UnmanagedThread : Thread
         this.Name = name;
 
         thread.Value = this;
-        logger = Logger.Get();
 
         threadRun = run;
         threadStop = stop;

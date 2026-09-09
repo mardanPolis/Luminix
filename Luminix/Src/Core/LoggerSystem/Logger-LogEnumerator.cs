@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Threading;
 
 namespace Luminix;
 
@@ -15,7 +16,7 @@ public sealed partial class Logger
             this.logger = logger;
             this.index = -1;
             this.current = default;
-            logger.locked = true;
+            Monitor.Enter(logger.loggerLock);
         }
 
         private Logger logger;
@@ -23,7 +24,7 @@ public sealed partial class Logger
         private Log current;
 
         public readonly Log Current => current;
-        readonly object IEnumerator.Current => current.Message.ToArray();
+        readonly object IEnumerator.Current => throw new NotSupportedException(nameof(IEnumerator.Current));
 
         public bool MoveNext()
         {
@@ -44,8 +45,7 @@ public sealed partial class Logger
 
         public void Dispose()
         {
-            logger.locked = false;
-            logger.FlushDroppedAttempts();
+            Monitor.Exit(logger.loggerLock);
         }
     }
 

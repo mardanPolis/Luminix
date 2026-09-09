@@ -10,21 +10,15 @@ public sealed partial class Logger
     public ref struct LogBuilder
     {
         private readonly Logger logger;
-        private readonly bool canLog;
         private char[] buffer;
         private int pointer;
 
         private Log.Level level;
 
-        public LogBuilder(Logger logger, Log.Level level, out bool canLog)
+        public LogBuilder(Logger logger, Log.Level level)
         {
-            canLog = false;
-
             if(logger == null)
                 return;
-
-            this.canLog = logger.TryCreateLog(level);
-            canLog = this.canLog;
 
             this.logger = logger;
             this.buffer = logger.logBuffer;
@@ -36,28 +30,32 @@ public sealed partial class Logger
             if(logger == null)
                 return;
 
-            canLog = logger.TryCreateLog(level);
-
             this.logger = logger;
             this.buffer = logger.logBuffer;
             this.level = level;
         }
+        internal LogBuilder(int literalLength, int formattedCount, Log.Level level)
+        {
+            this.logger = Logger.Global.Instance;
+            this.buffer = logger.logBuffer;
+            this.level = level;
+        }
+
         public bool AppendLiteral(string value)
         {
             if (logger == null) return false;
 
             return Add(value.AsSpan());
         }
-
         public bool AppendFormatted<T>(T value) where T : ISpanFormattable
         {
-            if (logger == null || !canLog) return false;
+            if (logger == null) return false;
 
             return Add(value, default);
         }
         public bool AppendFormatted<T>(T value, ReadOnlySpan<char> format) where T : ISpanFormattable
         {
-            if (logger == null || !canLog) return false;
+            if (logger == null) return false;
 
             try
             {
@@ -69,10 +67,9 @@ public sealed partial class Logger
                 return false; // stop appending further arguments once a format error hits
             }
         }
-
         public bool AppendFormatted(object value)
         {
-            if (logger == null || !canLog ) return false;
+            if (logger == null) return false;
 
             if(value == null)
                 return Add("null".AsSpan());
@@ -84,14 +81,13 @@ public sealed partial class Logger
         }
         public bool AppendFormatted(ReadOnlySpan<char> value)
         {
-            if (logger == null || !canLog) return false;
+            if (logger == null) return false;
 
             return Add(value);
         }
-
         public bool AppendFormatted(ReadOnlySpan<char> value, uint length)
         {
-            if (logger == null || !canLog) return false;
+            if (logger == null) return false;
 
             if (length < value.Length)
                 value = value[..(int)length];
@@ -99,14 +95,14 @@ public sealed partial class Logger
             return Add(value);
         }
 
-
         public void End()
         {
-            if(logger == null || !canLog) return;
+            if(logger == null) return;
 
             logger.PushMessage(level, buffer.AsSpan(0, pointer));
             buffer = null;
         }
+
 
         private bool Add(ReadOnlySpan<char> value)
         {
@@ -154,7 +150,6 @@ public sealed partial class Logger
             LengthError();
             return false;
         }
-        
         private bool AddType(Type type)
         {
             if (TypeRegistry.IsGenericType(type))
@@ -200,11 +195,5 @@ public sealed partial class Logger
             AppendFormatted(format);
             AppendFormatted("']");
         }
-    }
-
-    private enum LogDropReason
-    {
-        AlreadyCreatingLog,
-        LoggerLocked,
     }
 }

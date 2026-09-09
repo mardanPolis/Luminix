@@ -115,8 +115,6 @@ internal sealed class MainCore
     {
         try
         {
-            logger.Refresh();
-
             graphicsController.SwapBuffers();
 
             inputController.UpdateData();
