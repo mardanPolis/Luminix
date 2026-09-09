@@ -21,8 +21,8 @@ public static class Application
     public static bool IsMacOS { get; } = OperatingSystem.IsMacOS();
     public static bool IsLinux { get; } = OperatingSystem.IsLinux();
 
-    private static DateTime startTime { get; }
-    public static TimeSpan Uptime => DateTime.UtcNow - startTime;
+    public static DateTime StartTime { get; }
+    public static TimeSpan Uptime => DateTime.UtcNow - StartTime;
     public static string ExecutablePath => AppContext.BaseDirectory;
 
     private static string[] namespaces;
@@ -48,7 +48,7 @@ public static class Application
 
         namespaces = myNamespaces.ToArray();
 
-        startTime = DateTime.UtcNow;
+        StartTime = DateTime.UtcNow;
     } 
 
     public static Assembly GetAssembly(string name)

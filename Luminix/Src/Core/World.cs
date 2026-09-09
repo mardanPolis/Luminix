@@ -225,7 +225,7 @@ public sealed class World : Workspace.Service
                         var paramList = string.Join(", ", methodInfos[m].GetParameters()
                             .Select(p => $"{(p.ParameterType.IsByRef ? "ref " : "")}{(p.ParameterType.GetElementType() ?? p.ParameterType).Name} {p.Name}"));
 
-                        Logger.Get().NewLog(Logger.Log.Level.Error, $"Failed to bind method '{methodInfos[m].DeclaringType?.Name}.{methodInfos[m].Name}({paramList})': {ex}");
+                        Logger.NewLog(Logger.Log.Level.Error, $"Failed to bind method '{methodInfos[m].DeclaringType?.Name}.{methodInfos[m].Name}({paramList})': {ex}");
                     }
                 }
 
@@ -233,7 +233,7 @@ public sealed class World : Workspace.Service
             }
             catch(Exception ex)
             {
-                Logger.Get().NewLog(Logger.Log.Level.Error, $"Failed to get {methodName} methods of {entitySystem.GetType().Name}, reason: {ex}");
+                Logger.NewLog(Logger.Log.Level.Error, $"Failed to get {methodName} methods of {entitySystem.GetType().Name}, reason: {ex}");
                 return null;
             }
         }

@@ -4,59 +4,38 @@ using System.Runtime.CompilerServices;
 
 namespace Luminix;
 
-public sealed partial class Logger
+public static partial class Logger
 {
     [InterpolatedStringHandler]
     public ref struct LogBuilder
     {
-        private readonly Logger logger;
         private char[] buffer;
         private int pointer;
 
         private Log.Level level;
 
-        public LogBuilder(Logger logger, Log.Level level)
+        public LogBuilder(Log.Level level)
         {
-            if(logger == null)
-                return;
-
-            this.logger = logger;
-            this.buffer = logger.logBuffer;
+            this.buffer = logBuffer;
             this.level = level;
         }
 
-        public LogBuilder(int literalLength, int formattedCount, Logger logger, Log.Level level)
+        public LogBuilder(int literalLength, int formattedCount, Log.Level level)
         {
-            if(logger == null)
-                return;
-
-            this.logger = logger;
-            this.buffer = logger.logBuffer;
-            this.level = level;
-        }
-        internal LogBuilder(int literalLength, int formattedCount, Log.Level level)
-        {
-            this.logger = Logger.Global.Instance;
-            this.buffer = logger.logBuffer;
+            this.buffer = logBuffer;
             this.level = level;
         }
 
         public bool AppendLiteral(string value)
         {
-            if (logger == null) return false;
-
             return Add(value.AsSpan());
         }
         public bool AppendFormatted<T>(T value) where T : ISpanFormattable
         {
-            if (logger == null) return false;
-
             return Add(value, default);
         }
         public bool AppendFormatted<T>(T value, ReadOnlySpan<char> format) where T : ISpanFormattable
         {
-            if (logger == null) return false;
-
             try
             {
                 return Add(value, format);
@@ -69,8 +48,6 @@ public sealed partial class Logger
         }
         public bool AppendFormatted(object value)
         {
-            if (logger == null) return false;
-
             if(value == null)
                 return Add("null".AsSpan());
 
@@ -81,14 +58,10 @@ public sealed partial class Logger
         }
         public bool AppendFormatted(ReadOnlySpan<char> value)
         {
-            if (logger == null) return false;
-
             return Add(value);
         }
         public bool AppendFormatted(ReadOnlySpan<char> value, uint length)
         {
-            if (logger == null) return false;
-
             if (length < value.Length)
                 value = value[..(int)length];
 
@@ -97,9 +70,7 @@ public sealed partial class Logger
 
         public void End()
         {
-            if(logger == null) return;
-
-            logger.PushMessage(level, buffer.AsSpan(0, pointer));
+            Logger.PushMessage(level, buffer.AsSpan(0, pointer));
             buffer = null;
         }
 

@@ -223,7 +223,7 @@ internal partial class EntityContainer
         if(publicEntityCount != entityCount)
         {
             publicEntityCount = entityCount;
-            Logger.Get().NewLog(Logger.Log.Level.Error, $"Public entity count and internal entity count went out of sync for {EntityType}.EntityContainer");
+            Logger.NewLog(Logger.Log.Level.Error, $"Public entity count and internal entity count went out of sync for {EntityType}.EntityContainer");
         }
 
         for (int i = 0; i < updateMethods.Length; i++)

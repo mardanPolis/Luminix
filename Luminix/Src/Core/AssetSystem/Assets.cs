@@ -107,7 +107,7 @@ public sealed class Assets : Workspace.Service
 
             if(texture == null)
             {
-                logger.NewLog(Logger.Log.Level.Error, "Unable to add texture to an atlas, reason: provided texture is null!");
+                Logger.NewLog(Logger.Log.Level.Error, "Unable to add texture to an atlas, reason: provided texture is null!");
                 continue;
             }
 
@@ -206,7 +206,7 @@ public sealed class Assets : Workspace.Service
             }
             catch (Exception ex)
             {
-                Logger.Initialize().NewLog(Logger.Log.Level.Error, $"Fatal Error: {ex}");
+                Logger.NewLog(Logger.Log.Level.Error, $"Fatal Error: {ex}");
                 throw;
             }
         });
@@ -221,7 +221,7 @@ public sealed class Assets : Workspace.Service
             }
             catch (Exception ex)
             {
-                Logger.Initialize().NewLog(Logger.Log.Level.Error, $"Fatal Error: {ex}");
+                Logger.NewLog(Logger.Log.Level.Error, $"Fatal Error: {ex}");
                 throw;
             }
         });

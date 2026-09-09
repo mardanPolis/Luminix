@@ -88,7 +88,7 @@ public sealed class AssetIO
                 continue;
             }
 
-            Logger.Get()?.NewLog(Logger.Log.Level.Warning, $"Unsupported extension '{extension}' at location: '{path}'!");
+            Logger.NewLog(Logger.Log.Level.Warning, $"Unsupported extension '{extension}' at location: '{path}'!");
             continue;
         }
     }

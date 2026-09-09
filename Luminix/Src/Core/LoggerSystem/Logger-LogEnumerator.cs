@@ -5,21 +5,25 @@ using System.Threading;
 
 namespace Luminix;
 
-public sealed partial class Logger
+public static partial class Logger
 {
-    public LogEnumerator GetEnumerator() => new LogEnumerator(this);
+    public static LogEnumerator GetEnumerator() => new();
+    public static Enumerable Logs => default;
+
+    public readonly ref struct Enumerable
+    {
+        public LogEnumerator GetEnumerator() => Logger.GetEnumerator();
+    }
 
     public ref struct LogEnumerator : IEnumerator<Log>
     {
-        internal LogEnumerator(Logger logger)
+        public LogEnumerator()
         {
-            this.logger = logger;
             this.index = -1;
             this.current = default;
-            Monitor.Enter(logger.loggerLock);
+            Monitor.Enter(loggerLock);
         }
 
-        private Logger logger;
         private int index;
         private Log current;
 
@@ -28,12 +32,12 @@ public sealed partial class Logger
 
         public bool MoveNext()
         {
-            if (index + 1 >= logger.logs.Count)
+            if (index + 1 >= logs.Count)
                 return false;
 
             index++;
-            (int start, int length, Log.Level level) log = logger.logs[index];
-            current = new Log(logger, log.start, log.length, log.level);
+            (int start, int length, Log.Level level) log = logs[index];
+            current = new Log(log.start, log.length, log.level);
             return true;
         }
 
@@ -45,8 +49,7 @@ public sealed partial class Logger
 
         public void Dispose()
         {
-            Monitor.Exit(logger.loggerLock);
+            Monitor.Exit(loggerLock);
         }
     }
-
 }

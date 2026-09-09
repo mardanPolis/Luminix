@@ -20,7 +20,6 @@ public sealed class ResourceManager : Microsoft.Xna.Framework.Content.ContentMan
          throw new InvalidOperationException("Could not find method RecordDisposable on ContentManager.");
         this.recordDisposable = (Action<IDisposable>)Delegate.CreateDelegate(typeof(Action<IDisposable>), this, method);
 
-        this.logger = Logger.Get();
         this.main = main;
 
         this.sourceTextures = [];
@@ -32,7 +31,6 @@ public sealed class ResourceManager : Microsoft.Xna.Framework.Content.ContentMan
     public new string RootDirectory => AssetIO.ASSET_DIRECTORY;
     private Action<IDisposable> recordDisposable;
 
-    private Logger logger;
     private MainRender main;
     private bool disposed = false;
 
@@ -252,7 +250,7 @@ public sealed class ResourceManager : Microsoft.Xna.Framework.Content.ContentMan
         if (resources != null && resources.TryGetValue((type, identifier), out Resource resource))
             return (T)resource;
 
-        Logger.Get().NewLog(Logger.Log.Level.Warning, $"Resource {typeof(T)}, identified '{identifier}' was not found.");
+        Logger.NewLog(Logger.Log.Level.Warning, $"Resource {typeof(T)}, identified '{identifier}' was not found.");
         return null;
     }
 

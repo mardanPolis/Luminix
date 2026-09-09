@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading;
@@ -7,8 +8,7 @@ namespace Luminix.Threading;
 
 public abstract class Thread
 {
-    private static readonly HashSet<string> threadNames = new();
-    private static readonly object threadNameLock = new();
+    private static readonly ConcurrentDictionary<string, Thread> threads = new();
     protected static readonly ThreadLocal<Thread> thread = new(true);
 
     public static Thread CurrentThread => thread.Value;
@@ -30,24 +30,35 @@ public abstract class Thread
         get => SystemThread.Name; 
         protected set 
         {
-            lock(threadNameLock)
+            ArgumentException.ThrowIfNullOrWhiteSpace(value, nameof(Name));
+
+            if(!threads.TryAdd(value, this))
             {
-                if(threadNames.Contains(value))
-                {
-                    Logger.Global.NewLog(Logger.Log.Level.Error, $"Cant name {this} thread to '{value}', reason: An another thread is already named '{value}'");
-                    return;
-                }
-
-                threadNames.Remove(Name);
-                threadNames.Add(value);
-
-                SystemThread.Name = value;
+                Logger.NewLog(Logger.Log.Level.Error, $"Cant name {this} thread to '{value}', reason: An another thread is already named '{value}'");
+                return;
             }
+
+            if (Name is not null)
+            {
+                threads.TryRemove(Name, out _);
+            }
+
+            Name = value;
+            SystemThread.Name = value;
         }
     }
     public bool IsBackground { get => SystemThread.IsBackground; set => SystemThread.IsBackground = value; }
     public virtual bool IsAlive => SystemThread.IsAlive;
     public ThreadPriority Priority { get => SystemThread.Priority; set => SystemThread.Priority = value; }
+
+    public static Thread GetThreadByName(string name)
+    {
+        if(threads.TryGetValue(name, out Thread thread))
+            return thread;
+        
+        throw new KeyNotFoundException($"No thread found with name '{name}'.");
+    }
+    public static bool TryGetThreadByName(string name, out Thread thread) => threads.TryGetValue(name, out thread);
 
     public abstract void Start();
     public abstract void Stop();

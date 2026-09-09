@@ -296,7 +296,7 @@ internal sealed class Renderer
         }
         catch(Exception ex)
         {
-            Logger.Get().NewLog(Logger.Log.Level.Error, $"Exception happened during rendering (CommandIndex/CommandCount : {commandIndex}/{commandCount}), reason: {ex}");
+            Logger.NewLog(Logger.Log.Level.Error, $"Exception happened during rendering (CommandIndex/CommandCount : {commandIndex}/{commandCount}), reason: {ex}");
             throw;
         }
 
@@ -385,10 +385,10 @@ internal sealed class Renderer
             switch(commandDataType)
             {
                 case RenderBuffer.UiRenderObjectType.Image:
-                    Logger.Get().NewLog(Logger.Log.Level.Error, $"Exception happened during rendering (CommandIndex/CommandCount/ImageCount : {commandIndex}/{commandCount}/{imageCount})");
+                    Logger.NewLog(Logger.Log.Level.Error, $"Exception happened during rendering (CommandIndex/CommandCount/ImageCount : {commandIndex}/{commandCount}/{imageCount})");
                 break;
                 case RenderBuffer.UiRenderObjectType.Label:
-                    Logger.Get().NewLog(Logger.Log.Level.Error, $"Exception happened during rendering (CommandIndex/CommandCount/LabelCount : {commandIndex}/{commandCount}/{labelCount})");
+                    Logger.NewLog(Logger.Log.Level.Error, $"Exception happened during rendering (CommandIndex/CommandCount/LabelCount : {commandIndex}/{commandCount}/{labelCount})");
                 break;
             }
             throw;

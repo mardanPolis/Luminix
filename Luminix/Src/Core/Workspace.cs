@@ -33,12 +33,10 @@ public sealed class Workspace
     public abstract class Service
     {
         public Workspace Workspace { get; private set; }
-        protected Logger logger { get; private init; }
 
         public Service()
         {
             Workspace = Workspace.Current ?? throw new InvalidOperationException($"Service '{GetType().Name}' cannot be created: No active Workspace found.");
-            logger = Logger.Get();
                 
             var serviceType = GetType();
             if(Workspace.startMethods == null)
@@ -79,7 +77,7 @@ public sealed class Workspace
         }
         catch
         {
-            Logger.Get().NewLog(Logger.Log.Level.Error, $"Failed to create a workspace!");
+            Logger.NewLog(Logger.Log.Level.Error, $"Failed to create a workspace!");
             throw;
         }
     }

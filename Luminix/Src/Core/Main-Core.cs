@@ -1,7 +1,4 @@
 using System;
-using System.Diagnostics;
-using Luminix.Collections;
-using Luminix.IO;
 using Luminix.Threading;
 using Luminix.Threading.Bridges;
 using Luminix.Threading.Buffers;
@@ -21,8 +18,6 @@ internal sealed class MainCore
     private ResourceBridge resourceBridge;
     private CommandBridge<WindowCommand> windowBridge;
 
-    private Logger logger;
-
     private World world;
     private World.Controller worldController;
     private Graphics graphics;
@@ -35,8 +30,7 @@ internal sealed class MainCore
 
     internal void Initialize()
     {
-        logger = Logger.Get();
-        logger.EchoToConsole = true;
+        Logger.EchoToConsole = true;
 
         try
         {
@@ -57,10 +51,10 @@ internal sealed class MainCore
 
             TypeRegistry.SetDefaultSubType(typeof(IComponentType), typeof(ComponentType<>), true);
 
-            logger.NewLog(Logger.Log.Level.Info, $"Build-Vers: {Application.BuildVers}");
-            logger.NewLog(Logger.Log.Level.Info, $"Build-Date: {Application.BuildDate}");
+            Logger.NewLog(Logger.Log.Level.Info, $"Build-Vers: {Application.BuildVers}");
+            Logger.NewLog(Logger.Log.Level.Info, $"Build-Date: {Application.BuildDate}");
 
-            logger.NewLog(Logger.Log.Level.Info, $"Started initialization");
+            Logger.NewLog(Logger.Log.Level.Info, $"Started initialization");
 
             world           = new World(out worldController);
             graphics           = new Graphics(renderBridge, renderInfoBridge, out graphicsController);
@@ -79,7 +73,7 @@ internal sealed class MainCore
 
             assets.FinalizeAssets(false);
 
-            logger.NewLog(Logger.Log.Level.Info, "Loaded boot assets!");
+            Logger.NewLog(Logger.Log.Level.Info, "Loaded boot assets!");
 
             var nonBootAssetInfos = assets.GetAssetIO().EnumerateAssetInfos(boot: false);
             foreach(var info in nonBootAssetInfos)
@@ -99,8 +93,8 @@ internal sealed class MainCore
         }
         catch(Exception ex)
         {
-            logger.NewLog(Logger.Log.Level.Error, $"Fatal Initialization Error: {ex}");
-            logger.Flush();
+            Logger.NewLog(Logger.Log.Level.Error, $"Fatal Initialization Error: {ex}");
+            Logger.Flush();
             throw;
         }
     }
@@ -127,8 +121,8 @@ internal sealed class MainCore
         }
         catch(Exception ex)
         {
-            logger.NewLog(Logger.Log.Level.Error, $"Fatal Update Error: {ex}");
-            logger.Flush();
+            Logger.NewLog(Logger.Log.Level.Error, $"Fatal Update Error: {ex}");
+            Logger.Flush();
             throw;
         }
     }
@@ -145,8 +139,8 @@ internal sealed class MainCore
         }
         catch(Exception ex)
         {
-            logger.NewLog(Logger.Log.Level.Error, $"Fatal Render Error: {ex}");
-            logger.Flush();
+            Logger.NewLog(Logger.Log.Level.Error, $"Fatal Render Error: {ex}");
+            Logger.Flush();
             throw;
         }
     }

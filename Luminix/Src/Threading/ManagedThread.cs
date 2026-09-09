@@ -25,11 +25,11 @@ public abstract class ManagedThread : Thread
             {
                 Application.Exit();
 
-                Logger.Global.NewLog(Logger.Log.Level.Error, $"{this.Name} encountered a fatal error: {ex}");
+                Logger.NewLog(Logger.Log.Level.Error, $"{this.Name} encountered a fatal error: {ex}");
             }
             finally
             {
-                Logger.Shutdown();
+                Logger.Flush();
                 thread.Value = null;
                 running = false;
             }

@@ -37,15 +37,15 @@ public sealed class TickedThread : ManagedThread
 
             Time.TickAllocated = endBytes - startBytes;
 
-            logger.NewLog(Logger.Log.Level.Info, $"{Name} initialized in {stopwatch.Elapsed.Milliseconds}ms");
-            logger.NewLog(Logger.Log.Level.Info, $"{Name} allocated {Time.TickAllocated / 1024.0:F2} KB | ({Time.TickAllocated:N0} bytes) during initialization!");
+            Logger.NewLog(Logger.Log.Level.Info, $"{Name} initialized in {stopwatch.Elapsed.Milliseconds}ms");
+            Logger.NewLog(Logger.Log.Level.Info, $"{Name} allocated {Time.TickAllocated / 1024.0:F2} KB | ({Time.TickAllocated:N0} bytes) during initialization!");
 
             long before = GC.GetTotalMemory(false);
             GC.Collect();
             long after = GC.GetTotalMemory(true);
 
             long cleared = before - after;
-            logger.NewLog(Logger.Log.Level.Info, $"GC cleared: {cleared / 1024.0:F2} KB | ({cleared:N0} bytes)");
+            Logger.NewLog(Logger.Log.Level.Info, $"GC cleared: {cleared / 1024.0:F2} KB | ({cleared:N0} bytes)");
 
             try
             {

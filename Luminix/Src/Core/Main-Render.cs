@@ -13,7 +13,7 @@ using Luminix.Threading.Commands;
 namespace Luminix;
 internal sealed class MainRender : Microsoft.Xna.Framework.Game
 {
-    internal MainRender(TickedThread coreThread)
+    internal MainRender()
     {
         //workspace
         workspace = new Workspace(out workspaceController);
@@ -30,8 +30,6 @@ internal sealed class MainRender : Microsoft.Xna.Framework.Game
 
         resourceManager = new ResourceManager(this);
         IsMouseVisible = true;
-
-        this.coreThread = coreThread;
     }
 
     //Core Bridges
@@ -43,7 +41,7 @@ internal sealed class MainRender : Microsoft.Xna.Framework.Game
 
     //RenderThread
     private Thread mainThread;
-    private TickedThread coreThread = null;
+    private TickedThread coreThread;
 
     private volatile bool shouldStop = false;
 
@@ -55,7 +53,6 @@ internal sealed class MainRender : Microsoft.Xna.Framework.Game
 
     private Stopwatch stopwatch;
     private GameTime time;
-    private Logger logger;
 
     private Workspace workspace;
     private Workspace.Controller workspaceController;
@@ -99,11 +96,11 @@ internal sealed class MainRender : Microsoft.Xna.Framework.Game
         try
         {
             this.mainThread = Thread.CurrentThread;
+            this.coreThread = (TickedThread)Thread.GetThreadByName("CoreThread");
 
-            logger = Logger.Get();
-            logger.EchoToConsole = true;
+            Logger.EchoToConsole = true;
 
-            logger.NewLog(Logger.Log.Level.Info, $"Started initialization in {stopwatch.Elapsed.Milliseconds}ms");
+            Logger.NewLog(Logger.Log.Level.Info, $"Started initialization in {stopwatch.Elapsed.Milliseconds}ms");
 
             //thread bridges
             renderBridge            = ThreadBridges.GetBridge<TripleBufferBridge<RenderBuffer>>("CoreThread");
@@ -150,18 +147,18 @@ internal sealed class MainRender : Microsoft.Xna.Framework.Game
         }
         catch
         {
-            Logger.Get().NewLog(Logger.Log.Level.Error, $"Exception happened during initialization");
+            Logger.NewLog(Logger.Log.Level.Error, $"Exception happened during initialization");
             throw;
         }
 
         workspaceController.Start();
 
-        logger.NewLog(Logger.Log.Level.Info, $"RenderThread initialized in {stopwatch.Elapsed.Milliseconds}ms");
+        Logger.NewLog(Logger.Log.Level.Info, $"RenderThread initialized in {stopwatch.Elapsed.Milliseconds}ms");
 
         long endBytes = GC.GetAllocatedBytesForCurrentThread();
         allocated = endBytes - startBytes;
 
-        logger.NewLog(Logger.Log.Level.Info, $"RenderThread allocated {allocated / 1024.0:F2} KB | ({allocated:N0} bytes) during initialization!");
+        Logger.NewLog(Logger.Log.Level.Info, $"RenderThread allocated {allocated / 1024.0:F2} KB | ({allocated:N0} bytes) during initialization!");
     }
 
     protected override void Update(GameTime gameTime)

@@ -61,7 +61,7 @@ internal partial class EntityContainer
 
                     if (parameterInfo.IsIn && componentType.Size <= 8)
                     {
-                        Logger.Get().NewLog(Logger.Log.Level.Warning, $"Parameter '{parameterInfo.Name}' on '{methodInfo.DeclaringType?.Name}.{methodInfo.Name}' is 'in {elementType.Name}' ({componentType.Size} bytes) — no benefit over pass-by-value below 8 bytes, consider removing 'in'.");
+                        Logger.NewLog(Logger.Log.Level.Warning, $"Parameter '{parameterInfo.Name}' on '{methodInfo.DeclaringType?.Name}.{methodInfo.Name}' is 'in {elementType.Name}' ({componentType.Size} bytes) — no benefit over pass-by-value below 8 bytes, consider removing 'in'.");
                     }
                 }
 
