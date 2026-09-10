@@ -90,13 +90,13 @@ public sealed class Defs : Workspace.Service
             if (root.TryGetProperty("DefType", out JsonElement type) || root.TryGetProperty("defType", out type))
             {
                 var defType = defTypes[type.GetString()];
-                var defNode = LuminixJsonUtility.Deserialize<DefNode>(root);
+                var defNode = JsonUtility.Deserialize<DefNode>(root);
                 defNodes[(defType, defNode.DefName)] = defNode;
             }
             else if (root.TryGetProperty("PatchType", out type) || root.TryGetProperty("patchType", out type))
             {
                 var patchType = patchTypes[type.GetString()];
-                var patchNode = LuminixJsonUtility.Deserialize<PatchNode>(root);
+                var patchNode = JsonUtility.Deserialize<PatchNode>(root);
                 patchNodes.Add(patchNode);
             }
             else
@@ -265,7 +265,7 @@ public sealed class Defs : Workspace.Service
                         if (parentValue.ValueKind != JsonValueKind.Object && childValue.ValueKind != JsonValueKind.Object)
                             continue;
 
-                        childProperties[key] = LuminixJsonUtility.MergeJsonElements(parentValue, childValue);
+                        childProperties[key] = JsonUtility.MergeJsonElements(parentValue, childValue);
                     }
                     else
                     {
@@ -371,9 +371,9 @@ public sealed class Defs : Workspace.Service
     {
         Type defType = defTypes[defNode.DefType];
         
-        JsonObject defJson = LuminixJsonUtility.Parse(defNode.Properties);
+        JsonObject defJson = JsonUtility.Parse(defNode.Properties);
         defJson["name"] = defNode.DefName;
 
-        return LuminixJsonUtility.Deserialize(defJson, defType) as Def;
+        return JsonUtility.Deserialize(defJson, defType) as Def;
     }
 }

@@ -1,0 +1,11 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "C# Luminix",
+      "type": "dotnet",
+      "request": "launch",
+      "projectPath": "${workspaceFolder}/Luminix/Luminix.csproj",
+    }
+  ]
+}

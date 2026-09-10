@@ -6,7 +6,7 @@ using System.Text.Json.Nodes;
 
 namespace Luminix.Json;
 
-public static class LuminixJsonUtility
+public static class JsonUtility
 {
     public static readonly JsonSerializerOptions SerializerOptions = new() {
         PropertyNameCaseInsensitive = true,
@@ -62,7 +62,12 @@ public static class LuminixJsonUtility
         return JsonSerializer.Deserialize<T>(node, SerializerOptions);
     }
 
-    public static object Deserialize<T>(string node)
+    public static T Deserialize<T>(JsonDocument node)
+    {
+        return JsonSerializer.Deserialize<T>(node, SerializerOptions);
+    }
+
+    public static T Deserialize<T>(string node)
     {
         return JsonSerializer.Deserialize<T>(node, SerializerOptions);
     }
@@ -78,6 +83,11 @@ public static class LuminixJsonUtility
     }
 
     public static object Deserialize(JsonNode node, Type baseType)
+    {
+        return JsonSerializer.Deserialize(node, baseType, SerializerOptions);
+    }
+
+    public static object Deserialize(JsonDocument node, Type baseType)
     {
         return JsonSerializer.Deserialize(node, baseType, SerializerOptions);
     }

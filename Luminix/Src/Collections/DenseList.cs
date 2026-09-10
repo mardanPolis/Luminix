@@ -175,6 +175,8 @@ public sealed class DenseList<T> : ICollection<T>, IEnumerable<T>, IList<T>, IRe
         Array.Copy(items, 0, array, index, count);
     }
 
+    //TODO not efficient
+
     public IEnumerator<T> GetEnumerator()
     {
         for (int i = 0; i < count; i++)
