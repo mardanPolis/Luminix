@@ -30,7 +30,7 @@ public static partial class Logger
         public ReadOnlySpan<char> Message => data.AsSpan(startIndex, Length);
     }
 
-    internal static readonly string LogDir;
+    internal static string LogDir { get; }
 
     static Logger()
     {

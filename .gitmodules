@@ -1,0 +1,4 @@
+[submodule "MonoGame"]
+	path = MonoGame
+	url = https://github.com/mardanPolis/MonoGame.git
+	branch = my-3.8.4.1-changes

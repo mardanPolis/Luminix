@@ -5,13 +5,16 @@ using System.Runtime.InteropServices;
 using Luminix;
 using Luminix.Threading;
 
-public static class Application
+public sealed class Application
 {
-    public static Assembly Assembly { get; }
+    internal static Application Instance { get; private set; }
+
+    public static Assembly EngineAssembly { get; }
+    public static Assembly GameAssembly { get; }
     public static string BuildVers { get; }
     public static string BuildDate { get; }
-    
-    public static string Name { get; private set; }
+
+    public static string Name => Instance.name;
 
     public static string OSDescription{ get; } = RuntimeInformation.OSDescription;
     public static Architecture ProcessArchitecture { get; } = RuntimeInformation.ProcessArchitecture;
@@ -24,38 +27,36 @@ public static class Application
     public static bool IsMacOS { get; } = OperatingSystem.IsMacOS();
     public static bool IsLinux { get; } = OperatingSystem.IsLinux();
 
-    public static DateTime StartTime { get; }
-    public static TimeSpan Uptime => DateTime.UtcNow - StartTime;
     public static string ExecutablePath => AppContext.BaseDirectory;
 
-    private static string[] namespaces;
-    public static ReadOnlySpan<string> Namespaces => namespaces.AsSpan();
+    public static DateTime StartTime { get; }
+    public static TimeSpan Uptime => DateTime.UtcNow - StartTime;
 
-    private static TickedThread coreThread;
-    private static Thread renderThread;
+    public static ReadOnlySpan<string> Namespaces => Instance.namespaces.AsSpan();
+
+    private readonly string name;
+
+
+    private string[] namespaces;
+
+    private TickedThread coreThread;
+    private Thread renderThread;
 
     static Application()
     {
-        Assembly = Assembly.GetExecutingAssembly();
+        EngineAssembly = Assembly.GetExecutingAssembly();
+        GameAssembly = Assembly.GetEntryAssembly();
 
-        string version = Assembly.GetName().Version.ToString();
+        string version = EngineAssembly.GetName().Version.ToString();
         BuildVers = version;
 
-        var attribute = Assembly.GetCustomAttributes<AssemblyMetadataAttribute>()
+        var attribute = EngineAssembly.GetCustomAttributes<AssemblyMetadataAttribute>()
                             .FirstOrDefault(a => a.Key == "BuildDate");
         string buildDate = attribute?.Value ?? "Unknown";
         BuildDate = buildDate;
 
-        var myNamespaces = Assembly.GetTypes()
-            .Select(t => t.Namespace)
-            .Where(n => !string.IsNullOrEmpty(n) && n.StartsWith("Luminix"))
-            .Distinct()
-            .OrderBy(n => n);
-
-        namespaces = myNamespaces.ToArray();
-
         StartTime = DateTime.UtcNow;
-    } 
+    }
 
     public static Assembly GetAssembly(string name)
     {
@@ -71,44 +72,48 @@ public static class Application
         throw new ArgumentException($"There is no loaded Assembly named '{name}'", nameof(name));
     }
 
-    public static void Create(string name)
+    public Application(string name, bool debug = false)
     {
+        if (Instance != null)
+            throw new InvalidOperationException("An Application instance already exists.");
+
+        Logger.EchoToConsole = debug;
+
+        Instance = this;
+        this.name = name;
+
+        var myNamespaces = EngineAssembly.GetTypes()
+            .Select(t => t.Namespace)
+            .Where(n => !string.IsNullOrEmpty(n) && n.StartsWith("Luminix"))
+            .Distinct()
+            .OrderBy(n => n);
+
+        namespaces = myNamespaces.ToArray();
+
         try
         {
-            Application.Name = name;
-
             var mainCore = new Luminix.MainCore();
             coreThread = new TickedThread("CoreThread", mainCore.Initialize, mainCore.Tick, mainCore.OnStop);
             coreThread.Priority = System.Threading.ThreadPriority.AboveNormal;
-            coreThread.IsBackground = false;
 
             var mainRender = new Luminix.MainRender();
             renderThread = new UnmanagedThread("RenderThread", mainRender.Run, mainRender.Stop);
             renderThread.Priority = System.Threading.ThreadPriority.AboveNormal;
-            renderThread.IsBackground = false;
-
-            var someThread = new TickedThread("CoreThread", mainCore.Initialize, mainCore.Tick, mainCore.OnStop);
         }
-        catch(Exception ex)
+        catch (Exception ex)
         {
-            Logger.NewLog(Logger.Log.Level.Error, $"RenderThread encountered a fatal error: {ex}");
-        }
-        finally
-        {
-            Application.Exit();
-
-            Logger.Flush();
+            Logger.NewLog(Logger.Log.Level.Error, $"Application failed to initialize: {ex}");
+            throw;
         }
     }
 
-    public static void Run()
+    public void Run()
     {
         coreThread.Start();
         renderThread.Start();
     }
 
     public static void Restart() => throw new NotImplementedException(nameof(Restart));
-
     public static void Exit()
     {
         if (Thread.Threads != null)
@@ -117,7 +122,7 @@ public static class Application
                     thread?.Stop();
     }
 
-    public static void ForceExit(int code)
+    public static void ForceStop(int code)
     {
         Environment.Exit(code);
     }

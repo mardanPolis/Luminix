@@ -133,10 +133,10 @@ internal sealed class MainRender : Microsoft.Xna.Framework.Game
             resourceManager.CreateResource(nullTextureAsset);
             resourceManager.CreateResource(pixelTextureAsset);
 
-            resourceManager.CreateResource(assetIO.LoadXnbAsset(Application.Assembly, "Assets.Built-In.Fonts.IBMPlexMono-Bold.xnb"));
-            resourceManager.CreateResource(assetIO.LoadXnbAsset(Application.Assembly, "Assets.Built-In.Fonts.IBMPlexMono-Medium.xnb"));
-            resourceManager.CreateResource(assetIO.LoadXnbAsset(Application.Assembly, "Assets.Built-In.Fonts.IBMPlexMono-Regular.xnb"));
-            resourceManager.CreateResource(assetIO.LoadXnbAsset(Application.Assembly, "Assets.Built-In.Shaders.GenericShader.xnb"));
+            resourceManager.CreateResource(assetIO.LoadXnbAsset(Application.EngineAssembly, "Assets.Built-In.Fonts.IBMPlexMono-Bold.xnb"));
+            resourceManager.CreateResource(assetIO.LoadXnbAsset(Application.EngineAssembly, "Assets.Built-In.Fonts.IBMPlexMono-Medium.xnb"));
+            resourceManager.CreateResource(assetIO.LoadXnbAsset(Application.EngineAssembly, "Assets.Built-In.Fonts.IBMPlexMono-Regular.xnb"));
+            resourceManager.CreateResource(assetIO.LoadXnbAsset(Application.EngineAssembly, "Assets.Built-In.Shaders.GenericShader.xnb"));
 
             resourceCommandHandler = HandleResourceCommand;
             windowCommandHandler = HandleWindowCommand;
