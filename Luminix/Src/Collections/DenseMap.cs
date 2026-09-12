@@ -128,10 +128,10 @@ public sealed class DenseMap<T1, T2> : IEnumerable<(T1, T2)>, IReadOnlyCollectio
                && EqualityComparer<T2>.Default.Equals(items[index].Item2, item.Item2);
     }
 
-    public bool ContainsLeft(T1 key) => leftItems.ContainsKey(key);
-    public bool ContainsRight(T2 key) => rightItems.ContainsKey(key);
+    public bool ContainsItem(T1 key) => leftItems.ContainsKey(key);
+    public bool ContainsItem(T2 key) => rightItems.ContainsKey(key);
 
-    public bool TryGetLeft(T2 key, [MaybeNullWhen(false)] out T1 value)
+    public bool TryGetItem(T2 key, [MaybeNullWhen(false)] out T1 value)
     {
         if (rightItems.TryGetValue(key, out int index))
         {
@@ -143,7 +143,7 @@ public sealed class DenseMap<T1, T2> : IEnumerable<(T1, T2)>, IReadOnlyCollectio
         return false;
     }
 
-    public bool TryGetRight(T1 key, [MaybeNullWhen(false)] out T2 value)
+    public bool TryGetItem(T1 key, [MaybeNullWhen(false)] out T2 value)
     {
         if (leftItems.TryGetValue(key, out int index))
         {

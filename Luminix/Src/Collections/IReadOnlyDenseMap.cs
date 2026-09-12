@@ -11,8 +11,8 @@ public interface IReadOnlyDenseMap<T1, T2> : IEnumerable<(T1, T2)>, IReadOnlyCol
     DenseMap<T1, T2>.LeftEnumerable LeftItems { get; }
     DenseMap<T1, T2>.RightEnumerable RightItems { get; }
 
-    bool ContainsLeft(T1 key);
-    bool ContainsRight(T2 key);
-    bool TryGetLeft(T2 key, out T1 value);
-    bool TryGetRight(T1 key, out T2 value);
+    bool ContainsItem(T1 key);
+    bool ContainsItem(T2 key);
+    bool TryGetItem(T2 key, out T1 value);
+    bool TryGetItem(T1 key, out T2 value);
 }
