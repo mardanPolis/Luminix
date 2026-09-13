@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Reflection;
 using System.Threading;
 using Luminix.Threading;
 
@@ -7,29 +8,6 @@ namespace Luminix;
 
 public sealed class Workspace
 {
-    internal readonly struct Controller
-    {
-        internal Controller(Workspace controlled)
-        {
-            if(controlled.controllerIssued)
-                throw new ArgumentException("Cant create a UIManager.Controller, the provided UI manager is already initialized!");
-            
-            this.controlled = controlled;
-        }
-
-        private readonly Workspace controlled;
-
-        public void Start()
-        {
-            var startMethods = controlled.startMethods;
-            controlled.startMethods = null;
-            foreach(var method in startMethods)
-            {
-                method();
-            }
-        }
-    }
-
     public abstract class Service
     {
         public Workspace Workspace { get; private set; }
@@ -39,27 +17,40 @@ public sealed class Workspace
             Workspace = Workspace.Current ?? throw new InvalidOperationException($"Service '{GetType().Name}' cannot be created: No active Workspace found.");
                 
             var serviceType = GetType();
-            if(Workspace.startMethods == null)
+            if(Workspace.hasStarted)
                 throw new InvalidOperationException($"Cannot add {serviceType.Name} to '{this}', reason: Workspace has been already started.");
             if(Workspace.services.ContainsKey(serviceType))
                 throw new InvalidOperationException($"Cannot add {serviceType.Name} to '{this}', reason: Service with the same type exists.");
 
             Workspace.services[serviceType] = this;
-            Workspace.startMethods.Add(Start);
         }
 
         protected virtual void Start() {}
-
+        protected virtual void Shutdown() {}
         public override string ToString()
         {
             return $"Service {this.GetType().Name}";
         }
     }
 
+    static Workspace()
+    {
+        var method = typeof(Service).GetMethod(
+            "Start", BindingFlags.NonPublic | BindingFlags.Instance);
+
+        var shutdownMethod = typeof(Service).GetMethod(
+            "Shutdown", BindingFlags.NonPublic | BindingFlags.Instance);
+
+        startService = (Action<Service>)Delegate.CreateDelegate(typeof(Action<Service>), method);
+        shutdownService = (Action<Service>)Delegate.CreateDelegate(typeof(Action<Service>), shutdownMethod);
+    }
+
+    private static readonly Action<Service> startService;
+    private static readonly Action<Service> shutdownService;
     private static ThreadLocal<Workspace> instance = new ThreadLocal<Workspace>(true);
     public static Workspace Current => instance.Value;
 
-    internal Workspace(out Controller controller)
+    internal Workspace()
     {
         try
         {
@@ -70,10 +61,6 @@ public sealed class Workspace
 
             instance.Value = this;
             services = new();
-            startMethods = new();
-
-            controller = new Controller(this);
-            controllerIssued = true;
         }
         catch
         {
@@ -82,10 +69,11 @@ public sealed class Workspace
         }
     }
 
-    private readonly bool controllerIssued;
     private readonly Dictionary<Type, Service> services;
-    private List<Action> startMethods;
-    
+    private bool hasStarted;    
+
+    public bool HasStarted => hasStarted;
+
     public bool TryGetService<T>(out T _service) where T : Service 
     {
         _service = null;
@@ -107,5 +95,24 @@ public sealed class Workspace
     public override string ToString()
     {
         return $"{TickedThread.CurrentThread.Name} workspace";
+    }
+
+    internal void Start()
+    {
+        if(hasStarted)
+            return;
+
+        hasStarted = true;
+        foreach(var service in services.Values)
+            startService(service);
+    }
+
+    internal void Shutdown()
+    {
+        if(hasStarted)
+            return;
+        
+        foreach(var service in services.Values)
+            shutdownService(service);
     }
 }

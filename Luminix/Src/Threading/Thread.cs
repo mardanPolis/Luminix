@@ -18,9 +18,6 @@ public abstract class Thread
         this.ThreadID = new ID((uint)Threads.Count);
     }
 
-    private protected Workspace workspace;
-    private protected Workspace.Controller workspaceController;
-
     protected System.Threading.Thread SystemThread { get; private protected init; }
 
     public ID ThreadID { get; private init; }

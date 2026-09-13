@@ -52,27 +52,25 @@ public sealed class AssetIO
         public override string ToString() => FullPath;
     }
 
-    public IEnumerable<AssetInfo> EnumerateAssetInfos(string directory = "", bool? boot = null)
+    public IEnumerable<AssetInfo> EnumerateAssetInfos(string rootPath, bool? boot = null)
     {
-        if (Path.IsPathRooted(directory))
-            throw new ArgumentException($"'{directory}' must be a relative path.", nameof(directory));
+        if (!Path.IsPathRooted(rootPath))
+            throw new ArgumentException($"'{rootPath}' must not be a relative path.", nameof(rootPath));
 
-        string[] segments = directory.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        string[] segments = rootPath.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
         if (segments.Any(s => s == ".."))
-            throw new ArgumentException($"'{directory}' must not contain parent directory references ('..').", nameof(directory));
+            throw new ArgumentException($"'{rootPath}' must not contain parent directory references ('..').", nameof(rootPath));
 
-        if (directory.IndexOfAny(Path.GetInvalidPathChars()) >= 0)
-            throw new ArgumentException($"'{directory}' contains invalid path characters.", nameof(directory));
+        if (rootPath.IndexOfAny(Path.GetInvalidPathChars()) >= 0)
+            throw new ArgumentException($"'{rootPath}' contains invalid path characters.", nameof(rootPath));
 
-        if (!string.IsNullOrEmpty(Path.GetExtension(directory)))
-            throw new ArgumentException($"'{directory}' must be a directory, not a file.", nameof(directory));
+        if (!string.IsNullOrEmpty(Path.GetExtension(rootPath)))
+            throw new ArgumentException($"'{rootPath}' must be a directory, not a file.", nameof(rootPath));
 
-        string basePath = Path.GetFullPath(AppContext.BaseDirectory);
-        string targetPath = Path.GetFullPath(Path.Combine(basePath, directory, ASSET_DIRECTORY));
+        string targetPath = Path.GetFullPath(Path.Combine(rootPath, ASSET_DIRECTORY));
+        if(!Directory.Exists(targetPath))
+            yield break;
 
-        if (!targetPath.StartsWith(basePath, StringComparison.OrdinalIgnoreCase))
-            throw new ArgumentException($"'{directory}' resolves outside the allowed base directory.", nameof(directory));
-            
         foreach (var path in Directory.EnumerateFiles(targetPath, "*.*", SearchOption.AllDirectories))
         {
             string relativePath = Path.GetRelativePath(targetPath, path);

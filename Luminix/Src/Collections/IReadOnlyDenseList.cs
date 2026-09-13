@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 
 namespace Luminix.Collections;
@@ -15,4 +16,5 @@ public interface IReadOnlyDenseList<T> : IReadOnlyCollection<T>, IReadOnlyList<T
 
     public T[] ToArray();
     public List<T> ToList();
+    public ReadOnlySpan<T> AsSpan();
 }

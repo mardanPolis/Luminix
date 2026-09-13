@@ -1,21 +1,88 @@
 using System;
+using System.Linq;
 using System.Reflection;
+using System.Text.Json.Serialization;
 
 namespace Luminix;
 
-public abstract class Module
+public sealed class Module
 {
-    internal Module(ModuleAbout moduleAbout, Assembly assembly)
+    internal Module()
     {
-        this.moduleAbout = moduleAbout;
-        this.assembly = assembly;
+        supportedVersions = [];
+        dependencies = [];
     }
 
-    private readonly ModuleAbout moduleAbout;
-    private readonly Assembly assembly;
-    public ModuleAbout GetAbout() => moduleAbout;
-    public Assembly GetAssembly() => assembly;
+    private string id;
 
-    protected virtual void Initialize() {}
-    protected virtual void Shutdown() {}
+    public required string ID 
+    {
+        get => id;
+        init => id = value.ToLower();
+    }
+    public string Name { get; init; }
+    public string Author { get; init; }
+    public Version Version { get; init; }
+    public string Description { get; init; }
+
+    [JsonInclude] internal string Assembly { get; init; }
+    private Assembly loadedAssembly;
+
+    public bool HasAssembly() => !string.IsNullOrWhiteSpace(Assembly);
+    public bool IsAssemblyLoaded() => HasAssembly() && loadedAssembly != null;
+    public string GetAssemblyName() => Assembly;
+    public Assembly GetAssembly() => loadedAssembly;
+    internal void SetAssembly(Assembly assembly) => loadedAssembly = assembly;
+    
+
+    [JsonInclude] private Version[] supportedVersions;
+    [JsonInclude] private string[] dependencies;
+
+    public ReadOnlySpan<Version> SupportedVersions => supportedVersions;
+    public ReadOnlySpan<string> Dependencies => dependencies;
+
+    private string moduleDirectory { get; set; }
+    public string GetModuleDirectory() => moduleDirectory;
+    internal void SetModuleDirectory(string directory)
+    {
+        moduleDirectory = directory;
+    }
+
+    private ModuleBehavior behavior;
+    public bool HasBehavior() => behavior != null;
+    public ModuleBehavior GetBehavior() => behavior;
+    internal bool TryGetModuleBehavior(Module module, out ModuleBehavior behavior)
+    {
+        behavior = null;
+        if(!module.HasAssembly())
+            return false;
+
+        behavior = this.behavior;
+        if(module.HasBehavior())
+            return true;
+
+        Type[] types = loadedAssembly.GetTypes().Where(t => typeof(ModuleBehavior).IsAssignableFrom(t) && !t.IsAbstract).ToArray();
+ 
+        if (types.Length == 0)
+            return false;
+ 
+        Type type = types[0];
+ 
+        if (types.Length > 1)
+            for (int i = 1; i < types.Length; i++)
+                Logger.NewLog(Logger.Log.Level.Warning, $"Ignoring additional ModuleBehavior type: {types[i].FullName}");
+ 
+        behavior = (ModuleBehavior)Activator.CreateInstance(type, module);
+        this.behavior = behavior;
+        return true;
+    }
+
+    public override bool Equals(object obj)
+    {
+        return obj is Module moduleAbout && moduleAbout.ID.Equals(this.ID);
+    }
+    public override int GetHashCode()
+    {
+        return ID.GetHashCode();
+    }
 }

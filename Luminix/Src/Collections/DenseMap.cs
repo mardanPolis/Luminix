@@ -7,11 +7,19 @@ namespace Luminix.Collections;
 
 public sealed class DenseMap<T1, T2> : IEnumerable<(T1, T2)>, IReadOnlyCollection<(T1, T2)>, IReadOnlyDenseMap<T1, T2> where T1 : notnull where T2 : notnull
 {
+    public DenseMap()
+    {
+        items = new (T1, T2)[32];
+        leftItems = new Dictionary<T1, int>(32);
+        rightItems = new Dictionary<T2, int>(32);
+        count = 0;
+        defaultCapacity = 32;
+    }
     public DenseMap(int capacity = 32)
     {
         items = new (T1, T2)[capacity];
-        leftItems = new Dictionary<T1, int>();
-        rightItems = new Dictionary<T2, int>();
+        leftItems = new Dictionary<T1, int>(capacity);
+        rightItems = new Dictionary<T2, int>(capacity);
         count = 0;
         defaultCapacity = Math.Max(capacity, 32);
     }
@@ -124,10 +132,8 @@ public sealed class DenseMap<T1, T2> : IEnumerable<(T1, T2)>, IReadOnlyCollectio
 
     public bool Contains((T1, T2) item)
     {
-        return leftItems.TryGetValue(item.Item1, out int index)
-               && EqualityComparer<T2>.Default.Equals(items[index].Item2, item.Item2);
+        return leftItems.ContainsKey(item.Item1) && rightItems.ContainsKey(item.Item2);
     }
-
     public bool ContainsItem(T1 key) => leftItems.ContainsKey(key);
     public bool ContainsItem(T2 key) => rightItems.ContainsKey(key);
 
@@ -154,6 +160,17 @@ public sealed class DenseMap<T1, T2> : IEnumerable<(T1, T2)>, IReadOnlyCollectio
         value = default;
         return false;
     }
+
+    public bool TryGetItemIndex(T1 left, out int index)
+    {
+        return leftItems.TryGetValue(left, out index);
+    }
+
+    public bool TryGetItemIndex(T2 right, out int index)
+    {
+        return rightItems.TryGetValue(right, out index);
+    }
+
 
     public void CopyTo((T1, T2)[] array, int arrayIndex)
     {
@@ -241,6 +258,8 @@ public sealed class DenseMap<T1, T2> : IEnumerable<(T1, T2)>, IReadOnlyCollectio
         leftItems.TrimExcess(capacity);
         rightItems.TrimExcess(capacity);
     }
+
+    public ReadOnlySpan<(T1, T2)> AsSpan() => items.AsSpan(0, count);
 
     public DenseMapEnumerator GetEnumerator() => new(this);
 

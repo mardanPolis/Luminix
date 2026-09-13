@@ -17,18 +17,15 @@ public abstract class ManagedThread : Thread
 
             try
             {
+                _ = new Workspace();
                 running = true;
-                workspace = new Workspace(out workspaceController);
                 threadAction();
-            }
-            catch(Exception ex)
-            {
-                Application.Exit();
-
-                Logger.NewLog(Logger.Log.Level.Error, $"{this.Name} encountered a fatal error: {ex}");
+                Workspace.Current.Shutdown();
             }
             finally
             {
+                Application.Exit();
+
                 Logger.Flush();
                 thread.Value = null;
                 running = false;

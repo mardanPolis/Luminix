@@ -7,10 +7,18 @@ namespace Luminix.Collections;
 
 public sealed class DenseList<T> : ICollection<T>, IEnumerable<T>, IList<T>, IReadOnlyDenseList<T>, IEnumerable, ICollection
 {
+    public DenseList()
+    {
+        this.items = new T[32];
+        this.indexDict = [];
+        this.count = 0;
+        this.defaultCapacity = 32;
+    }
+
     public DenseList(int capacity = 32)
     {
         this.items = new T[capacity];
-        this.indexMap = new Dictionary<T, int>();
+        this.indexDict = [];
         this.count = 0;
         this.defaultCapacity = Math.Max(capacity, 32);
     }
@@ -18,7 +26,7 @@ public sealed class DenseList<T> : ICollection<T>, IEnumerable<T>, IList<T>, IRe
     public DenseList(IEnumerable<T> source)
     {
         items = new T[defaultCapacity > 0 ? defaultCapacity : 32];
-        indexMap = new Dictionary<T, int>();
+        indexDict = [];
         count = 0;
         defaultCapacity = Math.Max(items.Length, 32);
 
@@ -26,9 +34,11 @@ public sealed class DenseList<T> : ICollection<T>, IEnumerable<T>, IList<T>, IRe
             Add(item);
     }
 
+    public static DenseList<T> Empty = [];
+
     private T[] items;
     private int count;
-    private readonly Dictionary<T, int> indexMap;
+    private readonly Dictionary<T, int> indexDict;
 
     private int defaultCapacity;
 
@@ -56,49 +66,70 @@ public sealed class DenseList<T> : ICollection<T>, IEnumerable<T>, IList<T>, IRe
                 throw new IndexOutOfRangeException($"Index {index} is out of range for DenseList<{typeof(T).Name}> with count {count}.");
 
             var oldItem = items[index];
-            indexMap.Remove(oldItem);
+            indexDict.Remove(oldItem);
             
             items[index] = value;
-            indexMap[value] = index;
+            indexDict[value] = index;
         }
     }
     
     public void Add(T item)
     {
-        if (indexMap.ContainsKey(item))
+        if (indexDict.ContainsKey(item))
             return;
 
         if (count >= items.Length)
             Array.Resize(ref items, items.Length * 2);
 
         items[count] = item;
-        indexMap[item] = count;
+        indexDict[item] = count;
         count++;
     }
+    public void AddRange(IReadOnlyList<T> source)
+    {
+        EnsureCapacityFor(source.Count);
+        for (int i = 0; i < source.Count; i++)
+            Add(source[i]);
+    }
+
+    public void AddRange(IEnumerable<T> source)
+    {
+        switch (source)
+        {
+            case IReadOnlyList<T> list: AddRange(list); return;
+            case ICollection<T> collection:
+                EnsureCapacityFor(count + collection.Count);
+                break;
+        }
+
+        foreach (var item in source)
+            Add(item);
+    }
+
     public bool TryAdd(T item)
     {
-        if (indexMap.ContainsKey(item))
+        if (indexDict.ContainsKey(item))
             return false;
 
         if (count >= items.Length)
             Array.Resize(ref items, items.Length * 2);
 
         items[count] = item;
-        indexMap[item] = count;
+        indexDict[item] = count;
         count++;
         return true;
     }
 
     public bool TryAdd(T item, out int index)
     {
-        if (indexMap.TryGetValue(item, out index))
+        if (indexDict.TryGetValue(item, out index))
             return false;
 
         if (count >= items.Length)
             Array.Resize(ref items, items.Length * 2);
 
         items[count] = item;
-        indexMap[item] = count;
+        indexDict[item] = count;
         index = count;
         count++;
         return true;
@@ -106,7 +137,7 @@ public sealed class DenseList<T> : ICollection<T>, IEnumerable<T>, IList<T>, IRe
 
     public void Insert(int index, T item)
     {
-        if (indexMap.ContainsKey(item))
+        if (indexDict.ContainsKey(item))
             return;
         
         if (index < 0 || index > count)
@@ -115,13 +146,13 @@ public sealed class DenseList<T> : ICollection<T>, IEnumerable<T>, IList<T>, IRe
         if (count >= items.Length)
             Array.Resize(ref items, items.Length * 2);
 
-        Array.Copy(items, index, items, index + 1, count - index);
+        Array.Copy(items, index, items, index + 1, count - index); // moves items
 
         items[index] = item;
         count++;
 
         for (int i = index; i < count; i++)
-            indexMap[items[i]] = i;
+            indexDict[items[i]] = i;
     }
 
     private void Remove(int index, T item)
@@ -132,11 +163,11 @@ public sealed class DenseList<T> : ICollection<T>, IEnumerable<T>, IList<T>, IRe
         {
             T lastItem = items[lastIndex];
             items[index] = lastItem;
-            indexMap[lastItem] = index;
+            indexDict[lastItem] = index;
         }
 
         items[lastIndex] = default!;
-        indexMap.Remove(item);
+        indexDict.Remove(item);
         count--;
     }
     public void RemoveAt(int index)
@@ -149,7 +180,7 @@ public sealed class DenseList<T> : ICollection<T>, IEnumerable<T>, IList<T>, IRe
 
     public bool Remove(T item)
     {
-        if (!indexMap.TryGetValue(item, out int idx))
+        if (!indexDict.TryGetValue(item, out int idx))
             return false;
 
         Remove(idx, item);
@@ -158,24 +189,36 @@ public sealed class DenseList<T> : ICollection<T>, IEnumerable<T>, IList<T>, IRe
 
     public bool Contains(T item) 
     {
-        return indexMap.ContainsKey(item);
+        return indexDict.ContainsKey(item);
     }
     public int IndexOf(T item)
     {
-        return indexMap.TryGetValue(item, out int index) ? index : -1;
+        return indexDict.TryGetValue(item, out int index) ? index : -1;
+    }
+
+    public void EnsureCapacityFor(int capacity)
+    {
+        if (capacity > items.Length)
+        {
+            int newCapacity = items.Length == 0 ? (defaultCapacity > 32 ? defaultCapacity : 32) : items.Length;
+            while (newCapacity < capacity)
+                newCapacity *= 2;
+            Array.Resize(ref items, newCapacity);
+            indexDict.EnsureCapacity(newCapacity);
+        }
     }
 
     public void Clear()
     {
         Array.Clear(items, 0, count);
-        indexMap.Clear();
+        indexDict.Clear();
         count = 0;
     }
     public void Reset()
     {
         Clear();
         items = new T[defaultCapacity];
-        indexMap.TrimExcess(defaultCapacity);
+        indexDict.TrimExcess(defaultCapacity);
     }
 
     public void CopyTo(T[] array, int index)
@@ -186,18 +229,6 @@ public sealed class DenseList<T> : ICollection<T>, IEnumerable<T>, IList<T>, IRe
     {
         Array.Copy(items, 0, array, index, count);
     }
-
-    public DenseListEnumerator GetEnumerator()
-    {
-        return new DenseListEnumerator(this);
-    }
-
-    IEnumerator<T> IEnumerable<T>.GetEnumerator()
-    {
-        return GetEnumerator();
-    }
-
-    IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
     public T[] ToArray()
     {
@@ -214,12 +245,34 @@ public sealed class DenseList<T> : ICollection<T>, IEnumerable<T>, IList<T>, IRe
 
     public HashSet<T> ToHashSet()
     {
-        return indexMap.Keys.ToHashSet();
+        return indexDict.Keys.ToHashSet();
     }
 
-    public struct DenseListEnumerator : IEnumerator<T>
+    public Span<T> AsSpan()
     {
-        public DenseListEnumerator(DenseList<T> values)
+        return items.AsSpan(0, count);
+    }
+
+    ReadOnlySpan<T> IReadOnlyDenseList<T>.AsSpan()
+    {
+        return AsSpan();
+    }
+
+    public Enumerator GetEnumerator()
+    {
+        return new((DenseList<T>)this);
+    }
+
+    IEnumerator<T> IEnumerable<T>.GetEnumerator()
+    {
+        return GetEnumerator();
+    }
+
+    IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+
+    public struct Enumerator : IEnumerator<T>
+    {
+        public Enumerator(DenseList<T> values)
         {
             this.index = -1;
             this.current = default;

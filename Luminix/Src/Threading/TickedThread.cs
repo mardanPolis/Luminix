@@ -11,6 +11,8 @@ public sealed class TickedThread : ManagedThread
     {
         threadAction = () =>
         {
+            bool isNoGCRegion = GC.TryStartNoGCRegion(5000000);
+                
             var Time = new Time();
             Time.TickRate = tickRate;
             TickRate = Time.TickRate;
@@ -31,7 +33,7 @@ public sealed class TickedThread : ManagedThread
 
             init();
             
-            workspaceController.Start();
+            Workspace.Current.Start();
 
             endBytes = GC.GetAllocatedBytesForCurrentThread();
 
@@ -40,7 +42,7 @@ public sealed class TickedThread : ManagedThread
             Logger.NewLog(Logger.Log.Level.Info, $"{Name} initialized in {stopwatch.Elapsed.Milliseconds}ms");
             Logger.NewLog(Logger.Log.Level.Info, $"{Name} allocated {Time.TickAllocated / 1024.0:F2} KB | ({Time.TickAllocated:N0} bytes) during initialization!");
 
-            long before = GC.GetTotalMemory(false);
+            long before = GC.GetTotalMemory(true); // exits NoGCRegion automatically
             GC.Collect();
             long after = GC.GetTotalMemory(true);
 

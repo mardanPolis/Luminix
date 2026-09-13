@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
@@ -15,6 +16,9 @@ public sealed class Application
     public static string BuildDate { get; }
 
     public static string Name => Instance.name;
+    public static string Author => Instance.author;
+    public static Version Version => Instance.version;
+    public static bool IsModdable => Instance.moddable;
 
     public static string OSDescription{ get; } = RuntimeInformation.OSDescription;
     public static Architecture ProcessArchitecture { get; } = RuntimeInformation.ProcessArchitecture;
@@ -28,6 +32,7 @@ public sealed class Application
     public static bool IsLinux { get; } = OperatingSystem.IsLinux();
 
     public static string ExecutablePath => AppContext.BaseDirectory;
+    public static string DataPath => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), Name);
 
     public static DateTime StartTime { get; }
     public static TimeSpan Uptime => DateTime.UtcNow - StartTime;
@@ -35,7 +40,10 @@ public sealed class Application
     public static ReadOnlySpan<string> Namespaces => Instance.namespaces.AsSpan();
 
     private readonly string name;
+    private readonly string author;
+    private readonly Version version;
 
+    private readonly bool moddable;
 
     private string[] namespaces;
 
@@ -72,7 +80,7 @@ public sealed class Application
         throw new ArgumentException($"There is no loaded Assembly named '{name}'", nameof(name));
     }
 
-    public Application(string name, bool debug = false)
+    public Application(string name, string author, Version version, bool moddable, bool debug = false)
     {
         if (Instance != null)
             throw new InvalidOperationException("An Application instance already exists.");
@@ -81,6 +89,9 @@ public sealed class Application
 
         Instance = this;
         this.name = name;
+        this.author = author;
+        this.version = version;
+        this.moddable = moddable;
 
         var myNamespaces = EngineAssembly.GetTypes()
             .Select(t => t.Namespace)
@@ -118,8 +129,7 @@ public sealed class Application
     {
         if (Thread.Threads != null)
             foreach (var thread in Thread.Threads)
-                if(thread != Thread.CurrentThread)
-                    thread?.Stop();
+                thread?.Stop();
     }
 
     public static void ForceStop(int code)

@@ -17,7 +17,7 @@ internal sealed class MainRender : Microsoft.Xna.Framework.Game
     internal MainRender()
     {
         //workspace
-        workspace = new Workspace(out workspaceController);
+        workspace = new Workspace();
 
         stopwatch = Stopwatch.StartNew();
 
@@ -56,7 +56,6 @@ internal sealed class MainRender : Microsoft.Xna.Framework.Game
     private GameTime time;
 
     private Workspace workspace;
-    private Workspace.Controller workspaceController;
     private RenderingSystem renderingSystem;
 
     private ResourceManager resourceManager;
@@ -101,7 +100,7 @@ internal sealed class MainRender : Microsoft.Xna.Framework.Game
             this.mainThread = Thread.CurrentThread;
             this.coreThread = (TickedThread)Thread.GetThreadByName("CoreThread");
 
-            Logger.NewLog(Logger.Log.Level.Info, $"Started initialization in {stopwatch.Elapsed.Milliseconds}ms");
+            Logger.NewLog(Logger.Log.Level.Info, $"Started initialization");
 
             //thread bridges
             renderBridge            = ThreadBridges.GetBridge<TripleBufferBridge<RenderBuffer>>("CoreThread");
@@ -155,7 +154,7 @@ internal sealed class MainRender : Microsoft.Xna.Framework.Game
             throw;
         }
 
-        workspaceController.Start();
+        workspace.Start();
 
         Logger.NewLog(Logger.Log.Level.Info, $"RenderThread initialized in {stopwatch.Elapsed.Milliseconds}ms");
 

@@ -2,7 +2,6 @@ using System;
 using Luminix.Threading;
 using Luminix.Threading.Bridges;
 using Luminix.Threading.Buffers;
-using Luminix.Threading.Commands;
 
 namespace Luminix;
 
@@ -24,6 +23,7 @@ internal sealed class MainCore
     private Graphics.Controller graphicsController;
     private Input input;
     private Input.Controller inputController;
+    private ModuleManager moduleManager;
     private Defs defs;
     private Assets assets;
     private Resources resources;
@@ -56,6 +56,7 @@ internal sealed class MainCore
 
             world       = new World(out worldController);
             graphics    = new Graphics(windowBridge, renderBridge, renderInfoBridge, out graphicsController);
+            moduleManager     = new ModuleManager();
             input       = new Input(inputBridge, out inputController);
             defs        = new Defs();
             resources   = new Resources(resourceBridge);
@@ -63,13 +64,30 @@ internal sealed class MainCore
 
             defs.NewDefType<EntityType>(); // built in
 
-            // Module 
+            moduleManager.FindModules();
+            moduleManager.InitializeModules();
+
+            Logger.NewLog(Logger.Log.Level.Info, $"Found {moduleManager.ModuleCount} modules, {moduleManager.InitializedModuleCount} of them are initialized.");
+            Logger.NewLog(Logger.Log.Level.Info, "Found Modules: ");
+            foreach(var module in moduleManager.Modules)
+            {
+                Logger.NewLog(Logger.Log.Level.Info, $" Module: {module.Name}");
+            }
+
+            Logger.NewLog(Logger.Log.Level.Info, "Initialized Modules: ");
+            foreach(var module in moduleManager.InitializedModules)
+            {
+                Logger.NewLog(Logger.Log.Level.Info, $" Module: Name - {module.Name}; Has Assembly - {module.HasAssembly()}; Has Module Behavior - {module.HasBehavior()}");
+            }
 
             defs.FinalizeTypes();
 
-            var bootAssetInfos = assets.GetAssetIO().EnumerateAssetInfos(boot: true);
-            foreach(var info in bootAssetInfos)
-                assets.HandleAsset(info);
+            foreach(var module in moduleManager.InitializedModules)
+            {
+                var assetInfos = assets.GetAssetIO().EnumerateAssetInfos(module.GetModuleDirectory(), boot: true);
+                foreach(var info in assetInfos)
+                    assets.HandleAsset(info);
+            }
 
             assets.FinalizeAssets(false, out bool hadAssets);
 
@@ -78,11 +96,15 @@ internal sealed class MainCore
             if(hadAssets)
                 resources.Set();
 
-            //
+            // Rendering
 
-            var nonBootAssetInfos = assets.GetAssetIO().EnumerateAssetInfos(boot: false);
-            foreach(var info in nonBootAssetInfos)
-                assets.HandleAsset(info);
+
+            foreach(var module in moduleManager.InitializedModules)
+            {
+                var assetInfos = assets.GetAssetIO().EnumerateAssetInfos(module.GetModuleDirectory(), boot: false);
+                foreach(var info in assetInfos)
+                    assets.HandleAsset(info);
+            }
 
             assets.FinalizeAssets(true, out hadAssets);
 

@@ -7,6 +7,9 @@ public abstract class ModuleException : Exception
     public string ModuleID { get; }
     protected ModuleException(string moduleId, string message) : base(message)
         => ModuleID = moduleId;
+
+    protected ModuleException(string moduleId, string message, Exception inner) : base(message, inner)
+        => ModuleID = moduleId;
 }
 
 public sealed class DuplicateModuleException : ModuleException
@@ -33,16 +36,8 @@ public sealed class InvalidModuleManifestException : ModuleException
 {
     public string ModuleDirectory { get; }
     public InvalidModuleManifestException(string moduleDirectory, string reason, Exception inner = null)
-        : base(moduleId: "(unknown)", $"Invalid module manifest in '{moduleDirectory}': {reason}")
+        : base(moduleId: "(unknown)", $"Invalid module manifest in '{moduleDirectory}': {reason}", inner)
         => ModuleDirectory = moduleDirectory;
-}
-
-public sealed class ModuleInitializationException : ModuleException
-{
-    public ModuleInitializationException(string moduleId, Exception inner)
-        : base(moduleId, $"Module '{moduleId}' threw during initialization: {inner.Message}")
-    {
-    }
 }
 
 public sealed class ModuleDependencyException : ModuleException
@@ -53,8 +48,26 @@ public sealed class ModuleDependencyException : ModuleException
         => MissingDependencyID = missingDependencyId;
 }
 
-public sealed class CircularModuleDependencyException : ModuleException
+public sealed class ModuleInitializationException : ModuleException
 {
-    public CircularModuleDependencyException(string moduleId, string cyclePath)
-        : base(moduleId, $"Circular dependency detected involving module '{moduleId}': {cyclePath}") { }
+    public ModuleInitializationException(string moduleId, Exception inner)
+        : base(moduleId, $"Module '{moduleId}' threw during initialization: {inner.Message}", inner)
+    {
+    }
+}
+
+public sealed class ModuleStartException : ModuleException
+{
+    public ModuleStartException(string moduleId, Exception inner)
+        : base(moduleId, $"Module '{moduleId}' threw while starting: {inner.Message}", inner)
+    {
+    }
+}
+
+public sealed class ModuleShutdownException : ModuleException
+{
+    public ModuleShutdownException(string moduleId, Exception inner)
+        : base(moduleId, $"Module '{moduleId}' threw during shutdown: {inner.Message}", inner)
+    {
+    }
 }
