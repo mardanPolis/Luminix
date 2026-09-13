@@ -64,8 +64,9 @@ public sealed partial class ModuleManager : Workspace.Service
 
         coreModule = new()
         {
-            ID = Application.Author.ToLower() + "_" + Application.Name.ToLower(),
+            ID = Application.Author.Replace(' ', '.').ToLower() + "." + Application.Name.ToLower(),
             Name = Application.Name,
+            Author = Application.Author,
             Version = Application.Version,
             Description = $"Core {Application.Name} content.",
             Assembly = Application.GameAssembly.GetName().Name

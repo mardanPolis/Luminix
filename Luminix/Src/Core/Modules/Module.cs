@@ -7,6 +7,7 @@ namespace Luminix;
 
 public sealed class Module
 {
+    [JsonConstructor]
     internal Module()
     {
         supportedVersions = [];
@@ -20,10 +21,16 @@ public sealed class Module
         get => id;
         init => id = value.ToLower();
     }
-    public string Name { get; init; }
-    public string Author { get; init; }
-    public Version Version { get; init; }
+    public required string Name { get; init; }
+    public required string Author { get; init; }
+    public required Version Version { get; init; }
     public string Description { get; init; }
+
+    [JsonInclude] private Version[] supportedVersions;
+    [JsonInclude] private string[] dependencies;
+
+    [JsonIgnore] public ReadOnlySpan<Version> SupportedVersions => supportedVersions;
+    [JsonIgnore] public ReadOnlySpan<string> Dependencies => dependencies;
 
     [JsonInclude] internal string Assembly { get; init; }
     private Assembly loadedAssembly;
@@ -34,12 +41,6 @@ public sealed class Module
     public Assembly GetAssembly() => loadedAssembly;
     internal void SetAssembly(Assembly assembly) => loadedAssembly = assembly;
     
-
-    [JsonInclude] private Version[] supportedVersions;
-    [JsonInclude] private string[] dependencies;
-
-    public ReadOnlySpan<Version> SupportedVersions => supportedVersions;
-    public ReadOnlySpan<string> Dependencies => dependencies;
 
     private string moduleDirectory { get; set; }
     public string GetModuleDirectory() => moduleDirectory;

@@ -68,16 +68,35 @@ internal sealed class MainCore
             moduleManager.InitializeModules();
 
             Logger.NewLog(Logger.Log.Level.Info, $"Found {moduleManager.ModuleCount} modules, {moduleManager.InitializedModuleCount} of them are initialized.");
-            Logger.NewLog(Logger.Log.Level.Info, "Found Modules: ");
+            var logBuilder = new Logger.LogBuilder(Logger.Log.Level.Info);
+            logBuilder.AppendLiteral("Found Modules: ");
             foreach(var module in moduleManager.Modules)
             {
-                Logger.NewLog(Logger.Log.Level.Info, $" Module: {module.Name}");
+                logBuilder.AppendLiteral("\n Module: ID - ");
+                logBuilder.AppendFormatted(module.ID);
+                logBuilder.AppendLiteral("; Name - ");
+                logBuilder.AppendFormatted(module.Name);
             }
+            logBuilder.End();
 
-            Logger.NewLog(Logger.Log.Level.Info, "Initialized Modules: ");
+            logBuilder = new Logger.LogBuilder(Logger.Log.Level.Info);
+            logBuilder.AppendLiteral("Initialized Modules: ");
             foreach(var module in moduleManager.InitializedModules)
             {
-                Logger.NewLog(Logger.Log.Level.Info, $" Module: Name - {module.Name}; Has Assembly - {module.HasAssembly()}; Has Module Behavior - {module.HasBehavior()}");
+                logBuilder.AppendLiteral("\n Module: ID - ");
+                logBuilder.AppendFormatted(module.ID);
+                logBuilder.AppendLiteral("; Name - ");
+                logBuilder.AppendFormatted(module.Name);
+                logBuilder.AppendLiteral("; Has Assembly - ");
+                logBuilder.AppendFormatted(module.HasAssembly());
+                logBuilder.AppendLiteral("; Has Module Behavior - ");
+                logBuilder.AppendFormatted(module.HasBehavior());
+            }
+            logBuilder.End();
+
+            if(moduleManager.InitialModuleCount != moduleManager.InitializedModuleCount)
+            {
+                
             }
 
             defs.FinalizeTypes();

@@ -15,7 +15,8 @@ public static class JsonUtility
         {
             new TypedConverterFactory(),
             new ResourceConverterFactory(),
-            new DefRefConverterFactory()
+            new DefRefConverterFactory(),
+            new VersionConverter(),
         }
     };
 
