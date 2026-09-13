@@ -22,6 +22,6 @@ internal sealed class UnmanagedThread : Thread
         threadStop = stop;
     }
 
-    protected override void OnStart() => threadRun();
-    protected override void OnStop() => threadStop();
+    public override void Start() => threadRun();
+    public override void Stop() => threadStop();
 }

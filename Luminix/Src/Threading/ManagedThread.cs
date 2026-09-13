@@ -1,6 +1,4 @@
 using System;
-using System.Collections.Generic;
-using System.Threading;
 
 namespace Luminix.Threading;
 
@@ -41,9 +39,6 @@ public abstract class ManagedThread : Thread
 
     public override bool IsAlive => running;
 
-    protected override void OnStart() => SystemThread.Start();
-    protected override void OnStop()
-    {
-        running = false;
-    }
+    public sealed override void Start() => SystemThread.Start();
+    public sealed override void Stop() => running = false;
 }

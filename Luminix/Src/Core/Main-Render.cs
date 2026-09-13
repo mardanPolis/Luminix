@@ -190,6 +190,12 @@ internal sealed class MainRender : Microsoft.Xna.Framework.Game
 
         base.Update(gameTime);
     }
+
+    protected override void OnExiting(object sender, ExitingEventArgs args)
+    {
+        Application.Exit();
+        base.OnExiting(sender, args);
+    }
     
     protected override void Draw(GameTime gameTime)
     {

@@ -37,7 +37,8 @@ public sealed class Application
     public static DateTime StartTime { get; }
     public static TimeSpan Uptime => DateTime.UtcNow - StartTime;
 
-    public static ReadOnlySpan<string> Namespaces => Instance.namespaces.AsSpan();
+    private static string[] namespaces;
+    public static ReadOnlySpan<string> EngineNamespaces => namespaces.AsSpan();
 
     private readonly string name;
     private readonly string author;
@@ -45,7 +46,6 @@ public sealed class Application
 
     private readonly bool moddable;
 
-    private string[] namespaces;
 
     private TickedThread coreThread;
     private Thread renderThread;
@@ -64,6 +64,14 @@ public sealed class Application
         BuildDate = buildDate;
 
         StartTime = DateTime.UtcNow;
+
+        var myNamespaces = EngineAssembly.GetTypes()
+            .Select(t => t.Namespace)
+            .Where(n => !string.IsNullOrEmpty(n) && n.StartsWith(EngineAssembly.GetName().Name))
+            .Distinct()
+            .OrderBy(n => n);
+
+        namespaces = myNamespaces.ToArray();
     }
 
     public static Assembly GetAssembly(string name)
@@ -82,46 +90,48 @@ public sealed class Application
 
     public Application(string name, string author, Version version, bool moddable, bool debug = false)
     {
-        if (Instance != null)
-            throw new InvalidOperationException("An Application instance already exists.");
-
-        Logger.EchoToConsole = debug;
-
-        Instance = this;
-        this.name = name;
-        this.author = author;
-        this.version = version;
-        this.moddable = moddable;
-
-        var myNamespaces = EngineAssembly.GetTypes()
-            .Select(t => t.Namespace)
-            .Where(n => !string.IsNullOrEmpty(n) && n.StartsWith("Luminix"))
-            .Distinct()
-            .OrderBy(n => n);
-
-        namespaces = myNamespaces.ToArray();
-
-        try
         {
-            var mainCore = new Luminix.MainCore();
-            coreThread = new TickedThread("CoreThread", mainCore.Initialize, mainCore.Tick, mainCore.OnStop);
-            coreThread.Priority = System.Threading.ThreadPriority.AboveNormal;
+            if (Instance != null)
+                throw new InvalidOperationException("An Application instance already exists.");
 
-            var mainRender = new Luminix.MainRender();
-            renderThread = new UnmanagedThread("RenderThread", mainRender.Run, mainRender.Stop);
-            renderThread.Priority = System.Threading.ThreadPriority.AboveNormal;
+            Logger.EchoToConsole = debug;
+
+            Instance = this;
+            this.name = name;
+            this.author = author;
+            this.version = version;
+            this.moddable = moddable;
         }
-        catch (Exception ex)
-        {
-            Logger.NewLog(Logger.Log.Level.Error, $"Application failed to initialize: {ex}");
-            throw;
-        }
+
     }
 
     public void Run()
     {
-        coreThread.Start();
-        renderThread.Start();
+        MainCore mainCore = null;
+        MainRender mainRender = null;
+
+        try
+        {
+            mainCore = new Luminix.MainCore();
+            coreThread = new TickedThread("CoreThread", mainCore.Initialize, mainCore.Tick, mainCore.OnStop);
+            coreThread.Priority = System.Threading.ThreadPriority.AboveNormal;
+
+            mainRender = new Luminix.MainRender();
+            renderThread = new UnmanagedThread("RenderThread", mainRender.Run, mainRender.Stop);
+            renderThread.Priority = System.Threading.ThreadPriority.AboveNormal;
+
+            coreThread.Start();
+            renderThread.Start();
+        }
+        catch (Exception ex)
+        {
+            Logger.NewLog(Logger.Log.Level.Error, $"Application encountered an Error: {ex}");
+            throw;
+        }
+        finally
+        {
+            mainRender.Dispose();
+        }
     }
 
     public static void Restart() => throw new NotImplementedException(nameof(Restart));

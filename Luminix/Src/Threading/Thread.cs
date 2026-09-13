@@ -55,17 +55,8 @@ public abstract class Thread
     }
     public static bool TryGetThreadByName(string name, out Thread thread) => threads.TryGetValue(name, out thread);
 
-    public void Start()
-    {
-        OnStart();
-    }
-    public void Stop()
-    {
-        OnStop();
-    }
-
-    protected abstract void OnStart();
-    protected abstract void OnStop();
+    public virtual void Start() {}
+    public virtual void Stop() {}
 
     public override string ToString() => Name;
 }
