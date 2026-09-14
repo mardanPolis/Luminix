@@ -1,9 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Threading;
 
 namespace Luminix;
 
@@ -52,7 +50,7 @@ public static partial class Logger
 
     private static readonly List<(int Start, int Length, Log.Level level)> logs;
     private static char[] data;
-    private static char[] logBuffer;
+    private static char[] logBuffer; //FIXME : unsafe if log is being created while another log is being created.
 
     private static int pointer;
 
