@@ -43,7 +43,7 @@ public static partial class Logger
 
         Directory.CreateDirectory(LogDir);
 
-        logPath = Path.Combine(Logger.LogDir, $"{Application.StartTime.ToString("yyyy-MM-dd HH:mm:ss")}.log");
+        logPath = Path.Combine(Logger.LogDir, $"{Application.StartTime.ToString("yyyy-MM-dd HH-mm-ss")}.log");
         File.WriteAllText(logPath, string.Empty);
     }
 
