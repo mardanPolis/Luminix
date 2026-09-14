@@ -19,6 +19,7 @@ public sealed class Application
     public static string Author => Instance.author;
     public static Version Version => Instance.version;
     public static bool IsModdable => Instance.moddable;
+    public static bool IsDebug => Instance.isDebug;
 
     public static string OSDescription{ get; } = RuntimeInformation.OSDescription;
     public static Architecture ProcessArchitecture { get; } = RuntimeInformation.ProcessArchitecture;
@@ -46,6 +47,7 @@ public sealed class Application
 
     private readonly bool moddable;
 
+    private readonly bool isDebug;
 
     private TickedThread coreThread;
     private Thread renderThread;
@@ -86,19 +88,18 @@ public sealed class Application
         throw new ArgumentException($"There is no loaded Assembly named '{name}'", nameof(name));
     }
 
-    public Application(string name, string author, Version version, bool moddable, bool debug = false)
+    public Application(string name, string author, Version version, bool moddable, bool isDebug = false)
     {
         {
             if (Instance != null)
                 throw new InvalidOperationException("An Application instance already exists.");
-
-            Logger.EchoToConsole = debug;
 
             Instance = this;
             this.name = name;
             this.author = author;
             this.version = version;
             this.moddable = moddable;
+            this.isDebug = isDebug;
         }
 
     }

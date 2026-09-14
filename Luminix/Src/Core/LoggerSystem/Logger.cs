@@ -55,7 +55,6 @@ public static partial class Logger
     private static int pointer;
 
     public static string TimestampFormat { get; set; }
-    public static bool EchoToConsole { get; set; }
 
     public static void NewLog(Log.Level logLevel, string message) 
     {
@@ -241,7 +240,7 @@ public static partial class Logger
 
             int totalLength = headerLength + message.Length;
 
-            if(EchoToConsole)
+            if(Application.IsDebug)
             {
                 switch(level)
                 {
