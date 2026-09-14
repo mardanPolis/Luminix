@@ -94,9 +94,16 @@ internal sealed class MainCore
             }
             logBuilder.End();
 
-            if(moduleManager.InitialModuleCount != moduleManager.InitializedModuleCount)
+            if(moduleManager.InitialModuleProblems.Length != 0)
             {
-                
+                logBuilder = new Logger.LogBuilder(Logger.Log.Level.Error);
+                logBuilder.AppendLiteral("Failed to Initialize Modules: ");
+                foreach(var problem in moduleManager.InitialModuleProblems)
+                {
+                    logBuilder.AppendLiteral("\n Problem - ");
+                    logBuilder.AppendFormatted(problem);
+                }
+                logBuilder.End();
             }
 
             defs.FinalizeTypes();

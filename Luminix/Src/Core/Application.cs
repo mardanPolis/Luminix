@@ -32,7 +32,7 @@ public sealed class Application
     public static bool IsLinux { get; } = OperatingSystem.IsLinux();
 
     public static string ExecutablePath => AppContext.BaseDirectory;
-    public static string DataPath => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), Name);
+    public static string DataPath => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), GameAssembly.GetName().Name);
 
     public static DateTime StartTime { get; }
     public static TimeSpan Uptime => DateTime.UtcNow - StartTime;
@@ -58,9 +58,7 @@ public sealed class Application
         string version = EngineAssembly.GetName().Version.ToString();
         BuildVers = version;
 
-        var attribute = EngineAssembly.GetCustomAttributes<AssemblyMetadataAttribute>()
-                            .FirstOrDefault(a => a.Key == "BuildDate");
-        string buildDate = attribute?.Value ?? "Unknown";
+        string buildDate = EngineAssembly.GetCustomAttributes<AssemblyMetadataAttribute>().FirstOrDefault(a => a.Key == "BuildDate")?.Value ?? "Unknown";
         BuildDate = buildDate;
 
         StartTime = DateTime.UtcNow;

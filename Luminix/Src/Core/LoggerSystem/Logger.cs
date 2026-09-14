@@ -69,12 +69,44 @@ public static partial class Logger
     {
         message.End();
     }
+    public static void NewLog<T>(Log.Level logLevel, ReadOnlySpan<T> collection)
+    {
+        var builder = new LogBuilder(logLevel);
+
+        builder.AppendFormatted("ReadOnlySpan<");
+        builder.AppendFormatted(typeof(T).Name);
+        builder.AppendFormatted(">");
+
+        if (collection.Length == 0)
+        {
+            builder.AppendFormatted(" is empty");
+            builder.End();
+            return;
+        }
+
+        builder.AppendFormatted(" contains:");
+
+        for (int i = 0; i < collection.Length; i++)
+        {
+            builder.AppendFormatted('\n');
+
+            builder.AppendFormatted(i);
+            builder.AppendFormatted(" - ");
+
+            if (collection[i] is ISpanFormattable formattable)
+                builder.AppendFormatted(formattable);
+            else
+                builder.AppendFormatted(collection[i]);
+        }
+
+        builder.End();
+    }
+
     public static void NewLog<T>(Log.Level logLevel, IEnumerable<T> collection)
     {
         var builder = new LogBuilder(logLevel);
 
         builder.AppendFormatted(collection.GetType());
-
 
         if (collection is IReadOnlyList<T> list)
         {
@@ -85,19 +117,19 @@ public static partial class Logger
                 return;
             }
 
-            builder.AppendFormatted(" contains: \n");
+            builder.AppendFormatted(" contains:");
 
             for (int i = 0; i < list.Count; i++)
             {
+                builder.AppendFormatted('\n');
+
                 builder.AppendFormatted(i);
                 builder.AppendFormatted(" - ");
 
                 if (list[i] is ISpanFormattable formattable)
                     builder.AppendFormatted(formattable);
                 else
-                    builder.AppendFormatted(list[i]?.ToString() ?? "null");
-
-                builder.AppendFormatted('\n');
+                    builder.AppendFormatted(list[i]);
             }
         }
         else
@@ -213,11 +245,25 @@ public static partial class Logger
 
             if(EchoToConsole)
             {
+                switch(level)
+                {
+                    case Log.Level.Info:
+                        Console.ResetColor();
+                    break;
+                    case Log.Level.Warning:
+                        Console.ForegroundColor = ConsoleColor.Yellow;
+                    break;
+                    case Log.Level.Error:
+                        Console.ForegroundColor = ConsoleColor.Red;
+                    break;
+                }
+
                 Span<char> consoleLine = stackalloc char[headerLength + message.Length + Environment.NewLine.Length];
                 header[0..headerLength].CopyTo(consoleLine);
                 message.CopyTo(consoleLine.Slice(headerLength));
                 Environment.NewLine.AsSpan().CopyTo(consoleLine.Slice(headerLength + message.Length));
                 Console.Out.Write(consoleLine);
+                Console.ResetColor();
             }
 
             if (pointer + totalLength <= data.Length)

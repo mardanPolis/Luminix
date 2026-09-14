@@ -21,47 +21,9 @@ public sealed partial class ModuleManager
         private readonly ModuleManager manager;
         public InitializedModuleEnumerable(ModuleManager manager) => this.manager = manager;
 
-        public Enumerator GetEnumerator() => new(manager);
+        public HashSet<Module>.Enumerator GetEnumerator() => manager.initializedModules.GetEnumerator();
         IEnumerator<Module> IEnumerable<Module>.GetEnumerator() => GetEnumerator();
         IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
-
-        public struct Enumerator: IEnumerator<Module>
-        {
-            public Enumerator(ModuleManager manager)
-            {
-                this.manager = manager;
-                Reset();
-            }
-
-            private readonly ModuleManager manager;
-            private Module current;
-
-            private HashSet<string>.Enumerator innerEnumerator;
-
-            public Module Current => current;
-            object IEnumerator.Current => Current;
-
-            public bool MoveNext()
-            {
-                if(!innerEnumerator.MoveNext())
-                    return false;
-
-                current = manager.modules[innerEnumerator.Current];
-                return true;
-            }
-
-            public void Reset()
-            {
-                innerEnumerator = manager.initializedModules.GetEnumerator();
-                current = default;
-            }
-
-            public void Dispose() {
-                innerEnumerator.Dispose();
-                current = default;
-            }
-        }
-
     }
 
     public readonly struct NonInitialModuleEnumerable : IEnumerable<Module>

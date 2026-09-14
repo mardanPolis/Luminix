@@ -48,6 +48,14 @@ public sealed class ModuleDependencyException : ModuleException
         => MissingDependencyID = missingDependencyId;
 }
 
+public sealed class ModuleInitialException : ModuleException
+{
+    public ModuleInitialException(string moduleId, Exception inner)
+        : base(moduleId, $"Initial module '{moduleId}' has a problem: {inner.Message}", inner)
+    {
+    }
+}
+
 public sealed class ModuleInitializationException : ModuleException
 {
     public ModuleInitializationException(string moduleId, Exception inner)

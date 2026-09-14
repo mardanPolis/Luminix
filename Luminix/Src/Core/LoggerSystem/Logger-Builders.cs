@@ -54,6 +54,11 @@ public static partial class Logger
             if(value is Type type)
                 return AddType(type);
 
+            if(value is Exception ex)
+            {
+                return Add(ex.GetType().Name) && Add(ex.Message);
+            }
+
             return Add(value.ToString());
         }
         public bool AppendFormatted(ReadOnlySpan<char> value)

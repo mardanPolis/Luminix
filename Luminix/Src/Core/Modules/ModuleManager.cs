@@ -21,10 +21,12 @@ public sealed partial class ModuleManager : Workspace.Service
 
     private readonly DenseMap<string, Module> modules;
 
-    private HashSet<string> initializedModules;
-    private DenseList<string> initialModules;
+    private readonly HashSet<Module> initializedModules;
+    private readonly DenseList<string> initialModules;
 
     private readonly Module coreModule;
+
+    private readonly DenseList<Exception> initialModuleProblems; // creates garbage
 
     public ModuleEnumerable Modules => new(this);
     public InitializedModuleEnumerable InitializedModules => new(this);
@@ -35,6 +37,8 @@ public sealed partial class ModuleManager : Workspace.Service
     public int InitializedModuleCount => initializedModules.Count;
     public int NonInitialModuleCount => modules.Count - initialModules.Count;
     public int InitialModuleCount => initialModules.Count;
+
+    public ReadOnlySpan<Exception> InitialModuleProblems => initialModuleProblems.AsSpan();
 
 #region Constructors
     static ModuleManager()
@@ -54,10 +58,12 @@ public sealed partial class ModuleManager : Workspace.Service
 
         modulesRoot = Path.GetFullPath("modules", Application.ExecutablePath);
     }
-
     public ModuleManager()
     {
         modules = new(leftComparer: StringComparer.OrdinalIgnoreCase);
+        initializedModules = [];
+        initialModules = [];
+        initialModuleProblems = [];
 
         if (!Directory.Exists(modulesRoot))
             Directory.CreateDirectory(modulesRoot);
@@ -78,7 +84,7 @@ public sealed partial class ModuleManager : Workspace.Service
     }
 #endregion
 
-    public bool IsModuleInitialized(Module module) => initializedModules.Contains(module.ID);
+    public bool IsModuleInitialized(Module module) => initializedModules.Contains(module);
 
     public Module GetModule(string moduleID)
     {
@@ -99,8 +105,29 @@ public sealed partial class ModuleManager : Workspace.Service
         return module;
     }
 
+    public void MakeModuleInitial(string moduleID)
+    {
+        if(initialModules.TryAdd(moduleID))
+            ValidateInitialModules();
+    }
 
+    public void MakeModuleNonInitial(string moduleID)
+    {
+        if(initialModules.Remove(moduleID))
+            ValidateInitialModules();
+    }
 
+    public void MakeModuleInitial(Module module)
+    {
+        if(initialModules.TryAdd(module.ID))
+            ValidateInitialModules();
+    }
+
+    public void MakeModuleNonInitial(Module module)
+    {
+        if(initialModules.Remove(module.ID))
+            ValidateInitialModules();
+    }
 
 
 #region LoadModules
@@ -163,12 +190,14 @@ public sealed partial class ModuleManager : Workspace.Service
     {
         DenseList<string> moduleIDs = GetInitialModules();
  
-        initializedModules = [];
-        initialModules = [];
+        Logger.NewLog(Logger.Log.Level.Info, initialModules);
 
-        if (!ValidModules(moduleIDs.AsSpan()))
+        initialModules.AddRange(moduleIDs);
+
+        Logger.NewLog(Logger.Log.Level.Info, initialModules);
+
+        if (!ValidateInitialModules())
         {
-            initialModules.AddRange(moduleIDs);
             InitializeModule(coreModule);
             return;
         }
@@ -202,43 +231,6 @@ public sealed partial class ModuleManager : Workspace.Service
         }
     }
  
-    private bool ValidModules(ReadOnlySpan<string> moduleIDs)
-    {
-        var success = true;
-        var existingModules = new HashSet<string>();
- 
-        foreach (var moduleID in moduleIDs)
-        {
-            try
-            {
-                if (!modules.TryGetItem(moduleID, out Module module))
-                {
-                    Logger.NewLog(Logger.Log.Level.Error, new ModuleNotFoundException(moduleID).Message);
-                    success = false;
-                    continue;
-                }
- 
-                existingModules.Add(moduleID);
- 
-                foreach (var dep in module.Dependencies)
-                {
-                    if (!existingModules.Contains(dep))
-                    {
-                        Logger.NewLog(Logger.Log.Level.Error, new ModuleDependencyException(module.ID, dep).Message);
-                        success = false;
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                Logger.NewLog(Logger.Log.Level.Error, $"Failed to check Module '{moduleID}', reason: {ex}.");
-                success = false;
-            }
-        }
- 
-        return success;
-    }
- 
     private void InitializeModule(Module module)
     {
         try
@@ -248,7 +240,7 @@ public sealed partial class ModuleManager : Workspace.Service
  
             if (!module.HasAssembly())
             {
-                initializedModules.Add(module.ID);
+                initializedModules.Add(module);
                 return;
             }
  
@@ -263,15 +255,62 @@ public sealed partial class ModuleManager : Workspace.Service
                 initializeBehavior(behavior);
             }
 
-            initializedModules.Add(module.ID);
+            initializedModules.Add(module);
         }
         catch (Exception ex)
         {
-            Logger.NewLog(Logger.Log.Level.Error, new ModuleInitializationException(module.ID, ex).Message);
+            var exception = new ModuleInitializationException(module.ID, ex);
+            initialModuleProblems.Add(exception);
+            Logger.NewLog(Logger.Log.Level.Error, exception.Message);
         }
     }
 
 #endregion
+
+    private bool ValidateInitialModules()
+    {
+        var success = true;
+        var existingModules = new HashSet<string>();
+
+        initialModuleProblems.Clear();
+
+        foreach (var moduleID in initialModules)
+        {
+            try
+            {
+                if (!modules.TryGetItem(moduleID, out Module module))
+                {
+                    var exception = new ModuleNotFoundException(moduleID);
+                    initialModuleProblems.Add(exception);
+                    Logger.NewLog(Logger.Log.Level.Error, exception.Message);
+                    success = false;
+                    continue;
+                }
+ 
+                existingModules.Add(moduleID);
+ 
+                foreach (var dep in module.Dependencies)
+                {
+                    if (!existingModules.Contains(dep))
+                    {
+                        var exception = new ModuleDependencyException(module.ID, dep);
+                        initialModuleProblems.Add(exception);
+                        Logger.NewLog(Logger.Log.Level.Error, exception.Message);
+                        success = false;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                var exception = new ModuleInitialException(moduleID, ex);
+                initialModuleProblems.Add(exception);
+                Logger.NewLog(Logger.Log.Level.Error, $"Failed to check Module '{moduleID}', reason: {exception}.");
+                success = false;
+            }
+        }
+ 
+        return success;
+    }
 
     protected override void Start()
     {
