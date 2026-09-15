@@ -37,6 +37,7 @@ public sealed class GameObjectManager : Workspace.Service
     internal GameObjectManager(out Controller controller)
     {
         controller = new Controller(this);
+        controllerIssued = true;
         gameObjects = new();
     }
 
