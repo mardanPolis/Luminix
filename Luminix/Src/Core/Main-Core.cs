@@ -2,6 +2,7 @@ using System;
 using Luminix.Threading;
 using Luminix.Threading.Bridges;
 using Luminix.Threading.Buffers;
+using Luminix.UI;
 
 namespace Luminix;
 
@@ -25,6 +26,8 @@ internal sealed class MainCore
     private Input.Controller inputController;
     private GameObjectManager gameObjectManager;
     private GameObjectManager.Controller gameObjectManagerController;
+    private UIManager uiManager;
+    private UIManager.Controller uiManagerController;
     private ModuleManager moduleManager;
     private Defs defs;
     private Assets assets;
@@ -57,6 +60,7 @@ internal sealed class MainCore
             Logger.NewLog(Logger.Log.Level.Info, $"Started initialization");
 
             graphics    = new Graphics(out graphicsController);
+            uiManager   = new UIManager(graphics, out uiManagerController);
             moduleManager     = new ModuleManager();
             gameObjectManager = new GameObjectManager(out gameObjectManagerController);
             input       = new Input(out inputController);
@@ -187,8 +191,9 @@ internal sealed class MainCore
 
             gameObjectManagerController.UpdateGameObjects();
 
-            // var mousePosition = input.MousePosition;
-            // inputController.IsMouseOverUI = uiManagerController.isMouseColliding((int)mousePosition.X, (int)mousePosition.Y);
+            var mousePosition = input.MousePosition;
+            inputController.IsMouseOverUI = uiManagerController.isMouseCollidingAt((int)mousePosition.X, (int)mousePosition.Y);
+            
         }
         catch(Exception ex)
         {
@@ -206,6 +211,7 @@ internal sealed class MainCore
 
             worldController.RenderEntities();
             gameObjectManagerController.RenderGameObjects();
+            uiManagerController.Render();
 
             graphicsController.StopRender();
         }
