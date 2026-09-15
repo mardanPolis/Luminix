@@ -54,15 +54,17 @@ internal sealed class MainCore
 
             Logger.NewLog(Logger.Log.Level.Info, $"Started initialization");
 
-            world       = new World(out worldController);
             graphics    = new Graphics(windowBridge, renderBridge, renderInfoBridge, out graphicsController);
             moduleManager     = new ModuleManager();
             input       = new Input(inputBridge, out inputController);
-            defs        = new Defs();
             resources   = new Resources(resourceBridge);
             assets      = new Assets(resources);
+            defs        = new Defs();
+            world       = new World(graphics, out worldController);
 
             defs.NewDefType<EntityType>(); // built in
+
+            defs.AddDef(new EntityType("camera", null, (typeof(Transform), new Transform())));
 
             moduleManager.FindModules();
             moduleManager.InitializeModules();

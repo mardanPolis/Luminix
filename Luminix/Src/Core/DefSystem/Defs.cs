@@ -74,10 +74,23 @@ public sealed class Defs : Workspace.Service
 
         return CollectionsMarshal.AsSpan((List<T>)container);
     }
-
     public ReadOnlySpan<Def> GetDefs()
     {
         return CollectionsMarshal.AsSpan(defList);
+    }
+
+    public void AddDef<T>(T def) where T : Def
+    {
+        Type defType = typeof(T);
+        if (defTypes.ContainsKey(defType.Name))
+        {
+            defs[(defType, def.Name)] = def;
+            defContainers[defType].Add(def);
+            defList.Add(def);
+            return;
+        }
+        
+        Logger.NewLog(Logger.Log.Level.Error, $"Could not add a def, reason: Provided Def type is not registered.");
     }
 
     public void ParseDataAsset(DataAsset dataAsset)
@@ -318,13 +331,13 @@ public sealed class Defs : Workspace.Service
             if(defNode.Abstract)
                 continue;
 
-            if(string.IsNullOrWhiteSpace(defNode.DefType) || defNode.DefType.Any(char.IsWhiteSpace))
+            if(string.IsNullOrWhiteSpace(defNode.DefType) || defNode.DefType.HasWhitespace())
             {
                 Logger.NewLog(Logger.Log.Level.Error, "Unable to Parse DefNode, reason: Provided 'DefType' is null, empty or has whitespaces.");
                 continue;
             }
 
-            if(string.IsNullOrWhiteSpace(defNode.DefName) || defNode.DefName.Any(char.IsWhiteSpace))
+            if(string.IsNullOrWhiteSpace(defNode.DefName) || defNode.DefName.HasWhitespace())
             {
                 Logger.NewLog(Logger.Log.Level.Error, "Unable to Parse DefNode, reason: Provided 'DefName' is null, empty or has whitespaces.");
                 continue;

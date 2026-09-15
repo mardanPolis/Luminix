@@ -1,26 +1,81 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text.Json.Serialization;
-using Luminix.Collections;
 
 namespace Luminix;
 
-public sealed class EntityType : Def
+public class EntityType : Def
 {
-    [JsonConstructor]
-    internal EntityType()
+    [JsonConstructor] internal EntityType()
     {
         componentTypes = [];
     }
 
+
+    [SetsRequiredMembers] public EntityType(string name, Type entitySystemType, params ReadOnlySpan<(Type Type, object value)> components)
+    {
+        Name = name;
+
+        if (entitySystemType is not null)
+        {
+            if (!entitySystemType.IsClass)
+                throw new ArgumentException($"Provided entity system type '{entitySystemType}' is not a class type.", nameof(entitySystemType));
+
+            if (!typeof(EntitySystem).IsAssignableFrom(entitySystemType))
+                throw new ArgumentException($"Provided entity system type '{entitySystemType}' does not inherit from type '{typeof(EntitySystem)}'.", nameof(entitySystemType));
+
+            if (entitySystemType.IsAbstract || entitySystemType.IsInterface)
+                throw new ArgumentException($"Provided entity system type '{entitySystemType}' is abstract or is an interface.", nameof(entitySystemType));
+
+            entitySystem = (EntitySystem)Activator.CreateInstance(entitySystemType);
+        }
+
+        var componentTypes = new List<IComponentType>();
+
+        var seenTypes = new HashSet<Type>();
+
+        foreach (var component in components)
+        {
+            if (component.Type is null)
+                throw new ArgumentException("Component type is null.", nameof(components));
+
+            if (!seenTypes.Add(component.Type))
+                throw new ArgumentException($"Duplicate component type '{component.Type}' was provided.", nameof(components));
+
+            if (component.value is null)
+            {
+                if (component.Type.IsValueType && Nullable.GetUnderlyingType(component.Type) is null)
+                    throw new ArgumentException($"Provided value is null but component type '{component.Type}' is a non-nullable value type.", nameof(components));
+            }
+            else if (!component.Type.IsInstanceOfType(component.value))
+            {
+                throw new ArgumentException($"Provided value of type '{component.value.GetType()}' is not assignable to component type '{component.Type}'.", nameof(components));
+            }
+
+            IComponentType componentType;
+            try
+            {
+                componentType = (IComponentType)Activator.CreateInstance(TypeRegistry.GetClosedGenericType(typeof(ComponentType<>), component.Type));
+            }
+            catch (Exception ex)
+            {
+                throw new InvalidOperationException($"Failed to create ComponentType instance for '{component.Type}'.", ex);
+            }
+
+            componentType.Default = component.value;
+        }
+
+        this.componentTypes = [];
+        this.components = CollectionsMarshal.AsSpan(componentTypes);
+    }
+
     private Dictionary<Type, IComponentType> componentTypes;
 
-    [JsonInclude]
-    private EntitySystem entitySystem { get; set; }
-
-    [JsonInclude]
-    private IComponentType[] components
+    [JsonInclude] private EntitySystem entitySystem { get; set; }
+    [JsonInclude] private ReadOnlySpan<IComponentType> components
     {
         get => componentTypes.Values.ToArray();
         set

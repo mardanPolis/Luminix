@@ -12,8 +12,9 @@ internal class ComponentType<T> : IComponentType where T : struct
     public Type Type => typeof(T);
     public int Size => Unsafe.SizeOf<T>();
     public T Default { get { return data; } set { data = value; } }
-    [JsonInclude]
-    internal T data;
+    object IComponentType.Default { get => Default; set => data = (T)value; }
+
+    [JsonInclude] internal T data;
 
     public IComponentContainer GetComponentContainer()
     {

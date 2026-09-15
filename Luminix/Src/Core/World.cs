@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using Luminix.Collections;
 
 namespace Luminix;
 
@@ -57,11 +56,14 @@ public sealed class World : Workspace.Service
         }
     }
 
-    internal World(out Controller controller)
+    internal World(Graphics graphics, out Controller controller)
     {
         controller = new Controller(this);
+        this.graphics = graphics;
         this.controllerIssued = true;
     }
+
+    private Graphics graphics;
 
     private readonly bool controllerIssued;
 
@@ -84,7 +86,7 @@ public sealed class World : Workspace.Service
             typeContainers[container.EntityType] = container;
 
         foreach(EntityContainer container in entityContainers)
-            container.EntitySystem.Initialize(container.EntityType);
+            container.EntitySystem?.Initialize(container.EntityType);
     }
 
     public EntityID CreateEntity(EntityType entityType)
@@ -123,6 +125,11 @@ public sealed class World : Workspace.Service
 
     public ref T GetEntityComponent<T>(EntityID entityID) where T : struct
     {
+        if(graphics.IsRendering)
+        {
+            throw new InvalidOperationException("Cant access an Entity component during rendering.");
+        }
+
         if (!entities.TryGetValue(entityID, out EntityType entityType))
         {
             throw new ArgumentException($"Entity does not exist", nameof(entityID));
@@ -150,6 +157,16 @@ public sealed class World : Workspace.Service
         return container.HasComponent<T>();
     }
     
+    public ReadOnlySpan<EntityID> GetEntities(EntityType entityType)
+    {
+        if(!typeContainers.TryGetValue(entityType, out EntityContainer container))
+        {
+            throw new ArgumentException("Unknown entity type", nameof(entityType));
+        }
+
+        
+    }
+
     public EntitySystem GetEntitySystem(EntityType entityType)
     {
         if(!typeContainers.TryGetValue(entityType, out EntityContainer container))
@@ -209,6 +226,9 @@ public sealed class World : Workspace.Service
         {
             try
             {
+                if(entitySystem == null)
+                    return [];
+
                 MethodInfo[] methodInfos = GetMethodInfos(entitySystem, methodName);
                 List<EntityContainer.Method> updateMethods = null;
 

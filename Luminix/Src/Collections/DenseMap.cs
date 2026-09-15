@@ -68,6 +68,14 @@ public sealed class DenseMap<T1, T2> : IEnumerable<(T1, T2)>, IReadOnlyCollectio
     
     public T2 this[T1 left]
     {
+        set
+        {
+            if (!leftItems.TryGetValue(left, out int index))
+                throw new KeyNotFoundException($"Left item '{left}' was not found.");
+
+            if (rightItems.TryAdd(value, index))
+                throw new ArgumentException($"Right item '{value}' already exists.");
+        }
         get
         {
             if (!leftItems.TryGetValue(left, out int index))
@@ -79,6 +87,14 @@ public sealed class DenseMap<T1, T2> : IEnumerable<(T1, T2)>, IReadOnlyCollectio
 
     public T1 this[T2 right]
     {
+        set
+        {
+            if (!rightItems.TryGetValue(right, out int index))
+                throw new KeyNotFoundException($"Right item '{right}' was not found.");
+
+            if (leftItems.TryAdd(value, index))
+                throw new ArgumentException($"Left item '{value}' already exists.");
+        }
         get
         {
             if (!rightItems.TryGetValue(right, out int index))
@@ -102,9 +118,9 @@ public sealed class DenseMap<T1, T2> : IEnumerable<(T1, T2)>, IReadOnlyCollectio
     public void Add(T1 left, T2 right)
     {
         if (leftItems.ContainsKey(left))
-            throw new ArgumentException($"Left key '{left}' already exists.");
+            throw new ArgumentException($"Left item '{left}' already exists.");
         if (rightItems.ContainsKey(right))
-            throw new ArgumentException($"Right key '{right}' already exists.");
+            throw new ArgumentException($"Right item '{right}' already exists.");
 
         if (count >= items.Length)
             Array.Resize(ref items, items.Length * 2);
@@ -214,15 +230,23 @@ public sealed class DenseMap<T1, T2> : IEnumerable<(T1, T2)>, IReadOnlyCollectio
         return true;
     }
 
-    public bool Remove((T1, T2) item)
+    public bool Remove(T1 left, T2 right)
     {
-        if (!leftItems.TryGetValue(item.Item1, out int index))
+        if (!leftItems.TryGetValue(left, out int leftIndex))
             return false;
 
-        if (!EqualityComparer<T2>.Default.Equals(items[index].Item2, item.Item2))
+        if (!rightItems.TryGetValue(right, out int rightIndex))
             return false;
 
-        RemoveAt(index);
+        if (leftIndex != rightIndex)
+            return false;
+
+        var index = leftIndex;
+
+        items[index] = default!;
+        leftItems.Remove(left);
+        rightItems.Remove(right);
+
         return true;
     }
 

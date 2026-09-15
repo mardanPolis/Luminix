@@ -1,6 +1,5 @@
 using System;
 using Microsoft.Xna.Framework;
-using Luminix.Collections;
 
 namespace Luminix;
 
@@ -10,7 +9,6 @@ public class Camera
     public Camera()
     {
         graphics = Workspace.Current.GetService<Graphics>();
-        //TODO : complete Constructor Method
     }
 
     protected readonly Graphics graphics;

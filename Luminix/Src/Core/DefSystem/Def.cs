@@ -1,6 +1,5 @@
-using System.Collections.Generic;
-using System.Text.Json;
-using System.Text.Json.Serialization;
+using System;
+using Luminix.Extensions;
 
 namespace Luminix;
 
@@ -8,5 +7,13 @@ public abstract class Def
 {
     protected virtual void Initialize() {}
 
-    public required string Name { get; init; }
+    private string name = string.Empty;
+
+    public required string Name
+    {
+        get => name;
+        init => name = !string.IsNullOrWhiteSpace(value) && !name.HasWhitespace()
+            ? value
+            : throw new ArgumentException("Name cannot be null, empty, or has whitespace.", nameof(value));
+    }
 }

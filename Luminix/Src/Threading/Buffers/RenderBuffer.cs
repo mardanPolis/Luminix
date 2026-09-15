@@ -81,12 +81,12 @@ internal sealed class RenderBuffer
         instanceSprites.Add(new InstanceSprite(shader, texture, color, transform));
         NewCommand(key, RenderObjectType.SpriteNonInterpolated, dataIndex);
     }
-    internal void PushInterpolatedSprite(ShaderResource shader, TextureResource texture, Color color, in Transform from, in Transform to)
+    internal void PushInterpolatedSprite(ShaderResource shader, TextureResource texture, Color color, in TransformInterp transform)
     {
         ulong key = BuildSpriteKey(shader, texture);
  
         int dataIndex = interpolatedInstanceSprites.Count;
-        interpolatedInstanceSprites.Add(new InterpolatedInstanceSprite(shader, texture, color, from, to));
+        interpolatedInstanceSprites.Add(new InterpolatedInstanceSprite(shader, texture, color, transform));
         NewCommand(key, RenderObjectType.SpriteInterpolated, dataIndex);
     }
 
@@ -100,12 +100,12 @@ internal sealed class RenderBuffer
         NewCommand(key, RenderObjectType.TextNonInterpolated, dataIndex);
     }
 
-    internal void PushInterpolatedText(ShaderResource shader, FontResource font, Color color, string text, in Transform from, in Transform to)
+    internal void PushInterpolatedText(ShaderResource shader, FontResource font, Color color, string text, in TransformInterp transform)
     {
         ulong key = BuildFontKey(shader, font);
  
         int dataIndex = interpolatedInstanceTexts.Count;
-        interpolatedInstanceTexts.Add(new InterpolatedInstanceText(shader, font, color, text, from, to));
+        interpolatedInstanceTexts.Add(new InterpolatedInstanceText(shader, font, color, text, transform));
         NewCommand(key, RenderObjectType.TextInterpolated, dataIndex);
     }
 

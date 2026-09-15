@@ -208,8 +208,9 @@ internal sealed class Renderer
                     case RenderBuffer.RenderObjectType.SpriteInterpolated:
                     {
                         var instance = interpolatedSprites[commandDataIndex];
-                        var from = instance.From;
-                        var to = instance.To;
+                        var transform = instance.Transform;
+                        var from = transform.StartTransform;
+                        var to = transform.EndTransform;
  
                         var textureResource = instance.Texture ?? defaultTexture;
                         var shaderResource  = instance.Shader ?? defaultShader;
@@ -277,8 +278,9 @@ internal sealed class Renderer
                         //FIXME : Shader ignored
 
                         var instance = interpolatedTexts[commandDataIndex];
-                        var from = instance.From;
-                        var to = instance.To;
+                        var transform = instance.Transform;
+                        var from = transform.StartTransform;
+                        var to = transform.EndTransform;
 
                         var position = Vector3.Lerp(from.Position, to.Position, partialTick);
                         var size = Vector2.Lerp(from.Scale, to.Scale, partialTick);
