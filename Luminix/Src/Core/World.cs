@@ -1,7 +1,9 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using Luminix.Collections;
 
 namespace Luminix;
 
@@ -12,7 +14,7 @@ public sealed class World : Workspace.Service
         internal Controller(World controlled)
         {
             if(controlled.controllerIssued)
-                throw new ArgumentException("Cant create a Universe.Controller, the provided universe is already initialized!");
+                throw new ArgumentException("Cant create a World.Controller, the provided universe is already initialized!");
             
             this.controlled = controlled;
         }
@@ -26,6 +28,17 @@ public sealed class World : Workspace.Service
             {
                 containers[i].StartEntities();
             }
+        }
+
+        public readonly void PrepareEntities()
+        {
+            controlled.isPreparing = true;
+            var containers = controlled.entityContainers;
+            for(int i = 0; i < containers.Length; i++)
+            {
+                containers[i].PrepareEntities();
+            }
+            controlled.isPreparing = false;
         }
 
         public readonly void UpdateEntities()
@@ -74,6 +87,8 @@ public sealed class World : Workspace.Service
     private Dictionary<EntityType, EntityContainer> typeContainers;
     private EntityContainer[] entityContainers;
 
+    private bool isPreparing;
+
     protected override void Start()
     {
         var defs = Workspace.Current.GetService<Defs>();
@@ -91,13 +106,19 @@ public sealed class World : Workspace.Service
 
     public EntityID CreateEntity(EntityType entityType)
     {
+        if(graphics.IsRendering)
+            throw new InvalidOperationException("Cant create an Entity during rendering phase.");
+
+        if(isPreparing)
+            throw new InvalidOperationException("Cant create an Entity during preparing phase.");
+
         if(!typeContainers.TryGetValue(entityType, out EntityContainer container))
         {
             throw new ArgumentException("Unknown entity type", nameof(entityType));
         }
 
         entityID = new EntityID(entityID.Value + 1);
-        container.Create(entityID);
+        container.Allocate(entityID);
         entities[entityID] = entityType; 
 
         return entityID;
@@ -108,6 +129,12 @@ public sealed class World : Workspace.Service
     }
     public bool DestroyEntity(EntityID entityID)
     {
+        if(graphics.IsRendering)
+            throw new InvalidOperationException("Cant destroy an Entity during rendering phase.");
+
+        if(isPreparing)
+            throw new InvalidOperationException("Cant destroy an Entity during preparing phase.");
+
         if (!entities.TryGetValue(entityID, out EntityType entityType))
         {
             return false;
@@ -126,9 +153,10 @@ public sealed class World : Workspace.Service
     public ref T GetEntityComponent<T>(EntityID entityID) where T : struct
     {
         if(graphics.IsRendering)
-        {
-            throw new InvalidOperationException("Cant access an Entity component during rendering.");
-        }
+            throw new InvalidOperationException("Cant access an Entity component during rendering phase. Use GetEntityReadonlyComponent to get components of entities.");
+
+        if(isPreparing)
+            throw new InvalidOperationException("Cant access an Entity component during preparing phase. Use GetEntityReadonlyComponent to get components of entities.");
 
         if (!entities.TryGetValue(entityID, out EntityType entityType))
         {
@@ -137,6 +165,16 @@ public sealed class World : Workspace.Service
 
         return ref typeContainers[entityType].GetComponent<T>(entityID);
     }
+    public ref readonly T GetEntityReadonlyComponent<T>(EntityID entityID) where T : struct
+    {
+        if (!entities.TryGetValue(entityID, out EntityType entityType))
+        {
+            throw new ArgumentException($"Entity does not exist", nameof(entityID));
+        }
+
+        return ref typeContainers[entityType].GetComponent<T>(entityID);
+    }
+
     public EntityType GetEntityType(EntityID entityID)
     {
         if (!entities.TryGetValue(entityID, out EntityType entityType))
@@ -157,14 +195,14 @@ public sealed class World : Workspace.Service
         return container.HasComponent<T>();
     }
     
-    public ReadOnlySpan<EntityID> GetEntities(EntityType entityType)
+    public EntityEnumerable GetEntities(EntityType entityType)
     {
         if(!typeContainers.TryGetValue(entityType, out EntityContainer container))
         {
             throw new ArgumentException("Unknown entity type", nameof(entityType));
         }
 
-        
+        return new(container);
     }
 
     public EntitySystem GetEntitySystem(EntityType entityType)
@@ -275,14 +313,55 @@ public sealed class World : Workspace.Service
             }
 
             EntityContainer.Method[] startMethods = GetMethods(entitySystem, "Start", componentContainerMap, false);
+            EntityContainer.Method[] preUpdateMethods = GetMethods(entitySystem, "Prepare", componentContainerMap, false);
             EntityContainer.Method[] updateMethods = GetMethods(entitySystem, "Update", componentContainerMap, false);
             EntityContainer.Method[] renderMethods = GetMethods(entitySystem, "Render", componentContainerMap, true);
             EntityContainer.Method[] destroyMethods = GetMethods(entitySystem, "OnDestroy", componentContainerMap, false);
 
-            entityContainers.Add(new EntityContainer(entityType, entitySystem, startMethods, updateMethods, renderMethods, destroyMethods, componentContainerArray));
+            entityContainers.Add(new EntityContainer(entityType, entitySystem, startMethods, preUpdateMethods, updateMethods, renderMethods, destroyMethods, componentContainerArray));
             entryIndex++;
         }
 
         return entityContainers.ToArray();
+    }
+
+    public struct EntityEnumerable : IEnumerable<EntityID>
+    {
+        private EntityContainer container;
+        internal EntityEnumerable(EntityContainer container) => this.container = container;
+
+        public Enumerator GetEnumerator() => new(container);
+
+        IEnumerator<EntityID> IEnumerable<EntityID>.GetEnumerator() => GetEnumerator();
+
+        IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+
+        public struct Enumerator : IEnumerator<EntityID>
+        {
+            private EntityContainer container;
+            internal Enumerator(EntityContainer container)
+            {
+                this.container = container;
+            }
+            
+            private DenseMap<EntityID, int>.LeftEnumerator inner;
+            public EntityID current;
+            public EntityID Current => throw new NotImplementedException();
+
+            object IEnumerator.Current => Current;
+
+            public bool MoveNext()
+            {
+                if(!inner.MoveNext())
+                    return false;
+                
+                current = inner.Current;
+                return true;
+            }
+
+            public void Reset() => inner.Reset();
+
+            public void Dispose() => inner.Dispose();
+        }
     }
 }

@@ -10,7 +10,7 @@ internal class ComponentContainer<T> : IComponentContainer where T : struct
     }
 
     public IComponentType ComponentType => componentType;
-    public int Length => data.Length;
+    public int Capacity => data.Length;
 
     private ComponentType<T> componentType;
 

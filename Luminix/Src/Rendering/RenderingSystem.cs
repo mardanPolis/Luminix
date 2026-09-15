@@ -256,13 +256,13 @@ public sealed class RenderingSystem : Workspace.Service
         Mouse.SetPosition((int)(pos.X + mouse.X), (int)(pos.Y + mouse.Y));
     }
 
-    private Matrix? GetViewMatrix(Camera.Data? cameraData, Viewport viewport, float partialTick)
+    private Matrix? GetViewMatrix(in Camera? cameraData, Viewport viewport, float partialTick)
     {
         if(cameraData == null) return null;
 
-        Camera.Data cameraDataValue = cameraData.Value;
-        Vector2 position = Vector2.Lerp(cameraDataValue.Position0, cameraDataValue.Position, partialTick);
-        float orthoSize  = MathHelper.Lerp(cameraDataValue.OrthographicSize0, cameraDataValue.OrthographicSize, partialTick);
+        Camera camera = cameraData.Value;
+        Vector2 position = Vector2.Lerp(Camera.GetPosition(in camera), Camera.GetTargetPosition(in camera), partialTick);
+        float orthoSize  = MathHelper.Lerp(Camera.GetOrthographicSize(in camera), Camera.GetTargetOrthographicSize(in camera), partialTick);
 
         float scaleY = viewport.Height / orthoSize;
         float scaleX = scaleY;

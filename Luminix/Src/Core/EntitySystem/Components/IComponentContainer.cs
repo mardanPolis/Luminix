@@ -5,7 +5,7 @@ namespace Luminix;
 internal interface IComponentContainer
 {
     public IComponentType ComponentType { get; }
-    public int Length { get; }
+    public int Capacity { get; }
     public Array GetArray();
     public void Resize(int newLength);
     public void Default(int index);

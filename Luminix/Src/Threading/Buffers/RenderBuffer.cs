@@ -47,7 +47,7 @@ internal sealed class RenderBuffer
         uiRenderCommands = new(256);
     }
 
-    private Camera.Data? cameraData;
+    private Camera? cameraData;
 
     //WorldSpace
     private readonly List<InstanceSprite>  instanceSprites;
@@ -68,9 +68,9 @@ internal sealed class RenderBuffer
 
     public RenderSettings RenderSettings;
 
-    internal void SetCam(Camera camera)
+    internal void SetCam(in Camera? camera)
     {
-        cameraData = camera?.GetCameraSnapshot();
+        cameraData = camera;
     }
 
     internal void PushSprite(ShaderResource shader, TextureResource texture, Color color, in Transform transform)
@@ -132,7 +132,7 @@ internal sealed class RenderBuffer
 
     //TODO : Add PushBatch, batched sprites only.
 
-    internal Camera.Data? GetCameraData()
+    internal Camera? GetCameraData()
         => cameraData;
 
     internal ReadOnlySpan<InstanceSprite> GetSprites() 
