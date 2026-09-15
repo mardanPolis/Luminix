@@ -14,15 +14,16 @@ public sealed class Graphics : Workspace.Service
 {
     internal readonly struct Controller
     {
-        internal Controller(Graphics controlled, WindowBridge windowBridge, TripleBufferBridge<RenderBuffer> renderBridge, DoubleBufferBridge<RenderInfoBuffer> renderInfoBridge)
+        internal Controller(Graphics controlled)
         {
             if(controlled.controllerIssued)
                 throw new ArgumentException("Cant create a Graphics.Controller, the provided graphics is already initialized!");
             
-            this.renderBridge = renderBridge;
-            this.renderInfoBridge = renderInfoBridge;
-            this.windowBridge = windowBridge;
             this.controlled = controlled;
+
+            renderBridge = ThreadBridges.GetBridge<TripleBufferBridge<RenderBuffer>>(Application.RENDER_THREAD_NAME);
+            renderInfoBridge = ThreadBridges.GetBridge<DoubleBufferBridge<RenderInfoBuffer>>(Application.RENDER_THREAD_NAME);
+            windowBridge = ThreadBridges.GetBridge<WindowBridge>(Application.RENDER_THREAD_NAME);
 
             syncWindowCommandHandler = HandleSyncWindowCommand;
         }
@@ -33,6 +34,11 @@ public sealed class Graphics : Workspace.Service
         private readonly Graphics controlled;
 
         private readonly Action<WindowSyncCommand> syncWindowCommandHandler;
+
+        internal void Start()
+        {
+            
+        }
 
         internal void SwapBuffers()
         {
@@ -121,6 +127,12 @@ public sealed class Graphics : Workspace.Service
             ref RenderSettings settings = ref controlled.RenderSettings;
             var renderBuffer = controlled.renderBuffer;
 
+            var world = controlled.Workspace.GetService<World>();
+            if(world.EntityExists(controlled.mainCamera))
+                renderBuffer.SetCam(world.GetEntityReadonlyComponent<Camera>(controlled.mainCamera));
+            else
+                renderBuffer.SetCam(null);
+                
             renderBuffer.RenderSettings = controlled.renderSettings;
 
             controlled.renderBuffer = null;
@@ -141,10 +153,11 @@ public sealed class Graphics : Workspace.Service
         public int Y => Point.Y;
     }
 
-    internal Graphics(WindowBridge windowBridge, TripleBufferBridge<RenderBuffer> renderBridge, DoubleBufferBridge<RenderInfoBuffer> renderInfoBridge, out Controller controller)
+    internal Graphics(out Controller controller)
     {
-        controller = new Controller(this, windowBridge, renderBridge, renderInfoBridge);
+        controller = new Controller(this);
         this.controllerIssued = true;
+        var windowBridge = ThreadBridges.GetBridge<WindowBridge>(Application.RENDER_THREAD_NAME);
 
         var adapters = GraphicsAdapter.Adapters;
 
@@ -187,20 +200,40 @@ public sealed class Graphics : Workspace.Service
     private Point windowPosition;
     private Window.Mode windowMode;
 
-    private DenseList<Def> cameraTypes;
-
     private Viewport viewport;
     private FrameInfo frameInfo;
     private RenderSettings renderSettings;
+
+    private EntityID mainCamera;
 
     public ref readonly Viewport Viewport => ref viewport;
     public ref readonly FrameInfo FrameInfo => ref frameInfo;
     public ref RenderSettings RenderSettings => ref renderSettings;
 
-    public EntityID MainCamera { get; set; }
+    public EntityID MainCamera 
+    { 
+        get => mainCamera; 
+        set
+        {
+            var world = Workspace.GetService<World>();
+            if(!world.EntityExists(value))
+            {
+                Logger.NewLog(Logger.Log.Level.Warning, $"Cant use entity with ID '{value.Value}', reason: entity with that ID does not exist.");
+                return;
+            }
+
+            var entityType = world.GetEntityType(value);
+            if(entityType.HasComponent<Camera>())
+            {
+                Logger.NewLog(Logger.Log.Level.Warning, $"Cant use entity with ID '{value.Value}', reason: entity does not have 'Camera' component.");
+                return;
+            }
+
+            mainCamera = value;
+        } 
+    }
 
     public bool IsRendering => renderBuffer != null;
-
 
 
     public void DrawSprite(TextureResource texture, in Vector3 position)                                    => DrawSprite(null, texture, Color.White, new Transform(position));

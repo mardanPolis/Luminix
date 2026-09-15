@@ -40,7 +40,7 @@ public sealed class Resources : Workspace.Service, IEnumerable<Resource>
             }
         }
     }
-    internal Resources(ResourceBridge resourceBridge) { this.resourceBridge = resourceBridge; }
+    internal Resources() { this.resourceBridge = ThreadBridges.GetBridge<ResourceBridge>(Application.RENDER_THREAD_NAME); }
  
     public int ResourceCount => resources != null ? resources.Count : 0;
  

@@ -23,6 +23,8 @@ internal sealed class MainCore
     private Graphics.Controller graphicsController;
     private Input input;
     private Input.Controller inputController;
+    private GameObjectManager gameObjectManager;
+    private GameObjectManager.Controller gameObjectManagerController;
     private ModuleManager moduleManager;
     private Defs defs;
     private Assets assets;
@@ -32,11 +34,11 @@ internal sealed class MainCore
     {
         try
         {
-            renderBridge            = ThreadBridges.GetBridge<TripleBufferBridge<RenderBuffer>>("RenderThread");
-            renderInfoBridge        = ThreadBridges.GetBridge<DoubleBufferBridge<RenderInfoBuffer>>("RenderThread");
-            inputBridge             = ThreadBridges.GetBridge<DoubleBufferBridge<InputBuffer>>("RenderThread");
-            resourceBridge          = ThreadBridges.GetBridge<ResourceBridge>("RenderThread");
-            windowBridge            = ThreadBridges.GetBridge<WindowBridge>("RenderThread");
+            renderBridge            = ThreadBridges.GetBridge<TripleBufferBridge<RenderBuffer>>(Application.RENDER_THREAD_NAME);
+            renderInfoBridge        = ThreadBridges.GetBridge<DoubleBufferBridge<RenderInfoBuffer>>(Application.RENDER_THREAD_NAME);
+            inputBridge             = ThreadBridges.GetBridge<DoubleBufferBridge<InputBuffer>>(Application.RENDER_THREAD_NAME);
+            resourceBridge          = ThreadBridges.GetBridge<ResourceBridge>(Application.RENDER_THREAD_NAME);
+            windowBridge            = ThreadBridges.GetBridge<WindowBridge>(Application.RENDER_THREAD_NAME);
             
             inputBridge.PopulateIfEmpty();
 
@@ -54,13 +56,17 @@ internal sealed class MainCore
 
             Logger.NewLog(Logger.Log.Level.Info, $"Started initialization");
 
-            graphics    = new Graphics(windowBridge, renderBridge, renderInfoBridge, out graphicsController);
+            graphics    = new Graphics(out graphicsController);
             moduleManager     = new ModuleManager();
-            input       = new Input(inputBridge, out inputController);
-            resources   = new Resources(resourceBridge);
+            gameObjectManager = new GameObjectManager(out gameObjectManagerController);
+            input       = new Input(out inputController);
+            resources   = new Resources();
             assets      = new Assets(resources);
             defs        = new Defs();
             world       = new World(graphics, out worldController);
+
+            graphicsController.Start();
+
 
             defs.NewDefType<EntityType>(); // built in
 
@@ -173,6 +179,13 @@ internal sealed class MainCore
 
             resources.TrySet();
 
+            worldController.Tick();
+            worldController.DestroyEntities();
+            worldController.StartCreatedEntities();
+            worldController.PrepareEntities();
+            worldController.UpdateEntities();
+
+            gameObjectManagerController.UpdateGameObjects();
 
             // var mousePosition = input.MousePosition;
             // inputController.IsMouseOverUI = uiManagerController.isMouseColliding((int)mousePosition.X, (int)mousePosition.Y);
@@ -191,7 +204,8 @@ internal sealed class MainCore
         {
             graphicsController.BeginRender();
 
-            // entity rendering
+            worldController.RenderEntities();
+            gameObjectManagerController.RenderGameObjects();
 
             graphicsController.StopRender();
         }

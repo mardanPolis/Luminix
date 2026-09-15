@@ -10,13 +10,13 @@ public sealed class Input : Workspace.Service
 {
     internal readonly struct Controller
     {
-        internal Controller(Input controlled, DoubleBufferBridge<InputBuffer> inputBridge)
+        internal Controller(Input controlled)
         {
             if(controlled.controllerIssued)
                 throw new ArgumentException("Cant create a Input.Controller, the provided input is already initialized!");
             
             this.controlled = controlled;
-            this.bridge = inputBridge;
+            this.bridge = ThreadBridges.GetBridge<DoubleBufferBridge<InputBuffer>>(Application.RENDER_THREAD_NAME);
         }
 
         private readonly Input controlled;
@@ -68,10 +68,10 @@ public sealed class Input : Workspace.Service
     }
     internal record struct MouseData(byte Buttons = 0, int Position = 0);
 
-    internal Input(DoubleBufferBridge<InputBuffer> inputBridge, out Controller controller)
+    internal Input(out Controller controller)
     {
         this.controllerIssued = false;
-        controller = new Controller(this, inputBridge);
+        controller = new Controller(this);
         this.controllerIssued = true;
     }
 

@@ -98,16 +98,16 @@ internal sealed class MainRender : Microsoft.Xna.Framework.Game
         try
         {
             this.mainThread = Thread.CurrentThread;
-            this.coreThread = (TickedThread)Thread.GetThreadByName("CoreThread");
+            this.coreThread = (TickedThread)Thread.GetThreadByName(Application.CORE_THREAD_NAME);
 
             Logger.NewLog(Logger.Log.Level.Info, $"Started initialization");
 
             //thread bridges
-            renderBridge            = ThreadBridges.GetBridge<TripleBufferBridge<RenderBuffer>>("CoreThread");
-            renderInfoBridge        = ThreadBridges.GetBridge<DoubleBufferBridge<RenderInfoBuffer>>("CoreThread");
-            inputBridge             = ThreadBridges.GetBridge<DoubleBufferBridge<InputBuffer>>("CoreThread");
-            resourceBridge          = ThreadBridges.GetBridge<ResourceBridge>("CoreThread");
-            windowBridge            = ThreadBridges.GetBridge<WindowBridge>("CoreThread");
+            renderBridge            = ThreadBridges.GetBridge<TripleBufferBridge<RenderBuffer>>(Application.CORE_THREAD_NAME);
+            renderInfoBridge        = ThreadBridges.GetBridge<DoubleBufferBridge<RenderInfoBuffer>>(Application.CORE_THREAD_NAME);
+            inputBridge             = ThreadBridges.GetBridge<DoubleBufferBridge<InputBuffer>>(Application.CORE_THREAD_NAME);
+            resourceBridge          = ThreadBridges.GetBridge<ResourceBridge>(Application.CORE_THREAD_NAME);
+            windowBridge            = ThreadBridges.GetBridge<WindowBridge>(Application.CORE_THREAD_NAME);
             
             inputBridge.PopulateIfEmpty();
 

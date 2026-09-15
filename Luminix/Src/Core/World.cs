@@ -21,6 +21,15 @@ public sealed class World : Workspace.Service
 
         private readonly World controlled;
 
+        public readonly void Tick()
+        {
+            var containers = controlled.entityContainers;
+            for(int i = 0; i < containers.Length; i++)
+            {
+                containers[i].Tick();
+            }
+        }
+
         public readonly void StartCreatedEntities()
         {
             var containers = controlled.entityContainers;

@@ -10,6 +10,9 @@ public sealed class Application
 {
     internal static Application Instance { get; private set; }
 
+    internal const string CORE_THREAD_NAME = "CoreThread";
+    internal const string RENDER_THREAD_NAME = "RenderThread";
+
     public static Assembly EngineAssembly { get; }
     public static Assembly GameAssembly { get; }
     public static string BuildVers { get; }
@@ -112,11 +115,11 @@ public sealed class Application
         try
         {
             mainCore = new Luminix.MainCore();
-            coreThread = new TickedThread("CoreThread", mainCore.Initialize, mainCore.Tick, mainCore.OnStop);
+            coreThread = new TickedThread(CORE_THREAD_NAME, mainCore.Initialize, mainCore.Tick, mainCore.OnStop);
             coreThread.Priority = System.Threading.ThreadPriority.AboveNormal;
 
             mainRender = new Luminix.MainRender();
-            renderThread = new UnmanagedThread("RenderThread", mainRender.Run, mainRender.Stop);
+            renderThread = new UnmanagedThread(RENDER_THREAD_NAME, mainRender.Run, mainRender.Stop);
             renderThread.Priority = System.Threading.ThreadPriority.AboveNormal;
 
             coreThread.Start();
