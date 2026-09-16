@@ -6,6 +6,8 @@ namespace Luminix.Collections;
 
 public interface IReadOnlyDenseList<T> : IReadOnlyCollection<T>, IReadOnlyList<T>
 {
+    public bool IsEmpty { get; }
+
     public bool Contains(T item);
     public int IndexOf(T item);
 

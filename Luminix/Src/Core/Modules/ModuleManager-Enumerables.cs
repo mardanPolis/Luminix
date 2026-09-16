@@ -21,11 +21,10 @@ public sealed partial class ModuleManager
         private readonly ModuleManager manager;
         public InitializedModuleEnumerable(ModuleManager manager) => this.manager = manager;
 
-        public HashSet<Module>.Enumerator GetEnumerator() => manager.initializedModules.GetEnumerator();
+        public DenseList<Module>.Enumerator GetEnumerator() => manager.initializedModules.GetEnumerator();
         IEnumerator<Module> IEnumerable<Module>.GetEnumerator() => GetEnumerator();
         IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
     }
-
     public readonly struct NonInitialModuleEnumerable : IEnumerable<Module>
     {
         private readonly ModuleManager manager;
@@ -82,50 +81,5 @@ public sealed partial class ModuleManager
             }
         }
     }
-    public readonly struct InitialModuleEnumerable : IEnumerable<Module>
-    {
-        private readonly ModuleManager manager;
-        public InitialModuleEnumerable(ModuleManager manager) => this.manager = manager;
 
-        public Enumerator GetEnumerator() => new(manager);
-        IEnumerator<Module> IEnumerable<Module>.GetEnumerator() => GetEnumerator();
-        IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
-
-        public struct Enumerator: IEnumerator<Module>
-        {
-            public Enumerator(ModuleManager manager)
-            {
-                this.manager = manager;
-                Reset();
-            }
-
-            private readonly ModuleManager manager;
-            private Module current;
-
-            private DenseList<string>.Enumerator innerEnumerator;
-
-            public Module Current => current;
-            object IEnumerator.Current => Current;
-
-            public bool MoveNext()
-            {
-                if(!innerEnumerator.MoveNext())
-                    return false;
-
-                current = manager.modules[innerEnumerator.Current];
-                return true;
-            }
-
-            public void Reset()
-            {
-                innerEnumerator = manager.initialModules.GetEnumerator();
-                current = default;
-            }
-
-            public void Dispose() {
-                innerEnumerator.Dispose();
-                current = default;
-            }
-        }
-    }
 }

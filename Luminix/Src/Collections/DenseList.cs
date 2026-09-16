@@ -50,6 +50,8 @@ public sealed class DenseList<T> : ICollection<T>, IEnumerable<T>, IList<T>, IRe
     public bool IsFixedSize => false;
     public object SyncRoot => items;
 
+    public bool IsEmpty => count == 0;
+
 
     public T this[int index]
     {

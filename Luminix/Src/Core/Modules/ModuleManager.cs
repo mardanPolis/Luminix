@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
+using System.Threading.Tasks;
 using Luminix.Collections;
 using Luminix.Exceptions;
 using Luminix.Extensions;
@@ -21,17 +22,17 @@ public sealed partial class ModuleManager : Workspace.Service
 
     private readonly DenseMap<string, Module> modules;
 
-    private readonly HashSet<Module> initializedModules;
-    private readonly DenseList<string> initialModules;
+    private readonly DenseList<Module> initializedModules;
+    private readonly DenseList<string> initialModules; // its a DenseList<string>, because we load initial modules from 'modules.json', and we can guarantee if a Module exist with exact same module id.
 
     private readonly Module coreModule;
 
-    private readonly DenseList<Exception> initialModuleProblems; // creates garbage
+    private readonly DenseList<Exception> initialModuleProblems; // Exceptions creates garbage
 
     public ModuleEnumerable Modules => new(this);
     public InitializedModuleEnumerable InitializedModules => new(this);
     public NonInitialModuleEnumerable NonInitialModules => new(this);
-    public InitialModuleEnumerable InitialModules => new(this);
+    public ReadOnlySpan<string> InitialModules => initialModules.AsSpan();
 
     public int ModuleCount => modules.Count;
     public int InitializedModuleCount => initializedModules.Count;
@@ -127,6 +128,62 @@ public sealed partial class ModuleManager : Workspace.Service
     {
         if(initialModules.Remove(module.ID))
             ValidateInitialModules();
+    }
+
+    public bool CanMoveInitialModuleUp(Module module)
+    {
+        var index = initialModules.IndexOf(module.ID);
+        if(index == -1 || index == 0)
+            return false;
+        
+        return true;
+    }
+    public void MoveInitialModuleUp(Module module)
+    {
+        string id = module.ID;
+        var index = initialModules.IndexOf(id);
+        if(index == -1 || index == 0)
+            return;
+        
+        initialModules.RemoveAt(index);
+        initialModules.Insert(index - 1, id);
+    }
+    public bool CanMoveInitialModuleDown(Module module)
+    {
+        var index = initialModules.IndexOf(module.ID);
+        if(index == -1 || index >= initialModules.Count - 1)
+            return false;
+        
+        return true;
+    }
+    public void MoveInitialModuleDown(Module module)
+    {
+        string id = module.ID;
+        var index = initialModules.IndexOf(id);
+        if(index == -1 || index >= initialModules.Count - 1)
+            return;
+        
+        initialModules.RemoveAt(index);
+        initialModules.Insert(index + 1, id);
+    }
+
+    public async Task SaveInitialModules()
+    {
+        try
+        {
+            if(!initialModuleProblems.IsEmpty)
+            {
+                Logger.NewLog(Logger.Log.Level.Warning, "Failed to save initial modules, encountered problems!");
+                return;
+            }
+
+            await using FileStream fs = File.Create(InitialModulePath);
+            await JsonUtility.SerializeAsync(fs, initialModules);
+        }
+        catch(Exception ex)
+        {
+            Logger.NewLog(Logger.Log.Level.Error, $"Failed to save initial modules, reason: {ex}");
+        }
     }
 
 
