@@ -49,53 +49,48 @@ public sealed class TickedThread : ManagedThread
             long cleared = before - after;
             Logger.NewLog(Logger.Log.Level.Info, $"GC cleared: {cleared / 1024.0:F2} KB | ({cleared:N0} bytes)");
 
-            try
+            while (running)
             {
-                while (running)
+                long currentTicks = stopwatch.ElapsedTicks;
+
+                if(currentTicks <= nextTick)
                 {
-                    long currentTicks = stopwatch.ElapsedTicks;
-
-                    if(currentTicks <= nextTick)
-                    {
-                        long ticksRemaining = nextTick - currentTicks;
-                        
-                        if (ticksRemaining > threshold10ms)
-                            System.Threading.Thread.Sleep(5);
-                        else if (ticksRemaining > threshold4ms)
-                            System.Threading.Thread.Yield();
-                        else if (ticksRemaining > threshold1ms)
-                            System.Threading.Thread.SpinWait(1);
-
-                        continue;
-                    } 
+                    long ticksRemaining = nextTick - currentTicks;
                     
-                    Time.TickCount++;
-                    Interlocked.Exchange(ref lastTickDate, nextTick);
-                    nextTick += Interlocked.Read(ref tickIntervalInTicks);
+                    if (ticksRemaining > threshold10ms)
+                        System.Threading.Thread.Sleep(5);
+                    else if (ticksRemaining > threshold4ms)
+                        System.Threading.Thread.Yield();
+                    else if (ticksRemaining > threshold1ms)
+                        System.Threading.Thread.SpinWait(1);
 
-                    Time.TickDeltaTime = internalStopwatch.Elapsed.TotalSeconds;
-                    
-                    internalStopwatch.Restart(); // NEW TICK
+                    continue;
+                } 
+                
+                Time.TickCount++;
+                Interlocked.Exchange(ref lastTickDate, nextTick);
+                nextTick += Interlocked.Read(ref tickIntervalInTicks);
 
-                    startBytes = GC.GetAllocatedBytesForCurrentThread();
+                Time.TickDeltaTime = internalStopwatch.Elapsed.TotalSeconds;
+                
+                internalStopwatch.Restart(); // NEW TICK
 
-                    tick();
+                startBytes = GC.GetAllocatedBytesForCurrentThread();
 
-                    Time.TickAllocated = GC.GetAllocatedBytesForCurrentThread() - startBytes;
+                tick();
 
-                    Time.TickTime = internalStopwatch.Elapsed.TotalMicroseconds;
+                Time.TickAllocated = GC.GetAllocatedBytesForCurrentThread() - startBytes;
 
-                    if(tickRate != Time.TickRate)
-                    {
-                        tickRate = Time.TickRate;
-                        TickRate = tickRate;
-                    }
+                Time.TickTime = internalStopwatch.Elapsed.TotalMicroseconds;
+
+                if(tickRate != Time.TickRate)
+                {
+                    tickRate = Time.TickRate;
+                    TickRate = tickRate;
                 }
             }
-            finally
-            {
-                onStop();
-            }
+            
+            onStop();
         };
     }
 

@@ -21,7 +21,14 @@ public sealed class GameObjectManager : Workspace.Service
         {
             foreach(var gameObject in controlled.gameObjects.Values)
             {
-                gameObject.Update();
+                try
+                {
+                    gameObject.Update();
+                }
+                catch(Exception ex)
+                {
+                    Logger.NewLog(Logger.Log.Level.Error, $"Failed to Update GameObject {gameObject}, reason: {ex}");
+                }
             }
         }
 
@@ -29,7 +36,14 @@ public sealed class GameObjectManager : Workspace.Service
         {
             foreach(var gameObject in controlled.gameObjects.Values)
             {
-                gameObject.Render();
+                try
+                {
+                    gameObject.Render();
+                }
+                catch(Exception ex)
+                {
+                    Logger.NewLog(Logger.Log.Level.Error, $"Failed to Render GameObject {gameObject}, reason: {ex}");
+                }
             }
         }
 

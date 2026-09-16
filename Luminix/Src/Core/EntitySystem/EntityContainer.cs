@@ -36,6 +36,9 @@ internal partial class EntityContainer
                 entityContainer = (ComponentContainer<EntityID>)componentContainer;
         }
         
+        if(entityContainer == null)
+            throw new ArgumentException("Expected ComponentContainer<EntityID>, but never received one!");
+
         this.entityLocations = [];
 
         this.createdEntities = [];

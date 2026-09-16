@@ -13,10 +13,14 @@ internal partial class EntityContainer
         public MethodInfo Info { get; }
         public ParameterInfo[] Parameters { get; }
 
+        private readonly ComponentContainer<EntityID> entityIdContainer;
+
         public Method(MethodInfo methodInfo, EntitySystem entitySystem, Dictionary<Type, IComponentContainer> componentContainers, bool isByInOnly)
         {
             Info = methodInfo;
             Parameters = methodInfo.GetParameters();
+            entityIdContainer = (ComponentContainer<EntityID>)componentContainers[typeof(EntityID)];
+
             var parameterTypes = new DenseList<Type>();
 
             var instanceConst = Expression.Constant(entitySystem);
@@ -81,17 +85,39 @@ internal partial class EntityContainer
 
         public void Invoke(int index)
         {
-            compiledPerIndex(index);
+            InvokeAction(index);
         }
         public void InvokeFor(int length)
         {
             for (int i = 0; i < length; i++)
-                compiledPerIndex(i);
+            {
+                InvokeAction(i);
+            }
         }
         public void InvokeBackFor(int entityCount, int length)
         {
             for (int i = 1; i < length; i++)
-                compiledPerIndex(entityCount - i);
+            {
+                InvokeAction(entityCount - i);
+            }
+        }
+
+        private void InvokeAction(int index)
+        {
+            try
+            {
+                compiledPerIndex(index);
+            }
+            catch(Exception ex)
+            {
+                var entity = entityIdContainer.Data[index].Value;
+                Logger.NewLog(Logger.Log.Level.Error, $"Failed to {Info.DeclaringType}.{Info.Name} on Entity {entity}, reason: {ex}");
+            }
+        }
+
+        public override string ToString()
+        {
+            return $"{Info.Name} Method";
         }
     }
 }

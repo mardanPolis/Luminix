@@ -74,7 +74,7 @@ internal sealed class MainCore
 
             defs.NewDefType<EntityType>(); // built in
 
-            defs.AddDef(new EntityType("camera", null, (typeof(Transform), new Transform())));
+            defs.AddDef(new EntityType("camera", null, (typeof(Camera), new Camera())));
 
             moduleManager.FindModules();
             moduleManager.InitializeModules();
@@ -183,6 +183,8 @@ internal sealed class MainCore
 
             resources.TrySet();
 
+            uiManagerController.Clear();
+
             worldController.Tick();
             worldController.DestroyEntities();
             worldController.StartCreatedEntities();
@@ -193,7 +195,7 @@ internal sealed class MainCore
 
             var mousePosition = input.MousePosition;
             inputController.IsMouseOverUI = uiManagerController.isMouseCollidingAt((int)mousePosition.X, (int)mousePosition.Y);
-            
+
         }
         catch(Exception ex)
         {
