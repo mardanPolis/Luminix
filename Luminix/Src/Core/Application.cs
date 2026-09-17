@@ -3,8 +3,9 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
-using Luminix;
 using Luminix.Threading;
+
+namespace Luminix;
 
 public sealed class Application
 {
