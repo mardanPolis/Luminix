@@ -40,8 +40,4 @@
     </AssemblyAttribute>
   </ItemGroup>
 
-  <Target Name="BuildContent" BeforeTargets="Build">
-    <Exec Command="dotnet mgcb /@:&quot;$(MSBuildProjectDirectory)/Assets.mgcb&quot; /platform:DesktopGL /outputDir:&quot;$(MSBuildProjectDirectory)/build/bin/$(Configuration)/net10.0&quot; /intermediateDir:&quot;$(MSBuildProjectDirectory)/build/obj/$(Configuration)/net10.0&quot; /workingDir:&quot;$(MSBuildProjectDirectory)&quot;" />
-  </Target>
-  
 </Project>
