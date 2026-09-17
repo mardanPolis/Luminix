@@ -11,10 +11,6 @@
     <PlatformTarget>x64</PlatformTarget>
 
     <ApplicationManifest>app.manifest</ApplicationManifest>
-
-    <BaseOutputPath>build/bin</BaseOutputPath>
-    <BaseIntermediateOutputPath>build/obj</BaseIntermediateOutputPath>
-    <RestoreOutputPath>build/obj</RestoreOutputPath>
   </PropertyGroup>
 
   <ItemGroup>
