@@ -42,20 +42,22 @@ public sealed class Graphics : Workspace.Service
         internal void SwapBuffers()
         {
             this.renderBridge.Swap();
-            var renderInfoBuffer = this.renderInfoBridge.ReadBuffer;
-            if(renderInfoBuffer == null || !renderInfoBuffer.Updated)
-                return;
+            this.renderInfoBridge.Swap();
 
-            var accumulatedFrameCount = renderInfoBuffer.AccumulatedFrameCount;
-            ref FrameInfo frameInfo = ref controlled.frameInfo;
-            frameInfo = new FrameInfo(
-                renderInfoBuffer.FrameCount,
-                renderInfoBuffer.FrameTime / accumulatedFrameCount,
-                renderInfoBuffer.FrameDeltaTime / accumulatedFrameCount,
-                renderInfoBuffer.Allocated,
-                renderInfoBuffer.DrawCalls
-            );
-            renderInfoBuffer.Reset();
+            var renderInfoBuffer = this.renderInfoBridge.ReadBuffer;
+            if(renderInfoBuffer != null && renderInfoBuffer.Updated)
+            {
+                var accumulatedFrameCount = renderInfoBuffer.AccumulatedFrameCount;
+                ref FrameInfo frameInfo = ref controlled.frameInfo;
+                frameInfo = new FrameInfo(
+                    renderInfoBuffer.FrameCount,
+                    renderInfoBuffer.FrameTime / accumulatedFrameCount,
+                    renderInfoBuffer.FrameDeltaTime / accumulatedFrameCount,
+                    renderInfoBuffer.Allocated,
+                    renderInfoBuffer.DrawCalls
+                );
+                renderInfoBuffer.Reset();
+            }
 
             var window = controlled.window;
             var windowTitle = window.Title;
@@ -69,6 +71,7 @@ public sealed class Graphics : Workspace.Service
                     Kind = WindowCommand.Type.SetTitle,
                     Title = windowTitle,
                 };
+                controlled.windowTitle = windowTitle;
                 windowBridge.NewCommand(command);
                 windowBridge.ClearSyncCommands();
             }
@@ -80,6 +83,7 @@ public sealed class Graphics : Workspace.Service
                     Kind = WindowCommand.Type.SetPosition,
                     Position = windowPosition,
                 };
+                controlled.windowPosition = windowPosition;
                 windowBridge.NewCommand(command);
                 windowBridge.ClearSyncCommands();
             }
@@ -91,6 +95,7 @@ public sealed class Graphics : Workspace.Service
                     Kind = WindowCommand.Type.SetMode,
                     WindowMode = windowMode,
                 };
+                controlled.windowMode = windowMode;
                 windowBridge.NewCommand(command);
                 windowBridge.ClearSyncCommands();
             }
@@ -108,6 +113,8 @@ public sealed class Graphics : Workspace.Service
             var window = controlled.window;
             if(command.Handle != window.Handle)
                 return;
+            
+            controlled.windowPosition = command.Position;
             
             window.Position = command.Position;
             window.ClientBounds = command.ClientBound;
