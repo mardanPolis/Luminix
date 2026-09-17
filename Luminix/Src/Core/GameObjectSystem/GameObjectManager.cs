@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Reflection;
 
 namespace Luminix;
 
@@ -7,6 +8,18 @@ public sealed class GameObjectManager : Workspace.Service
 {
     internal readonly struct Controller 
     {
+        private readonly static Action<GameObject> updateMethod;
+        private readonly static Action<GameObject> renderMethod;
+
+        static Controller()
+        {
+            var updateMethodInfo = typeof(GameObject).GetMethod("Update", BindingFlags.NonPublic | BindingFlags.Instance);
+            var renderMethodInfo = typeof(GameObject).GetMethod("Render", BindingFlags.NonPublic | BindingFlags.Instance);
+
+            updateMethod = (Action<GameObject>)Delegate.CreateDelegate(typeof(Action<GameObject>), updateMethodInfo);
+            renderMethod = (Action<GameObject>)Delegate.CreateDelegate(typeof(Action<GameObject>), renderMethodInfo);
+        }
+
         internal Controller(GameObjectManager controlled)
         {
             if(controlled.controllerIssued)
@@ -23,7 +36,7 @@ public sealed class GameObjectManager : Workspace.Service
             {
                 try
                 {
-                    gameObject.Update();
+                    updateMethod(gameObject);
                 }
                 catch(Exception ex)
                 {
@@ -38,7 +51,7 @@ public sealed class GameObjectManager : Workspace.Service
             {
                 try
                 {
-                    gameObject.Render();
+                    renderMethod(gameObject);
                 }
                 catch(Exception ex)
                 {

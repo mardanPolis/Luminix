@@ -147,6 +147,8 @@ public sealed partial class ModuleManager : Workspace.Service
         
         initialModules.RemoveAt(index);
         initialModules.Insert(index - 1, id);
+
+        ValidateInitialModules();
     }
     public bool CanMoveInitialModuleDown(Module module)
     {
@@ -165,10 +167,14 @@ public sealed partial class ModuleManager : Workspace.Service
         
         initialModules.RemoveAt(index);
         initialModules.Insert(index + 1, id);
+
+        ValidateInitialModules();
     }
 
     public async Task SaveInitialModules()
     {
+        ValidateInitialModules();
+
         try
         {
             if(!initialModuleProblems.IsEmpty)

@@ -6,7 +6,6 @@ using Luminix.Threading.Buffers;
 using System.Runtime.CompilerServices;
 using Luminix.Rendering;
 using Luminix.Threading.Commands;
-using Luminix.Collections;
 
 namespace Luminix;
 
@@ -114,6 +113,7 @@ public sealed class Graphics : Workspace.Service
             window.ClientBounds = command.ClientBound;
             window.IsFocused = command.IsFocused;
             window.IsMinimized = command.IsMinimized;
+            window.CurrentDisplay = command.CurrentDisplay;
         }
 
         internal void BeginRender()
@@ -148,9 +148,9 @@ public sealed class Graphics : Workspace.Service
         }
 
         internal Point Point { get; }
-        internal int RefreshRate { get; }
         public int X => Point.X;
         public int Y => Point.Y;
+        public int RefreshRate { get; }
     }
 
     internal Graphics(out Controller controller)
@@ -293,7 +293,7 @@ public sealed class Graphics : Workspace.Service
         renderBuffer.PushLabel(shader, font, color, text, x, y, width, height, rotation);
     }
 
-    public Screen GetScreen() => screens[GraphicsAdapter.GetWindowGraphicsAdapter(window.Handle).DisplayIndex];
+    public Screen GetScreen() => screens[window.CurrentDisplay];
     public Window GetWindow() => window;
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

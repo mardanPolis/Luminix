@@ -38,11 +38,11 @@ internal sealed class Renderer
         resources = renderingSystem.ResourceManager;
         spriteBatch = renderingSystem.SpriteBatch;
 
-        defaultShader = resources.GetResource<ShaderResource>("Assets.Built-In.Shaders.GenericShader.xnb");
+        defaultShader = resources.GetResource<ShaderResource>("generic_shader");
         defaultTexture = resources.GetResource<TextureResource>("NullTexture");
-        defaultFontBold = resources.GetResource<FontResource>("Assets.Built-In.Fonts.IBMPlexMono-Bold.xnb");
-        defaultFontMedium = resources.GetResource<FontResource>("Assets.Built-In.Fonts.IBMPlexMono-Medium.xnb");
-        defaultFontRegular = resources.GetResource<FontResource>("Assets.Built-In.Fonts.IBMPlexMono-Regular.xnb");
+        defaultFontBold = resources.GetResource<FontResource>("font-bold");
+        defaultFontMedium = resources.GetResource<FontResource>("font-medium");
+        defaultFontRegular = resources.GetResource<FontResource>("font-regular");
 
         var vertices = new VertexPositionColorTexture[] {
             new (new Vector3(-0.5f, -0.5f, 0), Color.White, new Vector2(0, 0)),
@@ -362,7 +362,7 @@ internal sealed class Renderer
                             spriteBatch.Begin(effect:currentShader?.Source);
                         }
 
-                        spriteBatch.DrawString(label.Font.Source, label.Text, new Vector2(label.X, label.Y), label.Color);
+                        spriteBatch.DrawString(label.Font?.Source ?? defaultFontMedium.Source, label.Text, new Vector2(label.X, label.Y), label.Color);
                     break;
                 }
 
@@ -382,15 +382,15 @@ internal sealed class Renderer
                 spriteBatch.End();
             }
         }
-        catch
+        catch(Exception ex)
         {
             switch(commandDataType)
             {
                 case RenderBuffer.UiRenderObjectType.Image:
-                    Logger.NewLog(Logger.Log.Level.Error, $"Exception happened during rendering (CommandIndex/CommandCount/ImageCount : {commandIndex}/{commandCount}/{imageCount})");
+                    Logger.NewLog(Logger.Log.Level.Error, $"Exception happened during rendering (CommandIndex/CommandCount/ImageCount : {commandIndex}/{commandCount}/{imageCount}), exception: {ex}");
                 break;
                 case RenderBuffer.UiRenderObjectType.Label:
-                    Logger.NewLog(Logger.Log.Level.Error, $"Exception happened during rendering (CommandIndex/CommandCount/LabelCount : {commandIndex}/{commandCount}/{labelCount})");
+                    Logger.NewLog(Logger.Log.Level.Error, $"Exception happened during rendering (CommandIndex/CommandCount/LabelCount : {commandIndex}/{commandCount}/{labelCount}), exception: {ex}");
                 break;
             }
             throw;

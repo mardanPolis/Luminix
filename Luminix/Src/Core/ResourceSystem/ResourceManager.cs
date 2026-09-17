@@ -52,66 +52,74 @@ public sealed class ResourceManager : Microsoft.Xna.Framework.Content.ContentMan
         if (asset == null)
             throw new ArgumentNullException(nameof(asset), "Unable to create a Resource: provided asset cannot be null.");
 
-        if (string.IsNullOrWhiteSpace(asset.Identifier))
-            throw new ArgumentException($"Unable to create a Resource: asset identifier is null, empty, or whitespace ('{asset.Identifier}').", nameof(asset));
+        CreateResource(asset, asset.Identifier);
+    }
 
-        if (asset.Identifier.HasWhitespace())
-            throw new ArgumentException($"Unable to create a Resource: asset identifier cannot contain whitespace ('{asset.Identifier}').", nameof(asset));
+    public void CreateResource(Asset asset, string identifier)
+    {
+        if (disposed)
+            throw new ObjectDisposedException(nameof(ResourceManager), "Unable to create a Resource: ResourceManager is disposed.");
+
+        if (asset == null)
+            throw new ArgumentNullException(nameof(asset), "Unable to create a Resource: provided asset cannot be null.");
+
+        if (string.IsNullOrWhiteSpace(identifier))
+            throw new ArgumentException($"Unable to create a Resource: asset identifier is null, empty, or whitespace ('{identifier}').", nameof(asset));
+
+        if (identifier.HasWhitespace())
+            throw new ArgumentException($"Unable to create a Resource: asset identifier cannot contain whitespace ('{identifier}').", nameof(asset));
 
         
         if(asset is TextureAsset textureAsset)
         {
-            CreateFrom(textureAsset);
+            CreateFrom(textureAsset, identifier);
             return;
         }
         else if(asset is AtlasAsset atlasAsset)
         {
-            CreateFrom(atlasAsset);
+            CreateFrom(atlasAsset, identifier);
             return;
         }
         else if(asset is AudioAsset audioAsset)
         {
-            CreateFrom(audioAsset);
+            CreateFrom(audioAsset, identifier);
             return;
         }
         else if(asset is XnbAsset xnbAsset)
         {
-            CreateFrom(xnbAsset);
+            CreateFrom(xnbAsset, identifier);
             return;
         }
 
         throw new NotSupportedException($"Unable to create a Resource: unknown asset type '{asset.GetType().Name}'.");
     }
 
-    private void CreateFrom(TextureAsset asset)
-    {
-        var assetIdentifier = asset.Identifier.ToLower();
 
+    private void CreateFrom(TextureAsset asset, string identifier)
+    {
         var textureSize = asset.Size;
         var textureColors = asset.Colors;
 
         if (textureColors == null)
             throw new ArgumentException("Unable to create a TextureResource: provided texture colors cannot be null.", nameof(asset));
 
-        if (sourceTextures.ContainsKey(assetIdentifier))
-            throw new InvalidOperationException($"Unable to create a TextureResource: a SourceTexture is already defined with identifier '{assetIdentifier}'.");
+        if (sourceTextures.ContainsKey(identifier))
+            throw new InvalidOperationException($"Unable to create a TextureResource: a SourceTexture is already defined with identifier '{identifier}'.");
 
-        if (resources.ContainsKey((typeof(TextureResource), assetIdentifier)))
-            throw new InvalidOperationException($"Unable to create a TextureResource: a TextureResource is already defined with identifier '{assetIdentifier}'.");
+        if (resources.ContainsKey((typeof(TextureResource), identifier)))
+            throw new InvalidOperationException($"Unable to create a TextureResource: a TextureResource is already defined with identifier '{identifier}'.");
 
-        var texture = CreateSourceTexture(assetIdentifier, textureColors, textureSize);
-        var resource = CreateTexture(texture, assetIdentifier, new Rectangle(0, 0, (int)asset.Size.X, (int)asset.Size.Y));
+        var texture = CreateSourceTexture(identifier, textureColors, textureSize);
+        var resource = CreateTexture(texture, identifier, new Rectangle(0, 0, (int)asset.Size.X, (int)asset.Size.Y));
         var resourceIdentifiers = new DenseList<string>();
 
-        sourceTextures[assetIdentifier] = texture;
+        sourceTextures[identifier] = texture;
         sourceTextureResources[texture] = resourceIdentifiers;
 
-        resourceIdentifiers.Add(assetIdentifier);
+        resourceIdentifiers.Add(identifier);
     }
-    private void CreateFrom(AtlasAsset asset)
+    private void CreateFrom(AtlasAsset asset, string identifier)
     {
-        var assetIdentifier = asset.Identifier.ToLower();
-
         var atlasColors = asset.Colors;
         var atlasRegions = asset.Regions;
         var atlasSize = asset.Size;
@@ -122,8 +130,8 @@ public sealed class ResourceManager : Microsoft.Xna.Framework.Content.ContentMan
         if (atlasRegions == null)
             throw new ArgumentException("Unable to create an Atlas: provided atlas regions cannot be null.", nameof(asset));
 
-        if (sourceTextures.ContainsKey(assetIdentifier))
-            throw new InvalidOperationException($"Unable to create an Atlas: a SourceTexture is already defined with identifier '{assetIdentifier}'.");
+        if (sourceTextures.ContainsKey(identifier))
+            throw new InvalidOperationException($"Unable to create an Atlas: a SourceTexture is already defined with identifier '{identifier}'.");
 
 
         var regions = new List<AtlasAsset.Region>();
@@ -139,17 +147,17 @@ public sealed class ResourceManager : Microsoft.Xna.Framework.Content.ContentMan
             if (regionIdentifier.HasWhitespace())
                 throw new ArgumentException($"Unable to create a TextureResource: atlas.regions[{i}].identifier cannot contain whitespace ('{regionIdentifier}').", nameof(asset));
 
-            if (resources.ContainsKey((typeof(TextureResource), assetIdentifier)))
+            if (resources.ContainsKey((typeof(TextureResource), identifier)))
                 throw new InvalidOperationException($"Unable to create a TextureResource: a TextureResource is already defined with identifier '{regionIdentifier}'.");
 
             regions.Add(region);
         }
 
-        var texture = CreateSourceTexture(assetIdentifier, atlasColors, atlasSize);
+        var texture = CreateSourceTexture(identifier, atlasColors, atlasSize);
         var resourceIdentifiers = new DenseList<string>();
         var created = new Resource[regions.Count];
 
-        sourceTextures[assetIdentifier] = texture;
+        sourceTextures[identifier] = texture;
         sourceTextureResources[texture] = resourceIdentifiers;
 
         for (int i = 0; i < regions.Count; i++)
@@ -159,41 +167,37 @@ public sealed class ResourceManager : Microsoft.Xna.Framework.Content.ContentMan
             created[i] = CreateTexture(texture, region.Identifier, region.Rectangle);
         }
     }
-    private void CreateFrom(AudioAsset asset)
+    private void CreateFrom(AudioAsset asset, string identifier)
     {
-        var assetIdentifier = asset.Identifier.ToLower();
-
         if (asset.SoundEffect == null)
             throw new ArgumentException("Unable to create an AudioResource: provided audio soundEffect cannot be null.", nameof(asset));
 
-        if (resources.ContainsKey((typeof(AudioResource), assetIdentifier)))
-            throw new InvalidOperationException($"Unable to create a AudioResource: a AudioResource is already defined with identifier '{assetIdentifier}'.");
+        if (resources.ContainsKey((typeof(AudioResource), identifier)))
+            throw new InvalidOperationException($"Unable to create a AudioResource: a AudioResource is already defined with identifier '{identifier}'.");
             
-        CreateAudio(assetIdentifier, asset.SoundEffect);
+        CreateAudio(identifier, asset.SoundEffect);
     }
-    private void CreateFrom(XnbAsset asset)
+    private void CreateFrom(XnbAsset asset, string identifier)
     {
-        var assetIdentifier = asset.Identifier.ToLower();
-
         switch (asset.Type)
         {
             case XnbAsset.XnbType.Font:
                 if (asset.Stream == null)
                     throw new ArgumentException("Unable to create a FontResource: provided xnb stream cannot be null.", nameof(asset));
 
-                if (resources.ContainsKey((typeof(FontResource), assetIdentifier)))
-                    throw new InvalidOperationException($"Unable to create a FontResource: a FontResource is already defined with identifier '{assetIdentifier}'.");
+                if (resources.ContainsKey((typeof(FontResource), identifier)))
+                    throw new InvalidOperationException($"Unable to create a FontResource: a FontResource is already defined with identifier '{identifier}'.");
 
-                CreateFont(assetIdentifier, asset);
+                CreateFont(identifier, asset);
             break;
             case XnbAsset.XnbType.Shader:
                 if (asset.Stream == null)
                     throw new ArgumentException("Unable to create a ShaderResource: provided xnb stream cannot be null.", nameof(asset));
 
-                if (resources.ContainsKey((typeof(ShaderResource), assetIdentifier)))
-                    throw new InvalidOperationException($"Unable to create a ShaderResource: a ShaderResource is already defined with identifier '{assetIdentifier}'.");
+                if (resources.ContainsKey((typeof(ShaderResource), identifier)))
+                    throw new InvalidOperationException($"Unable to create a ShaderResource: a ShaderResource is already defined with identifier '{identifier}'.");
 
-                CreateShader(assetIdentifier, asset);
+                CreateShader(identifier, asset);
             break;
             default:
                 throw new NotSupportedException($"Unable to create a Resource: unrecognized XnbType '{asset.Type}'.");

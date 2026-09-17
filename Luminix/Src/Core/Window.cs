@@ -22,4 +22,6 @@ public sealed class Window
     public Rectangle ClientBounds { get; internal set; }
     public bool IsFocused { get; internal set; }
     public bool IsMinimized { get; internal set; }
+
+    public int CurrentDisplay { get; internal set; }
 }

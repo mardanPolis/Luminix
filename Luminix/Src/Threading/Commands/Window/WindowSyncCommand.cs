@@ -10,4 +10,5 @@ internal struct WindowSyncCommand
     public required Rectangle ClientBound;
     public required bool IsMinimized;
     public required bool IsFocused;
+    public required int CurrentDisplay;
 } 

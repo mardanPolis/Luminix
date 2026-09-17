@@ -132,10 +132,10 @@ internal sealed class MainRender : Microsoft.Xna.Framework.Game
             resourceManager.CreateResource(nullTextureAsset);
             resourceManager.CreateResource(pixelTextureAsset);
 
-            resourceManager.CreateResource(assetIO.LoadXnbAsset(Application.EngineAssembly, "Assets.Built-In.Fonts.IBMPlexMono-Bold.xnb"));
-            resourceManager.CreateResource(assetIO.LoadXnbAsset(Application.EngineAssembly, "Assets.Built-In.Fonts.IBMPlexMono-Medium.xnb"));
-            resourceManager.CreateResource(assetIO.LoadXnbAsset(Application.EngineAssembly, "Assets.Built-In.Fonts.IBMPlexMono-Regular.xnb"));
-            resourceManager.CreateResource(assetIO.LoadXnbAsset(Application.EngineAssembly, "Assets.Built-In.Shaders.GenericShader.xnb"));
+            resourceManager.CreateResource(assetIO.LoadXnbAsset(Application.EngineAssembly, "Assets.Built-In.Fonts.IBMPlexMono-Bold.xnb"), "font-bold");
+            resourceManager.CreateResource(assetIO.LoadXnbAsset(Application.EngineAssembly, "Assets.Built-In.Fonts.IBMPlexMono-Medium.xnb"), "font-medium");
+            resourceManager.CreateResource(assetIO.LoadXnbAsset(Application.EngineAssembly, "Assets.Built-In.Fonts.IBMPlexMono-Regular.xnb"), "font-regular");
+            resourceManager.CreateResource(assetIO.LoadXnbAsset(Application.EngineAssembly, "Assets.Built-In.Shaders.GenericShader.xnb"), "generic_shader");
 
             resourceCommandHandler = HandleResourceCommand;
             windowCommandHandler = HandleWindowCommand;
@@ -275,7 +275,8 @@ internal sealed class MainRender : Microsoft.Xna.Framework.Game
             Position = Window.Position,
             ClientBound = Window.ClientBounds,
             IsFocused = IsActive,
-            IsMinimized = Window.IsMinimized
+            IsMinimized = Window.IsMinimized,
+            CurrentDisplay = Window.GetDisplayIndex()
         };
 
         windowBridge.NewCommand(command);

@@ -1,4 +1,5 @@
 using System;
+using Luminix.Debug;
 using Luminix.Threading;
 using Luminix.Threading.Bridges;
 using Luminix.Threading.Buffers;
@@ -70,7 +71,6 @@ internal sealed class MainCore
             world       = new World(graphics, out worldController);
 
             graphicsController.Start();
-
 
             defs.NewDefType<EntityType>(); // built in
 
@@ -156,6 +156,9 @@ internal sealed class MainCore
             defs.DeserializeNodes();
 
             defs.FinalizeDefs();
+
+            if(Application.IsDebug)
+                gameObjectManager.Add(new DebugPanel());
 
             Thread.CurrentThread.IsBackground = false;
         }
