@@ -268,7 +268,7 @@ internal sealed class Renderer
                         if (frustumCulledGroups.Contains(instance.Group))
                             continue;
 
-                        spriteBatch.DrawString(instance.Font.Source, instance.Text, new Vector2(transform.Position.X, transform.Position.Y), Color.White,
+                        spriteBatch.DrawString(instance.Font?.Source ?? defaultFontRegular.Source, instance.Text, new Vector2(transform.Position.X, transform.Position.Y), Color.White,
                         transform.Rotation, new Vector2(0, 0), transform.Scale, SpriteEffects.None, transform.Position.Z);
                         break;
                     }
@@ -286,7 +286,7 @@ internal sealed class Renderer
                         var size = Vector2.Lerp(from.Scale, to.Scale, partialTick);
                         var rotation = MathHelper.Lerp(from.Rotation, to.Rotation, partialTick);
 
-                        spriteBatch.DrawString(instance.Font.Source, instance.Text, new Vector2(position.X, position.Y), Color.White,
+                        spriteBatch.DrawString(instance.Font?.Source ?? defaultFontRegular.Source, instance.Text, new Vector2(position.X, position.Y), Color.White,
                         rotation, new Vector2(0, 0), size, SpriteEffects.None, position.Z);
                         break;
                     }
@@ -349,7 +349,7 @@ internal sealed class Renderer
                             spriteBatch.Begin(effect:currentShader?.Source);
                         }
 
-                        spriteBatch.Draw(image.Texture.Source, new Vector2(image.X, image.Y), image.Texture.Rectangle, image.Color, image.Rotation, Vector2.Zero, new Vector2(image.Width, image.Height), SpriteEffects.None, 0f);
+                        spriteBatch.Draw(image.Texture?.Source ?? defaultTexture.Source, new Vector2(image.X, image.Y), image.Texture.Rectangle, image.Color, image.Rotation, Vector2.Zero, new Vector2(image.Width, image.Height), SpriteEffects.None, 0f);
                     break;
                     case RenderBuffer.UiRenderObjectType.Label:
 
