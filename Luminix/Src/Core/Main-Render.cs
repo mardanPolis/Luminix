@@ -205,14 +205,14 @@ internal sealed class MainRender : Microsoft.Xna.Framework.Game
 
         base.Draw(gameTime);
 
-        frameTime = stopwatch.Elapsed.TotalNanoseconds;
+        frameTime = stopwatch.Elapsed.TotalSeconds;
         time = gameTime;
         
         renderInfoBuffer.Allocated += allocated;
         renderInfoBuffer.DrawCalls = renderingSystem.DrawCount;
         renderInfoBuffer.FrameCount = renderingSystem.FrameCount;
         renderInfoBuffer.AccumulatedFrameCount++;
-        renderInfoBuffer.FrameDeltaTime += time.ElapsedGameTime.TotalMilliseconds;
+        renderInfoBuffer.FrameDeltaTime += time.ElapsedGameTime.TotalSeconds;
         renderInfoBuffer.FrameTime += frameTime;
 
         renderInfoBuffer.Updated = true;
