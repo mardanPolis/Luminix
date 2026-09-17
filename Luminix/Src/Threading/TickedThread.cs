@@ -81,7 +81,7 @@ public sealed class TickedThread : ManagedThread
 
                 Time.TickAllocated = GC.GetAllocatedBytesForCurrentThread() - startBytes;
 
-                Time.TickTime = internalStopwatch.Elapsed.TotalMicroseconds;
+                Time.TickTime = internalStopwatch.Elapsed.TotalSeconds;
 
                 if(tickRate != Time.TickRate)
                 {
