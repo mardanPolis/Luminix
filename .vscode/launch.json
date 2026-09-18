@@ -6,7 +6,7 @@
       "type": "coreclr",
       "request": "launch",
       "preLaunchTask": "build",
-      "program": "${workspaceFolder}/Luminix/build/bin/Debug/net10.0/Luminix.dll",
+      "program": "${workspaceFolder}/Luminix/bin/Debug/net10.0/Luminix.dll",
       "cwd": "${workspaceFolder}/Luminix",
       "console": "integratedTerminal",
       "stopAtEntry": false
