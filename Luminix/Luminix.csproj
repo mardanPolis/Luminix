@@ -21,9 +21,7 @@
 
   <ItemGroup>
     <!-- Replaced MonoGame NuGet with local DLL -->
-    <ProjectReference Include="../MonoGame/MonoGame.Framework/MonoGame.Framework.DesktopGL.csproj">
-      <SetConfiguration>Configuration=Release</SetConfiguration>
-    </ProjectReference>
+    <ProjectReference Include="../MonoGame/MonoGame.Framework/MonoGame.Framework.DesktopGL.csproj" />
     <PackageReference Include="StbImageSharp" Version="2.30.15" />
     <PackageReference Include="StbImageWriteSharp" Version="1.16.7" />
     <PackageReference Include="RectpackSharp" Version="1.1.*" />

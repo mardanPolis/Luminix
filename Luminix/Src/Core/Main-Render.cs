@@ -137,6 +137,8 @@ internal sealed class MainRender : Microsoft.Xna.Framework.Game
             resourceManager.CreateResource(assetIO.LoadXnbAsset(Application.EngineAssembly, "Assets.Built-In.Fonts.IBMPlexMono-Regular.xnb"), "font-regular");
             resourceManager.CreateResource(assetIO.LoadXnbAsset(Application.EngineAssembly, "Assets.Built-In.Shaders.GenericShader.xnb"), "generic_shader");
 
+            resourceBridge.SetResourceContainer(resourceManager.Resources);
+            
             resourceCommandHandler = HandleResourceCommand;
             windowCommandHandler = HandleWindowCommand;
 

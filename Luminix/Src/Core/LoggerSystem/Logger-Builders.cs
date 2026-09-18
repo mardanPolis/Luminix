@@ -14,15 +14,21 @@ public static partial class Logger
 
         private Log.Level level;
 
+        internal LogBuilder(Log.Level level, int bufferSize)
+        {
+            this.buffer = Logger.GetBuffer(bufferSize);
+            this.level = level;
+        }
+
         public LogBuilder(Log.Level level)
         {
-            this.buffer = logBuffer;
+            this.buffer = Logger.GetBuffer();
             this.level = level;
         }
 
         public LogBuilder(int literalLength, int formattedCount, Log.Level level)
         {
-            this.buffer = logBuffer;
+            this.buffer = Logger.GetBuffer();
             this.level = level;
         }
 
@@ -75,14 +81,28 @@ public static partial class Logger
 
         public void End()
         {
+            if (buffer is null)
+                return;
+
             Logger.PushMessage(level, buffer.AsSpan(0, pointer));
+            Dispose();
+        }
+
+        public void Dispose()
+        {
+            if (buffer is null)
+                return;
+
+            Logger.ReturnBuffer(buffer);
             buffer = null;
         }
 
-
         private bool Add(ReadOnlySpan<char> value)
         {
-            int remaining = buffer.Length - pointer;
+            if(buffer is null)
+                return false;
+
+            int remaining = Logger.GetBufferSize(buffer) - pointer;
 
             if (value.Length > remaining)
             {
@@ -99,6 +119,9 @@ public static partial class Logger
         }
         private bool Add<T>(T value, ReadOnlySpan<char> format) where T : ISpanFormattable
         {
+            if(buffer is null)
+                return false;
+
             Span<char> dest = buffer.AsSpan(pointer);
 
             if (value.TryFormat(dest, out int written, format, System.Globalization.CultureInfo.InvariantCulture))
@@ -114,7 +137,7 @@ public static partial class Logger
                 return false;
             }
 
-            int remaining = buffer.Length - pointer;
+            int remaining = Logger.GetBufferSize(buffer) - pointer;
             int toCopy = Math.Min(fullWritten, remaining);
 
             if (toCopy > 0)
@@ -128,6 +151,9 @@ public static partial class Logger
         }
         private bool AddType(Type type)
         {
+            if(buffer is null)
+                return false;
+
             if (TypeRegistry.IsGenericType(type))
             {
                 HandleGenericType(type);
@@ -159,6 +185,9 @@ public static partial class Logger
 
         private void LengthError()
         {
+            if(buffer is null)
+                return;
+
             ReadOnlySpan<char> chars = "...[Length Error -> log exceeded length of 16384 characters]";
 
             var length = chars.Length;

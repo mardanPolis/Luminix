@@ -2,20 +2,24 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "C# Luminix Debug",
+      "name": "C# Luminix Sandbox Release",
       "type": "coreclr",
       "request": "launch",
-      "preLaunchTask": "build",
-      "program": "${workspaceFolder}/Luminix/bin/Debug/net10.0/Luminix.dll",
-      "cwd": "${workspaceFolder}/Luminix",
+      "preLaunchTask": "build-release",
+      "program": "${workspaceFolder}/Sandbox/bin/Release/net10.0/Sandbox.dll",
+      "cwd": "${workspaceFolder}/Sandbox",
       "console": "integratedTerminal",
       "stopAtEntry": false
     },
     {
-      "name": "C# Luminix",
-      "type": "dotnet",
+      "name": "C# Luminix Sandbox Debug",
+      "type": "coreclr",
       "request": "launch",
-      "projectPath": "${workspaceFolder}/Luminix/Luminix.csproj",
+      "preLaunchTask": "build-debug",
+      "program": "${workspaceFolder}/Sandbox/bin/Debug/net10.0/Sandbox.dll",
+      "cwd": "${workspaceFolder}/Sandbox",
+      "console": "integratedTerminal",
+      "stopAtEntry": false
     }
   ]
 }

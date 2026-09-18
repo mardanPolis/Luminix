@@ -131,11 +131,7 @@ internal sealed class MainCore
 
             Logger.NewLog(Logger.Log.Level.Info, "Loaded boot assets!");
 
-            if(hadAssets)
-                resources.Set();
-
-            // Rendering
-
+            resources.Set();
 
             foreach(var module in moduleManager.InitializedModules)
             {
@@ -159,6 +155,8 @@ internal sealed class MainCore
 
             if(Application.IsDebug)
                 gameObjectManager.Add(new DebugPanel());
+
+            Logger.NewLog(Logger.Log.Level.Info, resources);
 
             Thread.CurrentThread.IsBackground = false;
         }

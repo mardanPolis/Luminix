@@ -1,4 +1,5 @@
 using System;
+using System.Buffers;
 using System.Collections.Generic;
 using System.IO;
 using System.Runtime.CompilerServices;
@@ -32,12 +33,14 @@ public static partial class Logger
 
     static Logger()
     {
+        Console.Clear();
+
         LogDir = Path.Combine(AppContext.BaseDirectory, "logs");
 
         loggerLock = new();
         logs = new(500);
         data = new char[256000];
-        logBuffer = new char[Math.Min(data.Length, 16384)];
+        logBufferSize = Math.Min(data.Length, 16384);
 
         Directory.CreateDirectory(LogDir);
 
@@ -50,7 +53,7 @@ public static partial class Logger
 
     private static readonly List<(int Start, int Length, Log.Level level)> logs;
     private static char[] data;
-    private static char[] logBuffer; //FIXME : unsafe if log is being created while another log is being created.
+    private static int logBufferSize;
 
     private static int pointer;
 
@@ -58,7 +61,7 @@ public static partial class Logger
 
     public static void NewLog(Log.Level logLevel, string message) 
     {
-        var builder = new LogBuilder(logLevel);
+        var builder = new LogBuilder(logLevel, message.Length);
         builder.AppendLiteral(message);
         builder.End();
     }
@@ -69,39 +72,53 @@ public static partial class Logger
     public static void NewLog<T>(Log.Level logLevel, ReadOnlySpan<T> collection)
     {
         var builder = new LogBuilder(logLevel);
-
-        builder.AppendFormatted("ReadOnlySpan<");
-        builder.AppendFormatted(typeof(T).Name);
-        builder.AppendFormatted(">");
-
-        if (collection.Length == 0)
+        try
         {
-            builder.AppendFormatted(" is empty");
+            builder.AppendFormatted("ReadOnlySpan<");
+            builder.AppendFormatted(typeof(T).Name);
+            builder.AppendFormatted(">");
+
+            if (collection.Length == 0)
+            {
+                builder.AppendFormatted(" is empty");
+                builder.End();
+                return;
+            }
+
+            builder.AppendFormatted(" contains:");
+
+            for (int i = 0; i < collection.Length; i++)
+            {
+                builder.AppendFormatted('\n');
+
+                builder.AppendFormatted(i);
+                builder.AppendFormatted(" - ");
+
+                if (collection[i] is ISpanFormattable formattable)
+                    builder.AppendFormatted(formattable);
+                else
+                    builder.AppendFormatted(collection[i]);
+            }
+
             builder.End();
-            return;
         }
-
-        builder.AppendFormatted(" contains:");
-
-        for (int i = 0; i < collection.Length; i++)
+        catch
         {
-            builder.AppendFormatted('\n');
-
-            builder.AppendFormatted(i);
-            builder.AppendFormatted(" - ");
-
-            if (collection[i] is ISpanFormattable formattable)
-                builder.AppendFormatted(formattable);
-            else
-                builder.AppendFormatted(collection[i]);
+            builder.Dispose();
+            throw;
         }
-
-        builder.End();
     }
 
     public static void NewLog<T>(Log.Level logLevel, IEnumerable<T> collection)
     {
         var builder = new LogBuilder(logLevel);
+
+        if(collection is null)
+        {
+            builder.AppendFormatted("collection is null.");
+            builder.End();
+            return;
+        }
 
         builder.AppendFormatted(collection.GetType());
 
@@ -229,17 +246,37 @@ public static partial class Logger
         }
     }
 
+    private static void ReturnBuffer(char[] buffer)
+    {
+        ArrayPool<char>.Shared.Return(buffer);
+    }
+
+    private static char[] GetBuffer()
+    {
+        return ArrayPool<char>.Shared.Rent(logBufferSize);
+    }
+
+    private static char[] GetBuffer(int bufferSize)
+    {
+        return ArrayPool<char>.Shared.Rent(Math.Min(bufferSize, logBufferSize));
+    }
+
+    private static int GetBufferSize(char[] buffer)
+    {
+        return Math.Min(buffer.Length, logBufferSize);
+    }
+
     private static void PushMessage(Log.Level level, ReadOnlySpan<char> message)
     {
+        DateTime currentTime = DateTime.Now;
+
+        Span<char> header = stackalloc char[128];
+        int headerLength = WriteHeader(header, currentTime, level);
+
+        int totalLength = headerLength + message.Length;
+
         lock(loggerLock)
         {
-            DateTime currentTime = DateTime.Now;
-
-            Span<char> header = stackalloc char[128];
-            int headerLength = WriteHeader(header, currentTime, level);
-
-            int totalLength = headerLength + message.Length;
-
             if(Application.IsDebug)
             {
                 switch(level)
