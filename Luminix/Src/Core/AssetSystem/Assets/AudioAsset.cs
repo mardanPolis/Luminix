@@ -5,12 +5,18 @@ namespace Luminix;
 
 public sealed class AudioAsset : Asset
 {
-    internal AudioAsset(string identifier, SoundEffect soundEffect) : base(identifier)
+    internal AudioAsset(string identifier, byte[] pcmData, AudioClip.Format audioFormat, AudioClip.SampleRate sampleRate) : base(identifier)
     {
-        ArgumentNullException.ThrowIfNull(soundEffect, nameof(soundEffect));
+        ArgumentNullException.ThrowIfNull(pcmData, nameof(pcmData));
 
-        SoundEffect = soundEffect;
+        this.pcmData = pcmData;
+        this.AudioFormat = audioFormat;
+        this.SampleRate = sampleRate;
     }
 
-    public SoundEffect SoundEffect { get; }
+    private byte[] pcmData;
+    public ReadOnlySpan<byte> PCMData => pcmData;
+    public AudioClip.Format AudioFormat { get; }
+    public AudioClip.SampleRate SampleRate { get; }
+
 }

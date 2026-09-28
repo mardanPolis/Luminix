@@ -4,23 +4,6 @@ namespace Luminix;
 
 public sealed class AudioClip
 {
-    internal enum SampleFormat : uint
-    {
-        Unknown = 0,
-        U8 = 1,
-        S16 = 2,
-        S24 = 3,
-        S32 = 4,
-        F32 = 5,
-        Count
-    }
-
-    internal enum Channels : uint
-    {
-        Mono    = 1,
-        Stereo  = 2
-    }
-
     public enum Format : int
     {
         Unknown         = 0,
@@ -35,6 +18,21 @@ public sealed class AudioClip
         MonoF32         = 9,
         StereoF32       = 10,
         StereoFloat32 = 11,
+    }
+    internal enum SampleFormat : uint
+    {
+        Unknown = 0,
+        U8 = 1,
+        S16 = 2,
+        S24 = 3,
+        S32 = 4,
+        F32 = 5,
+        Count
+    }
+    internal enum Channels : uint
+    {
+        Mono    = 1,
+        Stereo  = 2
     }
 
     public enum SampleRate : int

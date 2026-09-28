@@ -2,7 +2,7 @@ using System;
 
 namespace Luminix;
 
-public abstract class Asset
+public abstract class Asset : IDisposable
 {
     internal protected Asset(string identifier)
     {

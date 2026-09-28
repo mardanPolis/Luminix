@@ -106,6 +106,7 @@ MA_API ma_result ma_create_audio_source(ma_engine* pEngine, ma_audio_buffer* pAu
  
     result = ma_sound_init_from_data_source(pEngine, (ma_data_source*)&pSource->ref, 0, NULL, &pSource->sound);
     if (result != MA_SUCCESS) {
+        ma_audio_buffer_ref_uninit(&pSource->ref);
         free(pSource);
         return result;
     }
@@ -121,6 +122,7 @@ MA_API ma_result ma_dispose_audio_source(ma_audio_source* pSource)
     }
  
     ma_sound_uninit(&pSource->sound);
+    ma_audio_buffer_ref_uninit(&pSource->ref);
     free(pSource);
     return MA_SUCCESS;
 }
@@ -129,7 +131,7 @@ MA_API void ma_audio_source_play(ma_audio_source* pSource) {
     if(pSource == 0)
         return;
 
-    ma_sound_set_cursor(pSource, 0);
+    ma_sound_set_cursor(&pSource->sound, 0);
     ma_sound_play(&pSource->sound);
 }
 

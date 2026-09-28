@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Security.Claims;
 using System.Threading;
 using Luminix.Collections;
 using Luminix.Native.Audio;
@@ -40,9 +41,10 @@ internal unsafe sealed class AudioEngine : IDisposable
     }
 
     private AudioDevice audioDevice;
-    private Stack<uint> freeIndices;
+    private Stack<int> freeIndices;
     private AudioSourceState[] audioSourceStates;
-    private uint audioSourceCount;
+    private int lastIndex;
+    private int audioSourceCount;
     private DenseMap<(LargeHash, AudioClip.Format, AudioClip.SampleRate), AudioClip> audioClips;
 
     public void Dispose()
@@ -53,6 +55,14 @@ internal unsafe sealed class AudioEngine : IDisposable
         audioClips = null;
     }
 
+    public AudioClip GetOrCreateAudioClip(AudioAsset audioAsset)
+    {
+        var pcmData = audioAsset.PCMData;
+        var format = audioAsset.AudioFormat;
+        var sampleRate = audioAsset.SampleRate;
+
+        return GetOrCreateAudioClip(pcmData, format, sampleRate);
+    }
     public AudioClip GetOrCreateAudioClip(ReadOnlySpan<byte> pcmData, AudioClip.Format audioFormat, AudioClip.SampleRate sampleRate)
     {
         if(sampleRate == AudioClip.SampleRate.Invalid) 
@@ -66,7 +76,6 @@ internal unsafe sealed class AudioEngine : IDisposable
 
         return clip;
     }
-
     private AudioClip CreateAudioClip(ReadOnlySpan<byte> pcmData, AudioClip.Format audioFormat, AudioClip.SampleRate sampleRate)
     {
         (AudioClip.SampleFormat sampleFormat, AudioClip.Channels channels, int sampleSize) = ExtractData(audioFormat);
@@ -92,49 +101,71 @@ internal unsafe sealed class AudioEngine : IDisposable
         }
     }
 
+    //Master
+    public void SetMasterVolume(float volume)
+    {
+        ObjectDisposedException.ThrowIf(audioDevice.IsInvalid, audioDevice);
+
+        audioDevice.MasterSetVolume(volume);
+    }
+    public uint GetMasterSampleRate()
+    {
+        ObjectDisposedException.ThrowIf(audioDevice.IsInvalid, audioDevice);
+
+        return audioDevice.MasterGetSampleRate();
+    }
+    public uint GetMasterChannels()
+    {
+        ObjectDisposedException.ThrowIf(audioDevice.IsInvalid, audioDevice);
+
+        return audioDevice.MasterGetChannels();
+    }
+
+    //Listeners
+
     public void SetListenerPosition(float x, float y, float z)
     {
+        ObjectDisposedException.ThrowIf(audioDevice.IsInvalid, audioDevice);
+
         audioDevice.ListenerSetPosition(x, y, z);
     }
     public void SetListenerVelocity(float x, float y, float z)
     {
+        ObjectDisposedException.ThrowIf(audioDevice.IsInvalid, audioDevice);
+
         audioDevice.ListenerSetPosition(x, y, z);
     }
     public void SetListenerDirection(float x, float y, float z)
     {
+        ObjectDisposedException.ThrowIf(audioDevice.IsInvalid, audioDevice);
+
         audioDevice.ListenerSetPosition(x, y, z);
     }
     public void SetListenerWorldUp(float x, float y, float z)
     {
+        ObjectDisposedException.ThrowIf(audioDevice.IsInvalid, audioDevice);
+
         audioDevice.ListenerSetPosition(x, y, z);
     }
 
     //AudioSource Instance
     public AudioSource CreateAudioSource(AudioClip audio)
-    {
-        if(audio.IsDisposed)
-            throw new ArgumentException("Cannot create AudioSource instance from audio, reason: Audio is disposed.");
-        
-        IntPtr source = 0;
-        uint index;
-        if (freeIndices.TryPop(out var result))
-        {
-            index = result;
-            source = audioSourceStates[index].SourceID;
-            // if (source == 0)
-            //     source = AL.GenSource();
-        }
-        else
-        {
-            audioSourceCount++;
-            //source = AL.GenSource();
-            index = audioSourceCount;
+    {        
+        ObjectDisposedException.ThrowIf(audioDevice.IsInvalid, audioDevice);
 
-            if (audioSourceStates.Length <= audioSourceCount)
+        if(audio.IsDisposed)
+            throw new ArgumentException("Cannot create AudioSource instance from the provided AudioClip, reason: Audio is disposed.");
+        
+        audioSourceCount++;
+
+        IntPtr source = audioDevice.AudioSourceNew(audio.ClipPointer);;
+        if (!freeIndices.TryPop(out var index)) {
+            lastIndex++;
+            index = lastIndex;
+
+            if (audioSourceStates.Length <= lastIndex)
                 Array.Resize(ref audioSourceStates, audioSourceStates.Length * 2);
         }
-
-        //AL.SetSourceProperty(source, SourceInteger.Buffer, (int)audio.BufferID);
 
         var handle = new AudioSource(index);
         var state = new AudioSourceState
@@ -163,11 +194,6 @@ internal unsafe sealed class AudioEngine : IDisposable
     }
 
     public void DestroyAudioSource(AudioSource handle)
-    {
-        
-    }
-
-    public void DisposeAudioSource(AudioSource handle)
     {
         
     }
