@@ -23,6 +23,7 @@ internal sealed class MainCore
     private World.Controller worldController;
     private Graphics graphics;
     private Graphics.Controller graphicsController;
+    private AudioMedia audioMedia;
     private Input input;
     private Input.Controller inputController;
     private GameObjectManager gameObjectManager;
@@ -60,6 +61,7 @@ internal sealed class MainCore
 
             Logger.NewLog(Logger.Log.Level.Info, $"Started initialization");
 
+            audioMedia  = AudioMedia.CreateCore();
             graphics    = new Graphics(out graphicsController);
             uiManager   = new UIManager(graphics, out uiManagerController);
             moduleManager     = new ModuleManager();
@@ -228,6 +230,5 @@ internal sealed class MainCore
 
     internal void OnStop()
     {
-        
     }
 }

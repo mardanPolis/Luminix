@@ -45,12 +45,29 @@ public readonly struct LargeHash : IEquatable<LargeHash>
         return new LargeHash(new UInt128((ulong)h1, (ulong)h2));
     }
 
-    /// <summary>
-    /// Value hash for unmanaged (blittable) structs — int, Guid, Vector3, or your
-    /// own structs with no reference-type fields. Hashes the raw bytes directly,
-    /// no per-element GetHashCode calls, no boxing.
-    /// </summary>
-    public static LargeHash GetHash<T>(ReadOnlySpan<T> items) where T : unmanaged
+    public static LargeHash GetHash<T>(ReadOnlySpan<T> items) where T : struct
+    {
+        return System.Runtime.CompilerServices.RuntimeHelpers.IsReferenceOrContainsReferences<T>()
+            ? GetHashFromElements(items)
+            : GetHashFromBytes(items);
+    }
+
+    private static LargeHash GetHashFromElements<T>(ReadOnlySpan<T> items) where T : struct
+    {
+        long h1 = items.Length;
+        long h2 = Seed2;
+
+        for (int i = 0; i < items.Length; i++)
+        {
+            long v = items[i].GetHashCode();
+            h1 = Mix64(h1 ^ v);
+            h2 = Mix64(h2 + v + Seed1 + (h2 << 6) + (h2 >> 2));
+        }
+
+        return new LargeHash(new UInt128((ulong)h1, (ulong)h2));
+    }
+
+    private static LargeHash GetHashFromBytes<T>(ReadOnlySpan<T> items) where T : struct
     {
         long h1 = items.Length;
         long h2 = Seed2;
@@ -78,25 +95,6 @@ public readonly struct LargeHash : IEquatable<LargeHash>
         return new LargeHash(new UInt128((ulong)h1, (ulong)h2));
     }
 
-    /// <summary>
-    /// Value hash for non-blittable structs (contain reference fields, e.g. a struct
-    /// holding a string). Falls back to each element's own GetHashCode — override
-    /// GetHashCode on your struct if the default field-reflection based one is too slow.
-    /// </summary>
-    public static LargeHash GetHashByValue<T>(ReadOnlySpan<T> items) where T : struct
-    {
-        long h1 = items.Length;
-        long h2 = Seed2;
-
-        for (int i = 0; i < items.Length; i++)
-        {
-            long v = items[i].GetHashCode();
-            h1 = Mix64(h1 ^ v);
-            h2 = Mix64(h2 + v + Seed1 + (h2 << 6) + (h2 >> 2));
-        }
-
-        return new LargeHash(new UInt128((ulong)h1, (ulong)h2));
-    }
 
     private static long Mix64(long x)
     {

@@ -11,7 +11,7 @@ public sealed class TickedThread : ManagedThread
     {
         threadAction = () =>
         {
-            bool isNoGCRegion = GC.TryStartNoGCRegion(5000000);
+            bool isNoGCRegion = GC.TryStartNoGCRegion(250000000);
                 
             var Time = new Time();
             Time.TickRate = tickRate;

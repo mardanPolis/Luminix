@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Concurrent;
+using System.Threading;
 
 namespace Luminix.Threading.Bridges;
 
@@ -36,7 +37,14 @@ internal static class ThreadBridges
         public override string ToString() => $"({ThreadA}, {ThreadB})";
     }
 
-    private static readonly ConcurrentDictionary<(ThreadPair, Type), Lazy<object>> bridges = new ConcurrentDictionary<(ThreadPair, Type), Lazy<object>>();
+    private static readonly ConcurrentDictionary<(ThreadPair, Type), object> bridges = new();
+    private static readonly Lock bridgesLock = new();
+
+    private static class GlobalBridge<TBridge> where TBridge : class
+    {
+        public static TBridge GlobalInstance;
+        public static readonly Lock GlobalLock = new();
+    }
 
     public static TBridge GetBridge<TBridge>(string targetThreadName) where TBridge : class, new()
     {
@@ -48,17 +56,47 @@ internal static class ThreadBridges
         if(threadPair.ThreadA == threadPair.ThreadB)
             throw new ArgumentException($"Cannot create a bridge from thread '{Thread.CurrentThread.Name}' to itself.", nameof(targetThreadName));
 
-        var lazyBridge = bridges.GetOrAdd(
-            (threadPair, bridgeType),
-            _ => new Lazy<object>(() => new TBridge(), System.Threading.LazyThreadSafetyMode.ExecutionAndPublication));
+        var key = (threadPair, bridgeType);
 
+        if(bridges.TryGetValue(key, out var bridge))
+            return (TBridge)bridge;
 
-        return (TBridge)lazyBridge.Value;
+        lock (bridgesLock)
+        {
+            if(bridges.TryGetValue(key, out bridge))
+                return (TBridge)bridge;
+
+            bridge = new TBridge();
+            bridges[key] = bridge;
+            return (TBridge)bridge;
+        }
+    }
+    public static TBridge GetGlobalBridge<TBridge>() where TBridge : class, new()
+    {
+        if (Volatile.Read(ref GlobalBridge<TBridge>.GlobalInstance) is { } bridge)
+        {
+            return bridge;
+        }
+
+        lock (GlobalBridge<TBridge>.GlobalLock)
+        {
+            if (GlobalBridge<TBridge>.GlobalInstance is null)
+            {
+                var newBridge = new TBridge();
+                Volatile.Write(ref GlobalBridge<TBridge>.GlobalInstance, newBridge);
+            }
+
+            return GlobalBridge<TBridge>.GlobalInstance;
+        }
     }
 }
 
+//Thread specific
 //RenderBridge : TripleBufferBridge
 //RenderInfoBridge : DoubleBufferBridge
 //InputBridge : DoubleBufferBridge
 //WindowBridge : WindowBridge
+
+//Global
 //ResourceBridge : ResourceBridge
+//AudioBridge : AudioBridge

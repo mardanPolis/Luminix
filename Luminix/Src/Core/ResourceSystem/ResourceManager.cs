@@ -222,10 +222,10 @@ public sealed class ResourceManager : Microsoft.Xna.Framework.Content.ContentMan
     }
     private AudioResource CreateAudio(string identifier, SoundEffect source)
     {
-        AudioResource resource = new AudioResource(source, identifier);
-        resources.Add((typeof(AudioResource), identifier), resource);
-        recordDisposable(source);
-        return resource;
+        // AudioResource resource = new AudioResource(source, identifier);
+        // resources.Add((typeof(AudioResource), identifier), resource);
+        // recordDisposable(source);
+        return null; //FIXME
     }
     private FontResource CreateFont(string identifier, XnbAsset xnbAsset)
     {
@@ -280,9 +280,9 @@ public sealed class ResourceManager : Microsoft.Xna.Framework.Content.ContentMan
         return base.OpenStream(relativePath);
     }
     
-    public void UnloadAsset(Resource resource)
+    public void Unload(Resource resource)
     {
-        ObjectDisposedException.ThrowIf(disposed, "ResourceManager");
+        ObjectDisposedException.ThrowIf(disposed, this);
         ArgumentNullException.ThrowIfNull(resource, nameof(resource));
 
         if(!resources.Remove((resource.GetType(), resource.Identifier)))
@@ -291,19 +291,16 @@ public sealed class ResourceManager : Microsoft.Xna.Framework.Content.ContentMan
 
     public sealed override void Unload() 
     {
-        foreach(Resource resource in resources.Values)
-        {
-            UnloadAsset(resource);
-        }
-
         resources.Clear();
     }
 
+    [Obsolete("Use Unload(Resource) instead")]
     public sealed override void UnloadAsset(string assetName)
     {
         throw new NotSupportedException(nameof(UnloadAsset));
     }
 
+    [Obsolete("Use Unload() or Unload(Resource) instead")]
     public sealed override void UnloadAssets(IList<string> assetNames)
     {
         throw new NotSupportedException(nameof(UnloadAssets));

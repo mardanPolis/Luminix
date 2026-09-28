@@ -11,16 +11,45 @@
     <PlatformTarget>x64</PlatformTarget>
 
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
+
+  <!-- Automated Miniaudio Fetch, Wrapper Generation, and Compilation Pipeline -->  
+  <Target Name="BuildMiniaudio" BeforeTargets="BeforeBuild">
+    <PropertyGroup>
+      <NativeDir>$(MSBuildProjectDirectory)/native/miniaudio</NativeDir>
+    </PropertyGroup>
+
+    <MakeDir Directories="$(NativeDir)" Condition="!Exists('$(NativeDir)')" />
+
+    <DownloadFile 
+      SourceUrl="https://raw.githubusercontent.com/mackron/miniaudio/master/miniaudio.h" 
+      DestinationFolder="$(NativeDir)/fetched"
+      Condition="!Exists('$(NativeDir)/fetched/miniaudio.h')" />
+
+    <Exec Command="zig cc -target x86_64-windows-gnu -shared -O2 -o $(IntermediateOutputPath)miniaudio.dll $(NativeDir)/miniaudio.c" 
+          Condition="!Exists('$(IntermediateOutputPath)miniaudio.dll')" />
+
+    <Exec Command="zig cc -target x86_64-linux-gnu -shared -fPIC -O2 -o $(IntermediateOutputPath)libminiaudio.so $(NativeDir)/miniaudio.c -lpthread -lm -ldl" 
+          Condition="!Exists('$(IntermediateOutputPath)libminiaudio.so')" />
+
+    <ItemGroup>
+      <EmbeddedResource Include="$(IntermediateOutputPath)libminiaudio.so">
+        <LogicalName>libminiaudio.so</LogicalName>
+      </EmbeddedResource>
+      <EmbeddedResource Include="$(IntermediateOutputPath)miniaudio.dll">
+        <LogicalName>miniaudio.dll</LogicalName>
+      </EmbeddedResource>
+    </ItemGroup>
+  </Target>
 
   <ItemGroup>
     <EmbeddedResource Include="Assets/Built-In/**/*.xnb">
       <LogicalName>$([System.String]::Copy('%(Identity)').Replace('\', '.').Replace('/', '.'))</LogicalName>
     </EmbeddedResource>
   </ItemGroup>
-
+  
   <ItemGroup>
-    <!-- Replaced MonoGame NuGet with local DLL -->
     <ProjectReference Include="../MonoGame/MonoGame.Framework/MonoGame.Framework.DesktopGL.csproj" />
     <PackageReference Include="StbImageSharp" Version="2.30.15" />
     <PackageReference Include="StbImageWriteSharp" Version="1.16.7" />

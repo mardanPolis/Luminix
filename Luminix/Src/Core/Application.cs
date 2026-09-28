@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -9,13 +10,58 @@ namespace Luminix;
 
 public sealed class Application
 {
+    public static class Native
+    {
+        private static readonly ConcurrentDictionary<Assembly, byte> _resolversAttached = new();
+        private static readonly ConcurrentDictionary<string, IntPtr> _loaded = new();
+        private static readonly ConcurrentDictionary<(Assembly, string), bool> _known = new();
+
+        public static void EnsureLibrary(Assembly assembly, params string[] libraryNames)
+        {
+            if (_resolversAttached.TryAdd(assembly, 0))
+            {
+                NativeLibrary.SetDllImportResolver(assembly, Resolve);
+            }
+
+            foreach (var name in libraryNames)
+                _known[(assembly, name)] = true;
+        }
+
+        private static IntPtr Resolve(string libraryName, Assembly assembly, DllImportSearchPath? searchPath)
+        {
+            if (!_known.ContainsKey((assembly, libraryName)))
+                return IntPtr.Zero;
+
+            string logicalName = RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
+                ? $"{libraryName}.dll"
+                : RuntimeInformation.IsOSPlatform(OSPlatform.OSX)
+                    ? $"lib{libraryName}.dylib"
+                    : $"lib{libraryName}.so";
+
+            return _loaded.GetOrAdd(logicalName, name =>
+            {
+                using var stream = assembly.GetManifestResourceStream(name)
+                    ?? throw new DllNotFoundException(
+                        $"EnsureLibrary('{libraryName}') was called, but embedded resource '{name}' " +
+                        $"was not found in {assembly.FullName}. Check your <LogicalName> in the .csproj.");
+
+                string extractPath = Path.Combine(Path.GetTempPath(), $"luminix_{name}");
+                if (!File.Exists(extractPath))
+                {
+                    using var fs = File.Create(extractPath);
+                    stream.CopyTo(fs);
+                }
+                return NativeLibrary.Load(extractPath);
+            });
+        }
+    }
     internal static Application Instance { get; private set; }
 
     internal const string CORE_THREAD_NAME = "CoreThread";
     internal const string RENDER_THREAD_NAME = "RenderThread";
 
-    public static Assembly EngineAssembly { get; }
-    public static Assembly GameAssembly { get; }
+    public static Assembly EngineAssembly => typeof(Application).Assembly;
+    public static Assembly GameAssembly => Assembly.GetEntryAssembly();
     public static string BuildVers { get; }
     public static string BuildDate { get; }
 
@@ -58,9 +104,6 @@ public sealed class Application
 
     static Application()
     {
-        EngineAssembly = Assembly.GetExecutingAssembly();
-        GameAssembly = Assembly.GetEntryAssembly();
-
         string version = EngineAssembly.GetName().Version.ToString();
         BuildVers = version;
 
@@ -112,6 +155,8 @@ public sealed class Application
     {
         MainCore mainCore = null;
         MainRender mainRender = null;
+
+        Application.Native.EnsureLibrary(EngineAssembly, "miniaudio");
 
         try
         {

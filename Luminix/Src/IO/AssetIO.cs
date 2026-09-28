@@ -4,11 +4,9 @@ using System.IO;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Audio;
 using StbImageSharp;
-using StbImageWriteSharp;
 using System.Threading.Tasks;
 using System.Linq;
 using System.Reflection;
-using System.Text.Json.Nodes;
 using System.Text.Json;
 
 namespace Luminix.IO;
@@ -21,7 +19,7 @@ public sealed class AssetIO
 
     // private static readonly HashSet<string> packageExtensions = new(StringComparer.OrdinalIgnoreCase) { ".package" };
     private static readonly HashSet<string> textureExtensions = new(StringComparer.OrdinalIgnoreCase) { ".png", ".jpg", ".jpeg" };
-    private static readonly HashSet<string> audioExtensions = new(StringComparer.OrdinalIgnoreCase) { ".wav", ".mp3", ".ogg" };
+    private static readonly HashSet<string> audioExtensions = new(StringComparer.OrdinalIgnoreCase) { ".wav", ".ogg" };
     private static readonly HashSet<string> dataExtensions = new(StringComparer.OrdinalIgnoreCase) { ".json" };
     private static readonly HashSet<string> xnbExtensions = new(StringComparer.OrdinalIgnoreCase) { ".xnb" };
 

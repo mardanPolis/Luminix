@@ -7,7 +7,6 @@ using System.Threading.Tasks;
 using Luminix.Threading.Bridges;
 using Luminix.Threading.Commands;
 using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Audio;
 using Microsoft.Xna.Framework.Graphics;
 
 namespace Luminix;
@@ -184,20 +183,22 @@ public sealed class ShaderResource : Resource
 
 public sealed class AudioResource : Resource
 {
-    internal AudioResource(SoundEffect source, string name) 
+    internal AudioResource(AudioClip clip, string name) 
         : base(name)
     {
-        ArgumentNullException.ThrowIfNull(source, nameof(source));
+        ArgumentNullException.ThrowIfNull(clip, nameof(clip));
 
-        Source = source;
+        this.clip = clip;
     }
-    internal readonly SoundEffect Source;
 
-    public TimeSpan Duration => Source.Duration;
-    public bool IsDisposed => Source.IsDisposed;
-
-    public void Play() => Source.Play();
-    public SoundEffectInstance CreateInstance() => Source.CreateInstance();
+    private AudioClip clip;
     
-    public sealed override string ToString() => Source.ToString();
+    public AudioClip Clip => clip;
+    public bool IsDisposed => clip.IsDisposed;
+
+    public sealed override string ToString()
+    {
+        string identifier = !string.IsNullOrEmpty(Identifier) ? Identifier : "Unset";
+        return $"[AudioResource: '{identifier}' | {clip}]";
+    }
 }

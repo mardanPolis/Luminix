@@ -1,5 +1,7 @@
 obj/
 bin/
 
+**/*/fetched/
+
 .cache
 .mgstats

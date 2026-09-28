@@ -15,7 +15,9 @@
         "Renderable",
         "renderables",
         "resizer",
-        "Resizers"
+        "Resizers",
+        "rolloff",
+        "spatialization"
     ],
     "todo-tree.tree.scanMode": "workspace"
 }

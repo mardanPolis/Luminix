@@ -1,4 +1,8 @@
 <Solution>
+  <Folder Name="/MonoGame/" />
+  <Folder Name="/MonoGame/MonoGame.Framework/">
+    <Project Path="MonoGame/MonoGame.Framework/MonoGame.Framework.DesktopGL.csproj" />
+  </Folder>
   <Project Path="Luminix/Luminix.csproj" />
   <Project Path="Sandbox/Sandbox.csproj" />
 </Solution>
