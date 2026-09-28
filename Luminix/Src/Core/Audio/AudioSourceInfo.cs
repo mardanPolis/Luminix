@@ -4,7 +4,7 @@ namespace Luminix;
 
 public readonly ref struct AudioSourceInfo
 {
-    internal AudioSourceInfo(int state, bool spatial, bool isLopped, float volume, float pitch, float pan, Vector2 position)
+    internal AudioSourceInfo(int state, bool spatial, bool isLopped, float volume, float pitch, float pan, Vector3 position)
     {
         this.state = state;
         this.IsSpatial = spatial;
@@ -23,5 +23,5 @@ public readonly ref struct AudioSourceInfo
     public readonly float Volume { get; }
     public readonly float Pitch { get; }
     public readonly float Pan { get; }
-    public readonly Vector2 Position { get; }
+    public readonly Vector3 Position { get; }
 }

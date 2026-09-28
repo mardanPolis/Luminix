@@ -4,7 +4,7 @@ namespace Luminix;
 
 public sealed class AudioClip
 {
-    public enum Format : int
+    public enum Format
     {
         Unknown         = 0,
         Mono8           = 1,
@@ -35,7 +35,7 @@ public sealed class AudioClip
         Stereo  = 2
     }
 
-    public enum SampleRate : int
+    public enum SampleRate : uint
     {
         Invalid = 0,
 

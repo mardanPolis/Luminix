@@ -118,30 +118,19 @@ internal sealed partial class AudioDevice : SafeHandle, IDisposable
     [LibraryImport(lib, EntryPoint = "ma_sound_get_cursor_in_seconds")] private static partial AudioDeviceResult ma_sound_get_cursor(IntPtr pSource, out float pCursor);
     [LibraryImport(lib, EntryPoint = "ma_sound_get_length_in_seconds")] private static partial AudioDeviceResult ma_sound_get_length(IntPtr pSource, out float pLength);
 
-    public IntPtr AudioSourceNew(IntPtr pClip)
-    {
-        var result = ma_create_audio_source(handle, pClip, out IntPtr pSource);
-        if(result != AudioDeviceResult.Success)
-        {
-            throw new InvalidOperationException($"Failed to create audio source: {result}");
-        }
+    public AudioDeviceResult AudioSourceNew(IntPtr pClip, out IntPtr pSource) => ma_create_audio_source(handle, pClip, out pSource);
+    public void AudioSourceDispose(IntPtr pSource) => ma_dispose_audio_source(pSource);
 
-        return pSource;
-    }
-    public void AudioSourceDispose(IntPtr pSource)
-    {
-        ma_dispose_audio_source(pSource);
-    }
-
-    public void AudioSourcePlay(IntPtr pSource) => ma_audio_source_play(pSource);
-    public void AudioSourceStop(IntPtr pSource) => ma_audio_source_stop(pSource);
-    public void AudioSourceResume(IntPtr pSource) => ma_audio_source_resume(pSource);
-    public void AudioSourcePause(IntPtr pSource) => ma_audio_source_pause(pSource);
+    public AudioDeviceResult AudioSourcePlay(IntPtr pSource)    => ma_audio_source_play(pSource);
+    public AudioDeviceResult AudioSourceStop(IntPtr pSource)    => ma_audio_source_stop(pSource);
+    public AudioDeviceResult AudioSourceResume(IntPtr pSource)  => ma_audio_source_resume(pSource);
+    public AudioDeviceResult AudioSourcePause(IntPtr pSource)   => ma_audio_source_pause(pSource);
 
     public void AudioSourceSetVolume(IntPtr pSource, float volume) => ma_sound_set_volume(pSource, volume);
     public void AudioSourceSetPitch(IntPtr pSource, float pitch) => ma_sound_set_pitch(pSource, pitch);
     public void AudioSourceSetPan(IntPtr pSource, float pan) => ma_sound_set_pan(pSource, pan);
 
+    public void AudioSourceSetSpatial(IntPtr pSource, bool spatial) => ma_sound_set_spatialization_enabled(pSource, spatial ? 1 : 0);
     public void AudioSourceSetLooping(IntPtr pSource, bool looping) => ma_sound_set_looping(pSource, looping ? 1 : 0);
 
     public void AudioSourceSetPosition(IntPtr pSource, float x, float y, float z) => ma_sound_set_position(pSource, x, y, z);
@@ -150,23 +139,10 @@ internal sealed partial class AudioDevice : SafeHandle, IDisposable
     public void AudioSourceSetRolloff(IntPtr pSource, float rolloff) => ma_sound_set_rolloff(pSource, rolloff);
     public void AudioSourceSetMinDistance(IntPtr pSource, float distance) => ma_sound_set_min_distance(pSource, distance);
     public void AudioSourceSetMaxDistance(IntPtr pSource, float distance) => ma_sound_set_max_distance(pSource, distance);
-    public void AudioSourceSetSpatial(IntPtr pSource, bool spatial) => ma_sound_set_spatialization_enabled(pSource, spatial ? 1 : 0);
 
-    public void AudioSourceSetCursor(IntPtr pSource, float second) => ma_sound_set_cursor(pSource, second);
-    public float AudioSourceGetCursor(IntPtr pSource)
-    {
-        if(ma_sound_get_cursor(pSource, out float second) != AudioDeviceResult.Success)
-            return 0;
-
-        return second;
-    }
-    public float AudioSourceLength(IntPtr pSource)
-    {
-        if(ma_sound_get_length(pSource, out float second) != AudioDeviceResult.Success)
-            return 0;
-
-        return second;
-    }
+    public AudioDeviceResult AudioSourceSetCursor(IntPtr pSource, float second) => ma_sound_set_cursor(pSource, second);
+    public AudioDeviceResult AudioSourceGetCursor(IntPtr pSource, out float second) => ma_sound_get_cursor(pSource, out second);
+    public AudioDeviceResult AudioSourceLength(IntPtr pSource, out float second) => ma_sound_get_length(pSource, out second);
 
     public bool AudioSourceAtEnd(IntPtr pSource) => ma_sound_at_end(pSource) == 1;
 
