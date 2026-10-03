@@ -5,30 +5,23 @@ using System.Linq;
 
 namespace Luminix.Collections;
 
-public sealed class DenseList<T> : ICollection<T>, IEnumerable<T>, IList<T>, IReadOnlyDenseList<T>, IEnumerable, ICollection
+public sealed class DenseList<T> : ICollection<T>, IEnumerable<T>, IList<T>, IReadOnlyDenseList<T>, IEnumerable, ICollection where T : notnull
 {
-    public DenseList()
-    {
-        this.items = new T[32];
-        this.indexDict = [];
-        this.count = 0;
-        this.defaultCapacity = 32;
-    }
-
     public DenseList(int capacity = 32)
     {
+        capacity = Math.Max(capacity, 32);
         this.items = new T[capacity];
-        this.indexDict = [];
+        this.indexDict = new Dictionary<T, int>(capacity);
         this.count = 0;
-        this.defaultCapacity = Math.Max(capacity, 32);
+        this.defaultCapacity = capacity;
     }
 
     public DenseList(IEnumerable<T> source)
     {
-        items = new T[defaultCapacity > 0 ? defaultCapacity : 32];
-        indexDict = [];
+        items = new T[32];
+        this.indexDict = new Dictionary<T, int>(32);
         count = 0;
-        defaultCapacity = Math.Max(items.Length, 32);
+        defaultCapacity = 32;
 
         foreach (var item in source)
             Add(item);
@@ -67,6 +60,9 @@ public sealed class DenseList<T> : ICollection<T>, IEnumerable<T>, IList<T>, IRe
             if (index < 0 || index >= count)
                 throw new IndexOutOfRangeException($"Index {index} is out of range for DenseList<{typeof(T).Name}> with count {count}.");
 
+            if (indexDict.ContainsKey(value))
+                return;
+
             var oldItem = items[index];
             indexDict.Remove(oldItem);
             
@@ -89,7 +85,7 @@ public sealed class DenseList<T> : ICollection<T>, IEnumerable<T>, IList<T>, IRe
     }
     public void AddRange(IReadOnlyList<T> source)
     {
-        EnsureCapacityFor(source.Count);
+        EnsureCapacity(source.Count);
         for (int i = 0; i < source.Count; i++)
             Add(source[i]);
     }
@@ -100,7 +96,7 @@ public sealed class DenseList<T> : ICollection<T>, IEnumerable<T>, IList<T>, IRe
         {
             case IReadOnlyList<T> list: AddRange(list); return;
             case ICollection<T> collection:
-                EnsureCapacityFor(count + collection.Count);
+                EnsureCapacity(count + collection.Count);
                 break;
         }
 
@@ -198,16 +194,17 @@ public sealed class DenseList<T> : ICollection<T>, IEnumerable<T>, IList<T>, IRe
         return indexDict.TryGetValue(item, out int index) ? index : -1;
     }
 
-    public void EnsureCapacityFor(int capacity)
+    public void EnsureCapacity(int capacity)
     {
-        if (capacity > items.Length)
-        {
-            int newCapacity = items.Length == 0 ? (defaultCapacity > 32 ? defaultCapacity : 32) : items.Length;
-            while (newCapacity < capacity)
-                newCapacity *= 2;
-            Array.Resize(ref items, newCapacity);
-            indexDict.EnsureCapacity(newCapacity);
-        }
+        if (capacity <= items.Length)
+            return;
+
+        int newCapacity = items.Length == 0 ? Math.Max(defaultCapacity, 32) : items.Length;
+        while (newCapacity < capacity)
+            newCapacity *= 2;
+
+        Array.Resize(ref items, newCapacity);
+        indexDict.EnsureCapacity(newCapacity);
     }
 
     public void Clear()

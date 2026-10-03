@@ -7,14 +7,6 @@ namespace Luminix.Collections;
 
 public sealed class DenseMap<T1, T2> : IEnumerable<(T1, T2)>, IReadOnlyCollection<(T1, T2)>, IReadOnlyDenseMap<T1, T2> where T1 : notnull where T2 : notnull
 {
-    public DenseMap()
-    {
-        items = new (T1, T2)[32];
-        leftItems = new Dictionary<T1, int>(32);
-        rightItems = new Dictionary<T2, int>(32);
-        count = 0;
-        defaultCapacity = 32;
-    }
     public DenseMap(int capacity = 32)
     {
         items = new (T1, T2)[capacity];
@@ -36,8 +28,8 @@ public sealed class DenseMap<T1, T2> : IEnumerable<(T1, T2)>, IReadOnlyCollectio
         IEqualityComparer<T2> rightComparer = null)
     {
         items = new (T1, T2)[capacity];
-        leftItems = new Dictionary<T1, int>(leftComparer);
-        rightItems = new Dictionary<T2, int>(rightComparer);
+        leftItems = new Dictionary<T1, int>(capacity, leftComparer);
+        rightItems = new Dictionary<T2, int>(capacity, rightComparer);
         count = 0;
         defaultCapacity = Math.Max(capacity, 32);
     }
@@ -73,8 +65,18 @@ public sealed class DenseMap<T1, T2> : IEnumerable<(T1, T2)>, IReadOnlyCollectio
             if (!leftItems.TryGetValue(left, out int index))
                 throw new KeyNotFoundException($"Left item '{left}' was not found.");
 
-            if (rightItems.TryAdd(value, index))
-                throw new ArgumentException($"Right item '{value}' already exists.");
+            if (rightItems.TryGetValue(value, out int existing))
+            {
+                if (existing != index)
+                    throw new ArgumentException($"Right item '{value}' already exists.");
+
+                items[index].right = value;
+                return;
+            }
+
+            rightItems.Add(value, index);
+            rightItems.Remove(items[index].right);
+            items[index].right = value;
         }
         get
         {
@@ -84,7 +86,6 @@ public sealed class DenseMap<T1, T2> : IEnumerable<(T1, T2)>, IReadOnlyCollectio
             return items[index].right;
         }
     }
-
     public T1 this[T2 right]
     {
         set
@@ -92,27 +93,39 @@ public sealed class DenseMap<T1, T2> : IEnumerable<(T1, T2)>, IReadOnlyCollectio
             if (!rightItems.TryGetValue(right, out int index))
                 throw new KeyNotFoundException($"Right item '{right}' was not found.");
 
-            if (leftItems.TryAdd(value, index))
-                throw new ArgumentException($"Left item '{value}' already exists.");
+            if (leftItems.TryGetValue(value, out int existing))
+            {
+                if (existing != index)
+                    throw new ArgumentException($"Left item '{value}' already exists.");
+
+                items[index].left = value;
+                return;
+            }
+
+            leftItems.Add(value, index);
+            leftItems.Remove(items[index].left);
+            items[index].left = value;
         }
         get
         {
             if (!rightItems.TryGetValue(right, out int index))
-                throw new KeyNotFoundException($"Left item '{right}' was not found.");
+                throw new KeyNotFoundException($"Right item '{right}' was not found.");
 
             return items[index].left;
         }
     }
 
-    public (T1, T2) this[int index]
+    public RightRef RightRefOf(T1 left)
     {
-        get
-        {
-            if (index < 0 || index >= count)
-                throw new IndexOutOfRangeException($"Index {index} is out of range for DenseMap with count {count}.");
-
-            return items[index];
-        }
+        if (!leftItems.ContainsKey(left))
+            throw new KeyNotFoundException($"Left item '{left}' was not found.");
+        return new RightRef(this, left);
+    }
+    public LeftRef LeftRefOf(T2 right)
+    {
+        if (!rightItems.ContainsKey(right))
+            throw new KeyNotFoundException($"Left item '{right}' was not found.");
+        return new LeftRef(this, right);
     }
 
     public void Add(T1 left, T2 right)
@@ -123,21 +136,20 @@ public sealed class DenseMap<T1, T2> : IEnumerable<(T1, T2)>, IReadOnlyCollectio
             throw new ArgumentException($"Right item '{right}' already exists.");
 
         if (count >= items.Length)
-            Array.Resize(ref items, items.Length * 2);
+            Array.Resize(ref items, Math.Max(1, items.Length * 2));
 
         items[count] = (left, right);
         leftItems[left] = count;
         rightItems[right] = count;
         count++;
     }
-
     public bool TryAdd(T1 left, T2 right)
     {
         if (leftItems.ContainsKey(left) || rightItems.ContainsKey(right))
             return false;
 
         if (count >= items.Length)
-            Array.Resize(ref items, items.Length * 2);
+            Array.Resize(ref items, Math.Max(1, items.Length * 2));
 
         items[count] = (left, right);
         leftItems[left] = count;
@@ -164,7 +176,6 @@ public sealed class DenseMap<T1, T2> : IEnumerable<(T1, T2)>, IReadOnlyCollectio
         value = default;
         return false;
     }
-
     public bool TryGetItem(T1 key, [MaybeNullWhen(false)] out T2 value)
     {
         if (leftItems.TryGetValue(key, out int index))
@@ -176,17 +187,6 @@ public sealed class DenseMap<T1, T2> : IEnumerable<(T1, T2)>, IReadOnlyCollectio
         value = default;
         return false;
     }
-
-    public bool TryGetItemIndex(T1 left, out int index)
-    {
-        return leftItems.TryGetValue(left, out index);
-    }
-
-    public bool TryGetItemIndex(T2 right, out int index)
-    {
-        return rightItems.TryGetValue(right, out index);
-    }
-
 
     public void CopyTo((T1, T2)[] array, int arrayIndex)
     {
@@ -211,8 +211,7 @@ public sealed class DenseMap<T1, T2> : IEnumerable<(T1, T2)>, IReadOnlyCollectio
         rightItems.Remove(removed.Item2);
         count--;
     }
-
-    public bool RemoveLeft(T1 key)
+    public bool Remove(T1 key)
     {
         if (!leftItems.TryGetValue(key, out int index))
             return false;
@@ -220,8 +219,7 @@ public sealed class DenseMap<T1, T2> : IEnumerable<(T1, T2)>, IReadOnlyCollectio
         RemoveAt(index);
         return true;
     }
-
-    public bool RemoveRight(T2 key)
+    public bool Remove(T2 key)
     {
         if (!rightItems.TryGetValue(key, out int index))
             return false;
@@ -229,7 +227,6 @@ public sealed class DenseMap<T1, T2> : IEnumerable<(T1, T2)>, IReadOnlyCollectio
         RemoveAt(index);
         return true;
     }
-
     public bool Remove(T1 left, T2 right)
     {
         if (!leftItems.TryGetValue(left, out int leftIndex))
@@ -241,12 +238,7 @@ public sealed class DenseMap<T1, T2> : IEnumerable<(T1, T2)>, IReadOnlyCollectio
         if (leftIndex != rightIndex)
             return false;
 
-        var index = leftIndex;
-
-        items[index] = default!;
-        leftItems.Remove(left);
-        rightItems.Remove(right);
-
+        RemoveAt(leftIndex);
         return true;
     }
 
@@ -265,14 +257,12 @@ public sealed class DenseMap<T1, T2> : IEnumerable<(T1, T2)>, IReadOnlyCollectio
         leftItems.TrimExcess(defaultCapacity);
         rightItems.TrimExcess(defaultCapacity);
     }
-
     public void TrimExcess()
     {
         Array.Resize(ref items, count);
         leftItems.TrimExcess();
         rightItems.TrimExcess();
     }
-
     public void TrimExcess(int capacity)
     {
         if (capacity < count)
@@ -285,14 +275,43 @@ public sealed class DenseMap<T1, T2> : IEnumerable<(T1, T2)>, IReadOnlyCollectio
 
     public ReadOnlySpan<(T1, T2)> AsSpan() => items.AsSpan(0, count);
 
-    public DenseMapEnumerator GetEnumerator() => new(this);
+    public Enumerator GetEnumerator() => new(this);
 
     IEnumerator<(T1, T2)> IEnumerable<(T1, T2)>.GetEnumerator() => GetEnumerator();
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
-    public struct DenseMapEnumerator : IEnumerator<(T1, T2)>
+    public readonly ref struct LeftRef
     {
-        public DenseMapEnumerator(DenseMap<T1, T2> map)
+        private readonly DenseMap<T1, T2> map;
+        private readonly T2 key;
+
+        internal LeftRef(DenseMap<T1, T2> map, T2 key) { this.map = map; this.key = key; }
+
+        public T2 Key => key;
+        public T1 Value
+        {
+            get => map[key];
+            set => map[key] = value;
+        }
+    }
+    public readonly ref struct RightRef
+    {
+        private readonly DenseMap<T1, T2> map;
+        private readonly T1 key;
+
+        internal RightRef(DenseMap<T1, T2> map, T1 key) { this.map = map; this.key = key; }
+
+        public T1 Key => key;
+        public T2 Value
+        {
+            get => map[key];
+            set => map[key] = value;
+        }
+    }
+
+    public struct Enumerator : IEnumerator<(T1, T2)>
+    {
+        public Enumerator(DenseMap<T1, T2> map)
         {
             this.map = map;
             index = -1;
@@ -325,94 +344,92 @@ public sealed class DenseMap<T1, T2> : IEnumerable<(T1, T2)>, IReadOnlyCollectio
         public void Dispose() => current = default;
     }
 
-
     public readonly struct LeftEnumerable : IEnumerable<T1>
     {
         private readonly DenseMap<T1, T2> map;
         public LeftEnumerable(DenseMap<T1, T2> map) => this.map = map;
 
-        public LeftEnumerator GetEnumerator() => new(map);
+        public Enumerator GetEnumerator() => new(map);
         IEnumerator<T1> IEnumerable<T1>.GetEnumerator() => GetEnumerator();
         IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+
+        public struct Enumerator : IEnumerator<T1>
+        {
+            public Enumerator(DenseMap<T1, T2> map)
+            {
+                this.map = map;
+                index = -1;
+                current = default!;
+            }
+
+            private readonly DenseMap<T1, T2> map;
+            private int index;
+            private T1 current;
+
+            public T1 Current => current;
+            object IEnumerator.Current => Current!;
+
+            public bool MoveNext()
+            {
+                if (index + 1 >= map.count)
+                    return false;
+
+                index++;
+                current = map.items[index].Item1;
+                return true;
+            }
+
+            public void Reset()
+            {
+                index = -1;
+                current = default!;
+            }
+
+            public void Dispose() => current = default!;
+        }
     }
-
-    public struct LeftEnumerator : IEnumerator<T1>
-    {
-        public LeftEnumerator(DenseMap<T1, T2> map)
-        {
-            this.map = map;
-            index = -1;
-            current = default!;
-        }
-
-        private readonly DenseMap<T1, T2> map;
-        private int index;
-        private T1 current;
-
-        public T1 Current => current;
-        object IEnumerator.Current => Current!;
-
-        public bool MoveNext()
-        {
-            if (index + 1 >= map.count)
-                return false;
-
-            index++;
-            current = map.items[index].Item1;
-            return true;
-        }
-
-        public void Reset()
-        {
-            index = -1;
-            current = default!;
-        }
-
-        public void Dispose() => current = default!;
-    }
-
     public readonly struct RightEnumerable : IEnumerable<T2>
     {
         private readonly DenseMap<T1, T2> map;
         public RightEnumerable(DenseMap<T1, T2> map) => this.map = map;
 
-        public RightEnumerator GetEnumerator() => new(map);
+        public Enumerator GetEnumerator() => new(map);
         IEnumerator<T2> IEnumerable<T2>.GetEnumerator() => GetEnumerator();
         IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
-    }
 
-    public struct RightEnumerator : IEnumerator<T2>
-    {
-        public RightEnumerator(DenseMap<T1, T2> map)
+        public struct Enumerator : IEnumerator<T2>
         {
-            this.map = map;
-            index = -1;
-            current = default!;
+            public Enumerator(DenseMap<T1, T2> map)
+            {
+                this.map = map;
+                index = -1;
+                current = default!;
+            }
+
+            private readonly DenseMap<T1, T2> map;
+            private int index;
+            private T2 current;
+
+            public T2 Current => current;
+            object IEnumerator.Current => Current!;
+
+            public bool MoveNext()
+            {
+                if (index + 1 >= map.count)
+                    return false;
+
+                index++;
+                current = map.items[index].Item2;
+                return true;
+            }
+
+            public void Reset()
+            {
+                index = -1;
+                current = default!;
+            }
+
+            public void Dispose() => current = default!;
         }
-
-        private readonly DenseMap<T1, T2> map;
-        private int index;
-        private T2 current;
-
-        public T2 Current => current;
-        object IEnumerator.Current => Current!;
-
-        public bool MoveNext()
-        {
-            if (index + 1 >= map.count)
-                return false;
-
-            index++;
-            current = map.items[index].Item2;
-            return true;
-        }
-
-        public void Reset()
-        {
-            index = -1;
-            current = default!;
-        }
-
-        public void Dispose() => current = default!;
     }
 }
