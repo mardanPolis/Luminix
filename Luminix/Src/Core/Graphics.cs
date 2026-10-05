@@ -11,141 +11,6 @@ namespace Luminix;
 
 public sealed class Graphics : Workspace.Service
 {
-    internal readonly struct Controller
-    {
-        internal Controller(Graphics controlled)
-        {
-            if(controlled.controllerIssued)
-                throw new ArgumentException("Cant create a Graphics.Controller, the provided graphics is already initialized!");
-            
-            this.controlled = controlled;
-
-            renderBridge = ThreadBridges.GetBridge<TripleBufferBridge<RenderBuffer>>(Application.RENDER_THREAD_NAME);
-            renderInfoBridge = ThreadBridges.GetBridge<DoubleBufferBridge<RenderInfoBuffer>>(Application.RENDER_THREAD_NAME);
-            windowBridge = ThreadBridges.GetBridge<WindowBridge>(Application.RENDER_THREAD_NAME);
-
-            syncWindowCommandHandler = HandleSyncWindowCommand;
-        }
-
-        private readonly TripleBufferBridge<RenderBuffer> renderBridge;
-        private readonly DoubleBufferBridge<RenderInfoBuffer> renderInfoBridge;
-        private readonly WindowBridge windowBridge;
-        private readonly Graphics controlled;
-
-        private readonly Action<WindowSyncCommand> syncWindowCommandHandler;
-
-        internal void Start()
-        {
-            
-        }
-
-        internal void SwapBuffers()
-        {
-            this.renderBridge.Swap();
-            this.renderInfoBridge.Swap();
-
-            var renderInfoBuffer = this.renderInfoBridge.ReadBuffer;
-            if(renderInfoBuffer != null && renderInfoBuffer.Updated)
-            {
-                var accumulatedFrameCount = renderInfoBuffer.AccumulatedFrameCount;
-                ref FrameInfo frameInfo = ref controlled.frameInfo;
-                frameInfo = new FrameInfo(
-                    renderInfoBuffer.FrameCount,
-                    renderInfoBuffer.FrameTime / accumulatedFrameCount,
-                    renderInfoBuffer.FrameDeltaTime / accumulatedFrameCount,
-                    renderInfoBuffer.Allocated,
-                    renderInfoBuffer.DrawCalls
-                );
-                renderInfoBuffer.Reset();
-            }
-
-            var window = controlled.window;
-            var windowTitle = window.Title;
-            var windowPosition = window.Position;
-            var windowMode = window.CurrentMode;
-
-            if(windowTitle != controlled.windowTitle)
-            {
-                var command = new WindowCommand
-                {
-                    Kind = WindowCommand.Type.SetTitle,
-                    Title = windowTitle,
-                };
-                controlled.windowTitle = windowTitle;
-                windowBridge.NewCommand(command);
-                windowBridge.ClearSyncCommands();
-            }
-
-            if(windowPosition != controlled.windowPosition)
-            {
-                var command = new WindowCommand
-                {
-                    Kind = WindowCommand.Type.SetPosition,
-                    Position = windowPosition,
-                };
-                controlled.windowPosition = windowPosition;
-                windowBridge.NewCommand(command);
-                windowBridge.ClearSyncCommands();
-            }
-
-            if(windowMode != controlled.windowMode)
-            {
-                var command = new WindowCommand
-                {
-                    Kind = WindowCommand.Type.SetMode,
-                    WindowMode = windowMode,
-                };
-                controlled.windowMode = windowMode;
-                windowBridge.NewCommand(command);
-                windowBridge.ClearSyncCommands();
-            }
-
-            SyncWindows();
-        }
-
-        internal void SyncWindows()
-        {
-            windowBridge.ConsumeSyncCommand(syncWindowCommandHandler);
-        }
-
-        internal void HandleSyncWindowCommand(WindowSyncCommand command)
-        {
-            var window = controlled.window;
-            if(command.Handle != window.Handle)
-                return;
-            
-            controlled.windowPosition = command.Position;
-            
-            window.Position = command.Position;
-            window.ClientBounds = command.ClientBound;
-            window.IsFocused = command.IsFocused;
-            window.IsMinimized = command.IsMinimized;
-            window.CurrentDisplay = command.CurrentDisplay;
-        }
-
-        internal void BeginRender()
-        {
-            controlled.renderBuffer = renderBridge.WriteBuffer ?? renderBridge.GetNewBuffer();
-            controlled.renderBuffer.Reset();
-        }
-
-        internal void StopRender()
-        {
-            ref RenderSettings settings = ref controlled.RenderSettings;
-            var renderBuffer = controlled.renderBuffer;
-
-            var world = controlled.Workspace.GetService<World>();
-            if(world.EntityExists(controlled.mainCamera))
-                renderBuffer.SetCam(world.GetEntityReadonlyComponent<Camera>(controlled.mainCamera));
-            else
-                renderBuffer.SetCam(null);
-                
-            renderBuffer.RenderSettings = controlled.renderSettings;
-
-            controlled.renderBuffer = null;
-        }
-    }
-
     public class Resolution
     {        
         internal Resolution(Point point, int refreshRate)
@@ -160,11 +25,26 @@ public sealed class Graphics : Workspace.Service
         public int RefreshRate { get; }
     }
 
-    internal Graphics(out Controller controller)
+    internal Graphics()
     {
-        controller = new Controller(this);
-        this.controllerIssued = true;
-        var windowBridge = ThreadBridges.GetBridge<WindowBridge>(Application.RENDER_THREAD_NAME);
+        renderBridge = ThreadBridges.GetBridge<TripleBufferBridge<RenderBuffer>>(Application.RENDER_THREAD_NAME);
+        renderInfoBridge = ThreadBridges.GetBridge<DoubleBufferBridge<RenderInfoBuffer>>(Application.RENDER_THREAD_NAME);
+        windowBridge = ThreadBridges.GetBridge<WindowBridge>(Application.RENDER_THREAD_NAME);
+
+        syncWindowCommandHandler = (command) =>
+        {
+            var window = this.window;
+            if(command.Handle != window.Handle)
+                return;
+            
+            this.windowPosition = command.Position;
+            
+            window.Position = command.Position;
+            window.ClientBounds = command.ClientBound;
+            window.IsFocused = command.IsFocused;
+            window.IsMinimized = command.IsMinimized;
+            window.CurrentDisplay = command.CurrentDisplay;
+        };
 
         var adapters = GraphicsAdapter.Adapters;
 
@@ -196,9 +76,13 @@ public sealed class Graphics : Workspace.Service
         window.CurrentMode = result.WindowMode;
     }
     
-    private readonly bool controllerIssued;
-
     private RenderBuffer renderBuffer;
+
+    private readonly TripleBufferBridge<RenderBuffer> renderBridge;
+    private readonly DoubleBufferBridge<RenderInfoBuffer> renderInfoBridge;
+    private readonly WindowBridge windowBridge;
+
+    private readonly Action<WindowSyncCommand> syncWindowCommandHandler;
 
     private Screen[] screens;
     private Window window;
@@ -309,5 +193,92 @@ public sealed class Graphics : Workspace.Service
         if (renderBuffer == null)
             throw new InvalidOperationException($"{caller} must be called during rendering.");
         return true;
+    }
+
+
+    internal void SwapBuffers()
+    {
+        this.renderBridge.Swap();
+        this.renderInfoBridge.Swap();
+
+        var renderInfoBuffer = this.renderInfoBridge.ReadBuffer;
+        if(renderInfoBuffer != null && renderInfoBuffer.Updated)
+        {
+            var accumulatedFrameCount = renderInfoBuffer.AccumulatedFrameCount;
+            ref FrameInfo frameInfo = ref this.frameInfo;
+            frameInfo = new FrameInfo(
+                renderInfoBuffer.FrameCount,
+                renderInfoBuffer.FrameTime / accumulatedFrameCount,
+                renderInfoBuffer.FrameDeltaTime / accumulatedFrameCount,
+                renderInfoBuffer.Allocated,
+                renderInfoBuffer.DrawCalls
+            );
+            renderInfoBuffer.Reset();
+        }
+
+        var windowTitle = window.Title;
+        var windowPosition = window.Position;
+        var windowMode = window.CurrentMode;
+
+        if(windowTitle != this.windowTitle)
+        {
+            var command = new WindowCommand
+            {
+                Kind = WindowCommand.Type.SetTitle,
+                Title = windowTitle,
+            };
+            this.windowTitle = windowTitle;
+            windowBridge.NewCommand(command);
+            windowBridge.ClearSyncCommands();
+        }
+
+        if(windowPosition != this.windowPosition)
+        {
+            var command = new WindowCommand
+            {
+                Kind = WindowCommand.Type.SetPosition,
+                Position = windowPosition,
+            };
+            this.windowPosition = windowPosition;
+            windowBridge.NewCommand(command);
+            windowBridge.ClearSyncCommands();
+        }
+
+        if(windowMode != this.windowMode)
+        {
+            var command = new WindowCommand
+            {
+                Kind = WindowCommand.Type.SetMode,
+                WindowMode = windowMode,
+            };
+            this.windowMode = windowMode;
+            windowBridge.NewCommand(command);
+            windowBridge.ClearSyncCommands();
+        }
+
+        windowBridge.ConsumeSyncCommand(syncWindowCommandHandler);
+    }
+
+
+    internal void BeginRender()
+    {
+        renderBuffer = renderBridge.WriteBuffer ?? renderBridge.GetNewBuffer();
+        renderBuffer.Reset();
+    }
+
+    internal void StopRender()
+    {
+        ref RenderSettings settings = ref this.RenderSettings;
+        var renderBuffer = this.renderBuffer;
+
+        var world = this.Workspace.GetService<World>();
+        if(world.EntityExists(this.mainCamera))
+            renderBuffer.SetCam(world.GetEntityReadonlyComponent<Camera>(this.mainCamera));
+        else
+            renderBuffer.SetCam(null);
+            
+        renderBuffer.RenderSettings = this.renderSettings;
+
+        this.renderBuffer = null;
     }
 }

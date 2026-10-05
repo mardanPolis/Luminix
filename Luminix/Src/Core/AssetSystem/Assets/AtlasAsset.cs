@@ -32,12 +32,18 @@ public sealed class AtlasAsset : Asset
         Regions = regions;
     }
 
-    public Color[] Colors { get; }
+    public Color[] Colors { get; private set; }
     public Vector2 Size { get; }
-    public Region[] Regions { get; }
+    public Region[] Regions { get; private set; }
 
     public override string ToString()
     {
         return $"Atlas [ Size: {Size}; Regions: {Regions.Length} ]";
+    }
+
+    protected override void OnDispose()
+    {
+        Colors = null;
+        Regions = null;
     }
 }

@@ -18,9 +18,10 @@
   <Target Name="BuildMiniaudio" BeforeTargets="BeforeBuild">
     <PropertyGroup>
       <NativeDir>$(MSBuildProjectDirectory)/native/miniaudio</NativeDir>
+      <NativeOutDir>$(MSBuildProjectDirectory)/$(IntermediateOutputPath)</NativeOutDir>
     </PropertyGroup>
 
-    <MakeDir Directories="$(NativeDir)" Condition="!Exists('$(NativeDir)')" />
+    <MakeDir Directories="$(NativeDir);$(NativeDir)/fetched;$(NativeOutDir)" />
 
     <DownloadFile 
       SourceUrl="https://raw.githubusercontent.com/mackron/miniaudio/master/miniaudio.h" 

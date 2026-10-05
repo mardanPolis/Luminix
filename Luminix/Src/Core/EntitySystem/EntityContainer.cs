@@ -266,6 +266,6 @@ internal partial class EntityContainer
             renderMethods[i].InvokeFor(entityCountInternal);
     }
 
-    public DenseMap<EntityID, int>.LeftEnumerator GetEntityEnumerator() => entityLocations.LeftItems.GetEnumerator();
+    public DenseMap<EntityID, int>.LeftEnumerable.Enumerator GetEntityEnumerator() => entityLocations.LeftItems.GetEnumerator();
     
 }

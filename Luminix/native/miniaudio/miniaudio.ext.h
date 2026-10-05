@@ -2,7 +2,14 @@
  
 #ifndef MINIAUDIO_EXT_H
 #define MINIAUDIO_EXT_H
- 
+
+typedef struct
+{
+    ma_sound sound; // sound must be the first field of ma_audio_source since I pass the ma_audio_source pointer directly into ma functions.
+    ma_audio_buffer_ref ref;
+} ma_audio_source;
+
+
 MA_API ma_result ma_create_engine(ma_engine** ppEngine)
 {
     if (ppEngine == NULL) {
@@ -34,6 +41,47 @@ MA_API void ma_dispose_engine(ma_engine* pEngine)
  
     ma_engine_uninit(pEngine);
     free(pEngine);
+}
+
+// SOUND GROUPS
+
+MA_API ma_result ma_create_sound_group(ma_engine* pEngine, ma_sound_group* pParentGroup, ma_sound_group** ppGroup)
+{
+    if (pEngine == NULL || ppGroup == NULL) {
+        return MA_INVALID_ARGS;
+    }
+
+    ma_sound_group* pGroup = (ma_sound_group*)malloc(sizeof(ma_sound_group));
+    if (pGroup == NULL) {
+        *ppGroup = NULL;
+        return MA_OUT_OF_MEMORY;
+    }
+
+    ma_result result = ma_sound_group_init(pEngine, 0, pParentGroup, pGroup);
+    if (result != MA_SUCCESS) {
+        free(pGroup);
+        *ppGroup = NULL;
+        return result;
+    }
+
+    *ppGroup = pGroup;
+    return MA_SUCCESS;
+}
+
+MA_API ma_result ma_dispose_sound_group(ma_sound_group* pGroup)
+{
+    if (pGroup == NULL) {
+        return MA_INVALID_ARGS;
+    }
+
+    ma_sound_group_uninit(pGroup);
+    free(pGroup);
+    return MA_SUCCESS;
+}
+
+MA_API void ma_set_sound_group_volume(ma_sound_group* pGroup, float volume)
+{
+    ma_sound_group_set_volume(pGroup, volume);
 }
 
 // CLIP FUNCTIONS
@@ -75,13 +123,8 @@ MA_API ma_result ma_dispose_audio_clip(ma_audio_buffer* pAudioClip)
 
 
 // AUDIO SOURCE FUNCTIONS
-typedef struct
-{
-    ma_sound sound; // sound must be the first field of ma_audio_source since I pass the ma_audio_source pointer directly into ma functions.
-    ma_audio_buffer_ref ref;
-} ma_audio_source;
- 
-MA_API ma_result ma_create_audio_source(ma_engine* pEngine, ma_audio_buffer* pAudioClip, ma_audio_source** ppSource)
+
+MA_API ma_result ma_create_audio_source(ma_engine* pEngine, ma_audio_buffer* pAudioClip, ma_sound_group* pGroup, ma_audio_source** ppSource)
 {
     if (pEngine == NULL || pAudioClip == NULL || ppSource == NULL) {
         return MA_INVALID_ARGS;
@@ -104,7 +147,7 @@ MA_API ma_result ma_create_audio_source(ma_engine* pEngine, ma_audio_buffer* pAu
         return result;
     }
  
-    result = ma_sound_init_from_data_source(pEngine, (ma_data_source*)&pSource->ref, 0, NULL, &pSource->sound);
+    result = ma_sound_init_from_data_source(pEngine, (ma_data_source*)&pSource->ref, 0, pGroup, &pSource->sound);
     if (result != MA_SUCCESS) {
         ma_audio_buffer_ref_uninit(&pSource->ref);
         free(pSource);
@@ -131,8 +174,8 @@ MA_API void ma_audio_source_play(ma_audio_source* pSource) {
     if(pSource == 0)
         return;
 
-    ma_sound_set_cursor(&pSource->sound, 0);
-    ma_sound_play(&pSource->sound);
+    ma_sound_seek_to_second(&pSource->sound, 0);
+    ma_sound_start(&pSource->sound);
 }
 
 MA_API void ma_audio_source_stop(ma_audio_source* pSource) {
@@ -140,11 +183,11 @@ MA_API void ma_audio_source_stop(ma_audio_source* pSource) {
         return;
         
     ma_sound_stop(&pSource->sound);
-    ma_sound_set_cursor(pSource, 0);
+    ma_sound_seek_to_second(&pSource->sound, 0);
 }
 
 MA_API void ma_audio_source_resume(ma_audio_source* pSource) {
-    ma_sound_play(&pSource->sound);
+    ma_sound_start(&pSource->sound);
 }
 
 MA_API void ma_audio_source_pause(ma_audio_source* pSource) {

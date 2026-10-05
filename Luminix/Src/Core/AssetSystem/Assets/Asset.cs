@@ -4,11 +4,19 @@ namespace Luminix;
 
 public abstract class Asset : IDisposable
 {
-    internal protected Asset(string identifier)
+    private protected Asset(string identifier)
     {
         ArgumentNullException.ThrowIfNullOrWhiteSpace(identifier, nameof(identifier));
 
         Identifier = identifier.ToLower();
     }
+    public bool IsDisposed { get; private set; }
     public string Identifier { get; }
+    public void Dispose()
+    {
+        OnDispose();
+        IsDisposed = true;
+    }
+
+    protected abstract void OnDispose();
 }

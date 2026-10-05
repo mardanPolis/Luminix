@@ -19,4 +19,8 @@ public sealed class AudioAsset : Asset
     public AudioClip.Format AudioFormat { get; }
     public AudioClip.SampleRate SampleRate { get; }
 
+    protected override void OnDispose()
+    {
+        pcmData = null;
+    }
 }

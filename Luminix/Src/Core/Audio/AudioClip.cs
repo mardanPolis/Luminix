@@ -19,7 +19,7 @@ public sealed class AudioClip
         StereoF32       = 10,
         StereoFloat32 = 11,
     }
-    internal enum SampleFormat : uint
+    public enum SampleFormat : uint
     {
         Unknown = 0,
         U8 = 1,
@@ -29,12 +29,11 @@ public sealed class AudioClip
         F32 = 5,
         Count
     }
-    internal enum Channels : uint
+    public enum Channels : uint
     {
         Mono    = 1,
         Stereo  = 2
     }
-
     public enum SampleRate : uint
     {
         Invalid = 0,
@@ -86,6 +85,7 @@ public sealed class AudioClip
 
     internal void Dispose()
     {
+        pClip = 0;
         isDisposed = true;
     }
 }

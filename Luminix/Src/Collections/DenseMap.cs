@@ -7,7 +7,8 @@ namespace Luminix.Collections;
 
 public sealed class DenseMap<T1, T2> : IEnumerable<(T1, T2)>, IReadOnlyCollection<(T1, T2)>, IReadOnlyDenseMap<T1, T2> where T1 : notnull where T2 : notnull
 {
-    public DenseMap(int capacity = 32)
+    public DenseMap() : this(32) {}
+    public DenseMap(int capacity)
     {
         items = new (T1, T2)[capacity];
         leftItems = new Dictionary<T1, int>(capacity);

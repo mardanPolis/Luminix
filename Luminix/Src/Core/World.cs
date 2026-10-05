@@ -122,9 +122,7 @@ public sealed class World : Workspace.Service
             throw new InvalidOperationException("Cant create an Entity during preparing phase.");
 
         if(!typeContainers.TryGetValue(entityType, out EntityContainer container))
-        {
             throw new ArgumentException("Unknown entity type", nameof(entityType));
-        }
 
         entityID = new EntityID(entityID.Value + 1);
         container.Allocate(entityID);
@@ -145,14 +143,10 @@ public sealed class World : Workspace.Service
             throw new InvalidOperationException("Cant destroy an Entity during preparing phase.");
 
         if (!entities.TryGetValue(entityID, out EntityType entityType))
-        {
             return false;
-        }
 
         if (!typeContainers.TryGetValue(entityType, out EntityContainer container))
-        {
             return false;
-        }
 
         container.Destroy(entityID);
         entities.Remove(entityID);
@@ -168,18 +162,14 @@ public sealed class World : Workspace.Service
             throw new InvalidOperationException("Cant access an Entity component during preparing phase. Use GetEntityReadonlyComponent to get components of entities.");
 
         if (!entities.TryGetValue(entityID, out EntityType entityType))
-        {
             throw new ArgumentException($"Entity does not exist", nameof(entityID));
-        }
 
         return ref typeContainers[entityType].GetComponent<T>(entityID);
     }
     public ref readonly T GetEntityReadonlyComponent<T>(EntityID entityID) where T : struct
     {
         if (!entities.TryGetValue(entityID, out EntityType entityType))
-        {
             throw new ArgumentException($"Entity does not exist", nameof(entityID));
-        }
 
         return ref typeContainers[entityType].GetComponent<T>(entityID);
     }
@@ -187,9 +177,7 @@ public sealed class World : Workspace.Service
     public EntityType GetEntityType(EntityID entityID)
     {
         if (!entities.TryGetValue(entityID, out EntityType entityType))
-        {
             throw new ArgumentException($"Entity does not exist", nameof(entityID));
-        }
 
         return entityType;
     }
@@ -197,19 +185,14 @@ public sealed class World : Workspace.Service
     public bool HasComponent<T>(EntityType entityType) where T : struct
     {
         if(!typeContainers.TryGetValue(entityType, out EntityContainer container))
-        {
             throw new ArgumentException("Unknown entity type", nameof(entityType));
-        }
 
         return container.HasComponent<T>();
     }
-    
     public EntityEnumerable GetEntities(EntityType entityType)
     {
         if(!typeContainers.TryGetValue(entityType, out EntityContainer container))
-        {
             throw new ArgumentException("Unknown entity type", nameof(entityType));
-        }
 
         return new(container);
     }
@@ -232,7 +215,12 @@ public sealed class World : Workspace.Service
 
         return container.EntityCount;
     }
-
+    
+    public void Clear()
+    {
+        //TODO
+    }
+    
     internal EntityContainer[] CreateEntityContainers(ReadOnlySpan<EntityType> entityTypes)
     {
         MethodInfo[] GetMethodInfos(EntitySystem entitySystem, string methodName)
@@ -333,7 +321,6 @@ public sealed class World : Workspace.Service
 
         return entityContainers.ToArray();
     }
-
     public struct EntityEnumerable : IEnumerable<EntityID>
     {
         private EntityContainer container;
@@ -347,13 +334,12 @@ public sealed class World : Workspace.Service
 
         public struct Enumerator : IEnumerator<EntityID>
         {
-            private EntityContainer container;
             internal Enumerator(EntityContainer container)
             {
-                this.container = container;
+                this.inner = container.GetEntityEnumerator();
             }
             
-            private DenseMap<EntityID, int>.LeftEnumerator inner;
+            private DenseMap<EntityID, int>.LeftEnumerable.Enumerator inner;
             public EntityID current;
             public EntityID Current => throw new NotImplementedException();
 

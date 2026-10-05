@@ -4,6 +4,7 @@ using Luminix.Threading;
 using Luminix.Threading.Bridges;
 using Luminix.Threading.Buffers;
 using Luminix.UI;
+using Microsoft.Xna.Framework;
 
 namespace Luminix;
 
@@ -22,8 +23,8 @@ internal sealed class MainCore
     private World world;
     private World.Controller worldController;
     private Graphics graphics;
-    private Graphics.Controller graphicsController;
     private AudioMedia audioMedia;
+    private AudioEngine audioEngine;
     private Input input;
     private Input.Controller inputController;
     private GameObjectManager gameObjectManager;
@@ -39,6 +40,11 @@ internal sealed class MainCore
     {
         try
         {
+            Logger.NewLog(Logger.Log.Level.Info, $"Build-Vers: {Application.BuildVers}");
+            Logger.NewLog(Logger.Log.Level.Info, $"Build-Date: {Application.BuildDate}");
+
+            Logger.NewLog(Logger.Log.Level.Info, $"Started initialization");
+
             renderBridge            = ThreadBridges.GetBridge<TripleBufferBridge<RenderBuffer>>(Application.RENDER_THREAD_NAME);
             renderInfoBridge        = ThreadBridges.GetBridge<DoubleBufferBridge<RenderInfoBuffer>>(Application.RENDER_THREAD_NAME);
             inputBridge             = ThreadBridges.GetBridge<DoubleBufferBridge<InputBuffer>>(Application.RENDER_THREAD_NAME);
@@ -56,13 +62,9 @@ internal sealed class MainCore
 
             TypeRegistry.SetDefaultSubType(typeof(IComponentType), typeof(ComponentType<>), true);
 
-            Logger.NewLog(Logger.Log.Level.Info, $"Build-Vers: {Application.BuildVers}");
-            Logger.NewLog(Logger.Log.Level.Info, $"Build-Date: {Application.BuildDate}");
-
-            Logger.NewLog(Logger.Log.Level.Info, $"Started initialization");
-
             audioMedia  = AudioMedia.CreateCore();
-            graphics    = new Graphics(out graphicsController);
+            audioEngine = (AudioEngine)audioMedia.AudioEngine;
+            graphics    = new Graphics();
             uiManager   = new UIManager(graphics, out uiManagerController);
             moduleManager     = new ModuleManager();
             gameObjectManager = new GameObjectManager(out gameObjectManagerController);
@@ -72,7 +74,8 @@ internal sealed class MainCore
             defs        = new Defs();
             world       = new World(graphics, out worldController);
 
-            graphicsController.Start();
+            audioEngine.SetListenerDirection(0, 0, 1);
+            audioEngine.SetListenerWorldUp(0, 1, 0);
 
             defs.NewDefType<EntityType>(); // built in
 
@@ -84,12 +87,12 @@ internal sealed class MainCore
             Logger.NewLog(Logger.Log.Level.Info, $"Found {moduleManager.ModuleCount} modules, {moduleManager.InitializedModuleCount} of them are initialized.");
             var logBuilder = new Logger.LogBuilder(Logger.Log.Level.Info);
             logBuilder.AppendLiteral("Found Modules: ");
-            foreach(var module in moduleManager.Modules)
+            foreach((string, Module) data in moduleManager.Modules)
             {
                 logBuilder.AppendLiteral("\n Module: ID - ");
-                logBuilder.AppendFormatted(module.ID);
+                logBuilder.AppendFormatted(data.Item2.ID);
                 logBuilder.AppendLiteral("; Name - ");
-                logBuilder.AppendFormatted(module.Name);
+                logBuilder.AppendFormatted(data.Item2.Name);
             }
             logBuilder.End();
 
@@ -133,7 +136,7 @@ internal sealed class MainCore
 
             Logger.NewLog(Logger.Log.Level.Info, "Loaded boot assets!");
 
-            resources.Set();
+            resources.Reset();
 
             foreach(var module in moduleManager.InitializedModules)
             {
@@ -147,7 +150,7 @@ internal sealed class MainCore
             Logger.NewLog(Logger.Log.Level.Info, "Loaded assets!");
 
             if(hadAssets)
-                resources.Set();
+                resources.Reset();
 
             defs.PatchNodes();
             defs.InheritNodes();
@@ -180,11 +183,11 @@ internal sealed class MainCore
     {
         try
         {
-            graphicsController.SwapBuffers();
+            graphics.SwapBuffers();
 
             inputController.UpdateData();
 
-            resources.TrySet();
+            resources.TryReset();
 
             uiManagerController.Clear();
 
@@ -212,13 +215,13 @@ internal sealed class MainCore
     {
         try
         {
-            graphicsController.BeginRender();
+            graphics.BeginRender();
 
             worldController.RenderEntities();
             gameObjectManagerController.RenderGameObjects();
             uiManagerController.Render();
 
-            graphicsController.StopRender();
+            graphics.StopRender();
         }
         catch(Exception ex)
         {

@@ -38,23 +38,18 @@ internal sealed partial class AudioDevice : SafeHandle, IDisposable
 
     public override bool IsInvalid => handle == IntPtr.Zero;
 
-    public void Start()
-    {
-        ma_engine_start(handle);
-    }
-    public void Stop()
-    {
-        ma_engine_stop(handle);
-    }
+    public void Start() => ma_engine_start(handle);
+    public void Stop() => ma_engine_stop(handle);
 
-    // Master
-    [LibraryImport(lib)] private static partial AudioDeviceResult ma_engine_set_volume  (IntPtr pDevice, float volume);
-    [LibraryImport(lib)] private static partial uint ma_engine_get_sample_rate      (IntPtr pDevice);
-    [LibraryImport(lib)] private static partial uint ma_engine_get_channels         (IntPtr pDevice);
+    // ---- Audio Group --------------------------------------------------------------
 
-    public AudioDeviceResult MasterSetVolume(float volume) => ma_engine_set_volume(handle, volume);
-    public uint MasterGetSampleRate() => ma_engine_get_sample_rate(handle);
-    public uint MasterGetChannels() => ma_engine_get_channels(handle);
+    [LibraryImport(lib)] private static partial AudioDeviceResult ma_create_sound_group (IntPtr pDevice, IntPtr pParentGroup, out IntPtr pGroup);
+    [LibraryImport(lib)] private static partial AudioDeviceResult ma_dispose_sound_group(IntPtr pGroup);
+    [LibraryImport(lib)] private static partial uint ma_sound_group_set_vol             (IntPtr pGroup, float volume);
+
+    public AudioDeviceResult AudioGroupCreate(IntPtr pParentGroup, out IntPtr pGroup) => ma_create_sound_group(handle, pParentGroup, out pGroup);
+    public AudioDeviceResult AudioGroupDispose(IntPtr pGroup) => ma_dispose_sound_group(pGroup);
+    public uint AudioGroupSetVolume(IntPtr pGroup, float volume) => ma_sound_group_set_vol(pGroup, volume);
 
     // ---- Listener --------------------------------------------------------------
 
@@ -74,20 +69,8 @@ internal sealed partial class AudioDevice : SafeHandle, IDisposable
     [LibraryImport(lib)] private static partial AudioDeviceResult ma_create_audio_clip  (ReadOnlySpan<byte> pPCM, ulong frameCount, uint channels, AudioClip.SampleFormat format, uint sampleRate, out IntPtr pClip); // MUST CHECK
     [LibraryImport(lib)] private static partial void ma_dispose_audio_clip              (IntPtr pClip);  // MUST CHECK
 
-    public IntPtr AudioClipNew(ReadOnlySpan<byte> pcmData, ulong frameCount, AudioClip.Channels channels, AudioClip.SampleFormat sampleFormat, AudioClip.SampleRate sampleRate)
-    {
-        var result = ma_create_audio_clip(pcmData, frameCount, (uint)channels, sampleFormat, (uint)sampleRate, out IntPtr pSource);
-        if(result != AudioDeviceResult.Success)
-        {
-            throw new InvalidOperationException($"Failed to create audio clip: {result}");
-        }
-
-        return pSource;
-    }
-    public void AudioClipDispose(IntPtr pClip)
-    {
-        ma_dispose_audio_clip(pClip);
-    }
+    public AudioDeviceResult AudioClipNew(ReadOnlySpan<byte> pcmData, ulong frameCount, AudioClip.Channels channels, AudioClip.SampleFormat sampleFormat, AudioClip.SampleRate sampleRate, out IntPtr pClip) => ma_create_audio_clip(pcmData, frameCount, (uint)channels, sampleFormat, (uint)sampleRate, out pClip);
+    public void AudioClipDispose(IntPtr pClip) => ma_dispose_audio_clip(pClip);
 
     // ---- source --------------------------------------------------------------
 
@@ -106,6 +89,7 @@ internal sealed partial class AudioDevice : SafeHandle, IDisposable
     [LibraryImport(lib)] private static partial void ma_sound_set_looping(IntPtr pSource, int isLooping);
 
     [LibraryImport(lib)] private static partial void ma_sound_set_position              (IntPtr pSource, float x, float y, float z);
+    [LibraryImport(lib)] private static partial void ma_sound_set_velocity              (IntPtr pSource, float x, float y, float z);
     [LibraryImport(lib)] private static partial void ma_sound_set_attenuation_model     (IntPtr pSource, int attenuationModel);
     [LibraryImport(lib)] private static partial void ma_sound_set_rolloff               (IntPtr pSource, float rolloff);
     [LibraryImport(lib)] private static partial void ma_sound_set_min_distance          (IntPtr pSource, float minDistance);
@@ -134,6 +118,7 @@ internal sealed partial class AudioDevice : SafeHandle, IDisposable
     public void AudioSourceSetLooping(IntPtr pSource, bool looping) => ma_sound_set_looping(pSource, looping ? 1 : 0);
 
     public void AudioSourceSetPosition(IntPtr pSource, float x, float y, float z) => ma_sound_set_position(pSource, x, y, z);
+    public void AudioSourceSetVelocity(IntPtr pSource, float x, float y, float z) => ma_sound_set_velocity(pSource, x, y, z);
     public void AudioSourceSetAttenuationModel(IntPtr pSource, int attenuationModel) => ma_sound_set_attenuation_model(pSource, attenuationModel);
 
     public void AudioSourceSetRolloff(IntPtr pSource, float rolloff) => ma_sound_set_rolloff(pSource, rolloff);

@@ -13,6 +13,11 @@ public sealed class TextureAsset : Asset
         Size = size;
     }
 
-    public Color[] Colors { get; }
-    public Vector2 Size { get; }
+    public Color[] Colors { get; private set; }
+    public Vector2 Size { get; private set; }
+
+    protected override void OnDispose()
+    {
+        Colors = null;
+    }
 }

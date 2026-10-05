@@ -55,6 +55,12 @@ public sealed class XnbAsset : Asset
         };
     }
     public XnbType Type { get; }
-    public MemoryStream Stream { get; }
+    public MemoryStream Stream { get; private set; }
+
+    protected override void OnDispose()
+    {
+        Stream.Dispose();
+        Stream = null;
+    }
 }
 

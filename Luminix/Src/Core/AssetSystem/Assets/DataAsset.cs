@@ -1,10 +1,8 @@
-using System;
 using System.Text.Json;
-using System.Text.Json.Nodes;
 
 namespace Luminix;
 
-public sealed class DataAsset : Asset, IDisposable
+public sealed class DataAsset : Asset
 {
     internal DataAsset(string identifier, JsonDocument json) : base(identifier)
     {
@@ -13,7 +11,7 @@ public sealed class DataAsset : Asset, IDisposable
 
     public JsonDocument Json { get; }
 
-    public void Dispose()
+    protected override void OnDispose()
     {
         Json.Dispose();
     }

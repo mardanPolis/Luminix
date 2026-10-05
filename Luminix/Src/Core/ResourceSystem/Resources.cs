@@ -59,12 +59,12 @@ public sealed class Resources : Workspace.Service, IEnumerable<Resource>
         return null;
     }
 
-    internal void Set()
+    internal void Reset()
     {
         this.resources = resourceBridge.GetResourceContainer();
     }
 
-    internal void TrySet()
+    internal void TryReset()
     {
         if(resourceBridge.ChangedResources)
             this.resources = resourceBridge.GetResourceContainer();
