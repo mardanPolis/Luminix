@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using System.Linq;
 using System.Reflection;
 using System.Text.Json;
+using System.Text;
 
 namespace Luminix.IO;
 
@@ -19,7 +20,7 @@ public sealed class AssetIO
 
     // private static readonly HashSet<string> packageExtensions = new(StringComparer.OrdinalIgnoreCase) { ".package" };
     private static readonly HashSet<string> textureExtensions = new(StringComparer.OrdinalIgnoreCase) { ".png", ".jpg", ".jpeg" };
-    private static readonly HashSet<string> audioExtensions = new(StringComparer.OrdinalIgnoreCase) { ".wav", ".ogg" };
+    private static readonly HashSet<string> audioExtensions = new(StringComparer.OrdinalIgnoreCase) { ".wav" };
     private static readonly HashSet<string> dataExtensions = new(StringComparer.OrdinalIgnoreCase) { ".json" };
     private static readonly HashSet<string> xnbExtensions = new(StringComparer.OrdinalIgnoreCase) { ".xnb" };
 
@@ -158,13 +159,13 @@ public sealed class AssetIO
     {
         try
         {
-            using Stream stream = assembly.GetManifestResourceStream(identifier);
-            var soundEffect = SoundEffect.FromStream(stream);
-            return new AudioAsset(identifier, soundEffect);
+            using Stream? stream = assembly.GetManifestResourceStream(identifier) ?? throw new FileNotFoundException($"Embedded resource '{identifier}' was not found.");
+            AudioData wav = WavReader.Read(stream);
+            return new AudioAsset(identifier, wav.PcmData, wav.Format, wav.SampleRate);
         }
-        catch(Exception ex)
+        catch (Exception ex)
         {
-            throw new InvalidDataException($"Failed to load audio '{identifier}' from '{assembly.FullName}', reason: {ex.Message}");
+            throw new InvalidDataException($"Failed to load audio '{identifier}' from '{assembly.FullName}'.", ex);
         }
     }
     public XnbAsset     LoadXnbAsset(Assembly assembly, string identifier)
@@ -248,12 +249,12 @@ public sealed class AssetIO
         try
         {
             using Stream stream = OpenStream(assetInfo, false);
-            var soundEffect = SoundEffect.FromStream(stream);
-            return new AudioAsset(assetInfo.RelativePath, soundEffect);
+            AudioData wav = WavReader.Read(stream);
+            return new AudioAsset(assetInfo.RelativePath, wav.PcmData, wav.Format, wav.SampleRate);
         }
-        catch(Exception ex)
+        catch (Exception ex)
         {
-            throw new InvalidDataException($"Failed to load audio at '{assetInfo.FullPath}', reason: {ex.Message}");
+            throw new InvalidDataException($"Failed to load audio at '{assetInfo.FullPath}'.", ex);
         }
     }
     public XnbAsset     LoadXnbAsset(AssetInfo assetInfo)
@@ -340,17 +341,15 @@ public sealed class AssetIO
     {
         try
         {
-            using Stream stream = OpenStream(assetInfo, true);
-            MemoryStream memStream = new MemoryStream();
-            await stream.CopyToAsync(memStream);
-            memStream.Position = 0;
+            await using Stream stream = OpenStream(assetInfo, true);
 
-            var soundEffect = SoundEffect.FromStream(memStream);
-            return new AudioAsset(assetInfo.RelativePath, soundEffect);
+            AudioData wav = await WavReader.ReadAsync(stream);
+
+            return new AudioAsset(assetInfo.RelativePath, wav.PcmData, wav.Format, wav.SampleRate);
         }
-        catch(Exception ex)
+        catch (Exception ex)
         {
-            throw new InvalidDataException($"Failed to load audio at '{assetInfo.FullPath}', reason: {ex.Message}");
+            throw new InvalidDataException($"Failed to load audio at '{assetInfo.FullPath}'.", ex);
         }
     }
     public async Task<XnbAsset>     LoadXnbAssetAsync(AssetInfo assetInfo)
