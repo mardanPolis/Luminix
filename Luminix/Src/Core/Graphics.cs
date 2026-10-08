@@ -224,7 +224,7 @@ public sealed class Graphics : Workspace.Service
         {
             var command = new WindowCommand
             {
-                Kind = WindowCommand.Type.SetTitle,
+                Kind = WindowCommandType.SetTitle,
                 Title = windowTitle,
             };
             this.windowTitle = windowTitle;
@@ -236,7 +236,7 @@ public sealed class Graphics : Workspace.Service
         {
             var command = new WindowCommand
             {
-                Kind = WindowCommand.Type.SetPosition,
+                Kind = WindowCommandType.SetPosition,
                 Position = windowPosition,
             };
             this.windowPosition = windowPosition;
@@ -248,7 +248,7 @@ public sealed class Graphics : Workspace.Service
         {
             var command = new WindowCommand
             {
-                Kind = WindowCommand.Type.SetMode,
+                Kind = WindowCommandType.SetMode,
                 WindowMode = windowMode,
             };
             this.windowMode = windowMode;

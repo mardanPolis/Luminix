@@ -29,7 +29,7 @@ internal sealed class MainRender : Microsoft.Xna.Framework.Game
         graphics.HardwareModeSwitch = false;
         graphics.PreferHalfPixelOffset = false;
 
-        resourceManager = new ResourceManager(this);
+        resourceManager = new GraphicResourceManager(this);
         IsMouseVisible = true;
     }
 
@@ -37,7 +37,7 @@ internal sealed class MainRender : Microsoft.Xna.Framework.Game
     private TripleBufferBridge<RenderBuffer> renderBridge;
     private DoubleBufferBridge<RenderInfoBuffer> renderInfoBridge;
     private DoubleBufferBridge<InputBuffer> inputBridge;
-    private ResourceBridge resourceBridge;
+    private CommandBridge<GraphicResourceCommand> resourceBridge;
     private WindowBridge windowBridge;
 
     //RenderThread
@@ -58,20 +58,20 @@ internal sealed class MainRender : Microsoft.Xna.Framework.Game
     private Workspace workspace;
     private RenderingSystem renderingSystem;
 
-    private ResourceManager resourceManager;
+    private GraphicResourceManager resourceManager;
     private GraphicsDeviceManager graphics;
 
     private InputHandler inputHandler;
 
     private RenderInfoBuffer renderInfoBuffer;
 
-    private Action<ResourceCommand> resourceCommandHandler;
+    private Action<GraphicResourceCommand> resourceCommandHandler;
     private Action<WindowCommand> windowCommandHandler;
 
     public Thread MainThread => mainThread;
     public TickedThread CoreThread => coreThread;
 
-    internal ResourceManager ResourceManager => resourceManager;
+    internal GraphicResourceManager ResourceManager => resourceManager;
     internal GraphicsDeviceManager GraphicsDeviceManager => graphics;
 
     public double FrameTime => frameTime;
@@ -106,7 +106,7 @@ internal sealed class MainRender : Microsoft.Xna.Framework.Game
             renderBridge            = ThreadBridges.GetBridge<TripleBufferBridge<RenderBuffer>>(Application.CORE_THREAD_NAME);
             renderInfoBridge        = ThreadBridges.GetBridge<DoubleBufferBridge<RenderInfoBuffer>>(Application.CORE_THREAD_NAME);
             inputBridge             = ThreadBridges.GetBridge<DoubleBufferBridge<InputBuffer>>(Application.CORE_THREAD_NAME);
-            resourceBridge          = ThreadBridges.GetBridge<ResourceBridge>(Application.CORE_THREAD_NAME);
+            resourceBridge          = ThreadBridges.GetBridge<CommandBridge<GraphicResourceCommand>>(Application.CORE_THREAD_NAME);
             windowBridge            = ThreadBridges.GetBridge<WindowBridge>(Application.CORE_THREAD_NAME);
             
             inputBridge.PopulateIfEmpty();
@@ -126,21 +126,69 @@ internal sealed class MainRender : Microsoft.Xna.Framework.Game
             //base initialization
             base.Initialize();
 
-            TextureAsset nullTextureAsset = new ("NullTexture", Resources.BuiltIn.NullTextureColor, new Vector2(32, 32));
-            TextureAsset pixelTextureAsset = new ("Pixel", Resources.BuiltIn.PixelTextureColor, new Vector2(1, 1));
+            resourceCommandHandler = (command) =>
+            {
+                try
+                {
+                    switch ((command.CommandType, command.ResourceType))
+                    {
+                        case (GraphicResourceCommandType.Create, GraphicResourceType.Texture):
+                            resourceManager.CreateTexture(command.Identifier, (Color[])command.Data, command.Width, command.Height);
+                            break;
 
-            resourceManager.CreateResource(nullTextureAsset);
-            resourceManager.CreateResource(pixelTextureAsset);
+                        case (GraphicResourceCommandType.Create, GraphicResourceType.Font):
+                            resourceManager.CreateFont(command.Identifier, (byte[])command.Data);
+                            break;
 
-            resourceManager.CreateResource(assetIO.LoadXnbAsset(Application.EngineAssembly, "Assets.Built-In.Fonts.IBMPlexMono-Bold.xnb"), "font-bold");
-            resourceManager.CreateResource(assetIO.LoadXnbAsset(Application.EngineAssembly, "Assets.Built-In.Fonts.IBMPlexMono-Medium.xnb"), "font-medium");
-            resourceManager.CreateResource(assetIO.LoadXnbAsset(Application.EngineAssembly, "Assets.Built-In.Fonts.IBMPlexMono-Regular.xnb"), "font-regular");
-            resourceManager.CreateResource(assetIO.LoadXnbAsset(Application.EngineAssembly, "Assets.Built-In.Shaders.GenericShader.xnb"), "generic_shader");
+                        case (GraphicResourceCommandType.Create, GraphicResourceType.Shader):
+                            resourceManager.CreateShader(command.Identifier, (byte[])command.Data);
+                            break;
 
-            resourceBridge.SetResourceContainer(resourceManager.Resources);
-            
-            resourceCommandHandler = HandleResourceCommand;
-            windowCommandHandler = HandleWindowCommand;
+                        case (GraphicResourceCommandType.Update, GraphicResourceType.Texture):
+                            resourceManager.UpdateTexture(command.Identifier, (Color[])command.Data);
+                            break;
+
+                        case (GraphicResourceCommandType.Unload, _):
+                            resourceManager.Unload(command.ResourceType, command.Identifier);
+                            break;
+
+                        case (GraphicResourceCommandType.Link, GraphicResourceType.Texture):
+                            resourceManager.LinkTexture(command.Identifier, (TextureResource)command.Data);
+                            break;
+
+                        case (GraphicResourceCommandType.Link, GraphicResourceType.Font):
+                            resourceManager.LinkFont(command.Identifier, (FontResource)command.Data);
+                            break;
+
+                        case (GraphicResourceCommandType.Link, GraphicResourceType.Shader):
+                            resourceManager.LinkShader(command.Identifier, (ShaderResource)command.Data);
+                            break;
+
+                        case (GraphicResourceCommandType.Unlink, _):
+                            resourceManager.Unlink((Resource)command.Data);
+                            break;
+                    }
+                }
+                catch(Exception ex)
+                {
+                    Logger.NewLog(Logger.Log.Level.Error, $"Failed to resolve graphic resource command, reason: {ex}");
+                }
+            };
+            windowCommandHandler = (command) =>
+            {
+                switch(command.Kind)
+                {
+                    case WindowCommandType.SetTitle:
+                        Window.Title = command.Title;
+                        break;
+                    case WindowCommandType.SetPosition:
+                        Window.Position = command.Position;
+                        break;
+                    case WindowCommandType.SetMode:
+                        renderingSystem.SetWindowMode(command.WindowMode);
+                        break;
+                }
+            };
 
             //Renderer initialization   
             renderingSystem.Initialize();
@@ -176,11 +224,8 @@ internal sealed class MainRender : Microsoft.Xna.Framework.Game
 
         inputHandler.Update(IsActive);
 
-        if(resourceBridge.ResourceCommandsIncoming)
-        {
+        if(resourceBridge.CommandsIncoming)
             resourceBridge.ConsumeCommands(resourceCommandHandler);
-            resourceBridge.SetResourceContainer(resourceManager.Resources);
-        }
 
         if(windowBridge.CommandsIncoming) // TODO : look into the window clunky syncing where 
         {
@@ -223,21 +268,6 @@ internal sealed class MainRender : Microsoft.Xna.Framework.Game
         startBytes = GC.GetAllocatedBytesForCurrentThread();
     }
     
-    private void HandleResourceCommand(ResourceCommand command)
-    {
-        switch (command.Kind)
-        {
-            case ResourceCommand.Type.create:
-                resourceManager.CreateResource(command.Asset);
-            break;
-            case ResourceCommand.Type.update:
-                throw new NotImplementedException("update resource");
-            case ResourceCommand.Type.unload:
-                resourceManager.UnloadAsset(command.Asset.Identifier);
-            break;
-        }
-    }
-
     private WindowCreateCommandResponse HandleWindowCreateCommand(WindowCreateCommand command)
     {
         Window.Title = command.Title;
@@ -251,22 +281,6 @@ internal sealed class MainRender : Microsoft.Xna.Framework.Game
             WindowMode = renderingSystem.IsFullScreen ? Luminix.Window.Mode.Fullscreen : Luminix.Window.Mode.Windowed
         };
         return response;
-    }
-
-    private void HandleWindowCommand(WindowCommand command)
-    {
-        switch(command.Kind)
-        {
-            case WindowCommand.Type.SetTitle:
-                Window.Title = command.Title;
-            break;
-            case WindowCommand.Type.SetPosition:
-                Window.Position = command.Position;
-            break;
-            case WindowCommand.Type.SetMode:
-                renderingSystem.SetWindowMode(command.WindowMode);
-            break;
-        }
     }
 
     private void SendWindowSyncCommand()

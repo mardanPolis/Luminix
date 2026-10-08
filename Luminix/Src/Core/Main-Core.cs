@@ -1,10 +1,10 @@
 using System;
 using Luminix.Debug;
 using Luminix.Threading;
+using Luminix.Threading.Commands;
 using Luminix.Threading.Bridges;
 using Luminix.Threading.Buffers;
 using Luminix.UI;
-using Microsoft.Xna.Framework;
 
 namespace Luminix;
 
@@ -17,7 +17,7 @@ internal sealed class MainCore
     private TripleBufferBridge<RenderBuffer> renderBridge;
     private DoubleBufferBridge<RenderInfoBuffer> renderInfoBridge;
     private DoubleBufferBridge<InputBuffer> inputBridge;
-    private ResourceBridge resourceBridge;
+    private CommandBridge<GraphicResourceCommand> resourceBridge;
     private WindowBridge windowBridge;
 
     private World world;
@@ -48,7 +48,7 @@ internal sealed class MainCore
             renderBridge            = ThreadBridges.GetBridge<TripleBufferBridge<RenderBuffer>>(Application.RENDER_THREAD_NAME);
             renderInfoBridge        = ThreadBridges.GetBridge<DoubleBufferBridge<RenderInfoBuffer>>(Application.RENDER_THREAD_NAME);
             inputBridge             = ThreadBridges.GetBridge<DoubleBufferBridge<InputBuffer>>(Application.RENDER_THREAD_NAME);
-            resourceBridge          = ThreadBridges.GetBridge<ResourceBridge>(Application.RENDER_THREAD_NAME);
+            resourceBridge          = ThreadBridges.GetBridge<CommandBridge<GraphicResourceCommand>>(Application.RENDER_THREAD_NAME);
             windowBridge            = ThreadBridges.GetBridge<WindowBridge>(Application.RENDER_THREAD_NAME);
             
             inputBridge.PopulateIfEmpty();
@@ -81,18 +81,19 @@ internal sealed class MainCore
 
             defs.AddDef(new EntityType("camera", null, (typeof(Camera), new Camera())));
 
+            // --- MODULES ---
             moduleManager.FindModules();
             moduleManager.InitializeModules();
 
             Logger.NewLog(Logger.Log.Level.Info, $"Found {moduleManager.ModuleCount} modules, {moduleManager.InitializedModuleCount} of them are initialized.");
             var logBuilder = new Logger.LogBuilder(Logger.Log.Level.Info);
             logBuilder.AppendLiteral("Found Modules: ");
-            foreach((string, Module) data in moduleManager.Modules)
+            foreach(var module in moduleManager.Modules)
             {
                 logBuilder.AppendLiteral("\n Module: ID - ");
-                logBuilder.AppendFormatted(data.Item2.ID);
+                logBuilder.AppendFormatted(module.ID);
                 logBuilder.AppendLiteral("; Name - ");
-                logBuilder.AppendFormatted(data.Item2.Name);
+                logBuilder.AppendFormatted(module.Name);
             }
             logBuilder.End();
 
@@ -125,6 +126,7 @@ internal sealed class MainCore
 
             defs.FinalizeTypes();
 
+            // --- BOOT ASSETS ---
             foreach(var module in moduleManager.InitializedModules)
             {
                 var assetInfos = assets.GetAssetIO().EnumerateAssetInfos(module.GetModuleDirectory(), boot: true);
@@ -136,8 +138,7 @@ internal sealed class MainCore
 
             Logger.NewLog(Logger.Log.Level.Info, "Loaded boot assets!");
 
-            resources.Reset();
-
+            // --- NON-BOOT ASSETS ---
             foreach(var module in moduleManager.InitializedModules)
             {
                 var assetInfos = assets.GetAssetIO().EnumerateAssetInfos(module.GetModuleDirectory(), boot: false);
@@ -148,9 +149,6 @@ internal sealed class MainCore
             assets.FinalizeAssets(true, out hadAssets);
 
             Logger.NewLog(Logger.Log.Level.Info, "Loaded assets!");
-
-            if(hadAssets)
-                resources.Reset();
 
             defs.PatchNodes();
             defs.InheritNodes();
@@ -186,8 +184,6 @@ internal sealed class MainCore
             graphics.SwapBuffers();
 
             inputController.UpdateData();
-
-            resources.TryReset();
 
             uiManagerController.Clear();
 

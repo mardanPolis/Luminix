@@ -15,11 +15,7 @@ public sealed class Assets : Workspace.Service
         this.assetIO = new AssetIO();
         this.resources = resources;
 
-        this.textureAssetInfos = [];
-        this.audioAssetInfos = [];
-
         this.textureAssets = [];
-        this.atlasAssets = [];
         this.audioAssets = [];
         this.shaderAssets = [];
         this.fontAssets = [];
@@ -30,29 +26,23 @@ public sealed class Assets : Workspace.Service
     private readonly AssetIO assetIO;
     private readonly Resources resources;
 
-    private readonly SortedDictionary<string, AssetIO.AssetInfo> textureAssetInfos;
-    private readonly Dictionary<string, AssetIO.AssetInfo> audioAssetInfos;
-
-    private readonly SortedDictionary<string, TextureAsset> textureAssets;
-    private readonly Dictionary<string, AtlasAsset> atlasAssets;
-    private readonly Dictionary<string, AudioAsset> audioAssets;
+    private readonly SortedDictionary<string, (TextureAsset, AssetIO.AssetInfo)> textureAssets;
+    private readonly Dictionary<string, (AudioAsset, AssetIO.AssetInfo)> audioAssets;
     private readonly Dictionary<string, XnbAsset> shaderAssets;
     private readonly Dictionary<string, XnbAsset> fontAssets;
     private readonly List<DataAsset> dataAssets;
-
-    public AssetIO GetAssetIO() => assetIO;
 
     public void HandleAsset(in AssetIO.AssetInfo assetInfo)
     {
         if (assetIO.IsTextureAsset(assetInfo))
         {
-            textureAssetInfos[assetInfo.RelativePath] = assetInfo;
+            textureAssets[assetInfo.RelativePath.ToLower()] = (null, assetInfo);
         }
         else if(assetIO.IsAudioAsset(assetInfo))
         {
-            audioAssetInfos[assetInfo.RelativePath] = assetInfo;
+            audioAssets[assetInfo.RelativePath.ToLower()] = (null, assetInfo);
         }
-        else
+        else // XNB assets are loaded instantly because I have to determine its type and Data assets are also loaded because they do not follow the standart .
         {
             Asset asset = assetIO.LoadAsset(assetInfo);
             HandleAsset(asset);
@@ -62,15 +52,11 @@ public sealed class Assets : Workspace.Service
     {
         if(asset is TextureAsset texture)
         {
-            textureAssets[texture.Identifier] = texture;
-        }
-        else if(asset is AtlasAsset atlas)
-        {
-            atlasAssets[atlas.Identifier] = atlas;
+            textureAssets[texture.Identifier] = (texture, default);
         }
         else if(asset is AudioAsset audio)
         {
-            audioAssets[audio.Identifier] = audio;
+            audioAssets[audio.Identifier] = (audio, default);
         }
         else if(asset is XnbAsset xnb)
         {
@@ -90,11 +76,11 @@ public sealed class Assets : Workspace.Service
         }
         else
         {
-            throw new NotSupportedException($"Unable to resolve asset: {asset}.");
+            throw new NotSupportedException($"Unable to handle asset, reason: Unsupported asset type '{asset}'");
         }
     }
 
-    public AtlasAsset[] CreateAtlasAssets(IReadOnlyList<TextureAsset> textureAssets)
+    private AtlasAsset[] CreateAtlasAssets(IReadOnlyList<TextureAsset> textureAssets)
     {
         var atlasGroups = new Dictionary<string, List<TextureAsset>>();
 
@@ -104,10 +90,7 @@ public sealed class Assets : Workspace.Service
             var texture = textureAssets[i];
 
             if(texture == null)
-            {
-                Logger.NewLog(Logger.Log.Level.Error, "Unable to add texture to an atlas, reason: provided texture is null!");
                 continue;
-            }
 
             string textureName = Path.GetFileName(texture.Identifier.Replace('·', Path.DirectorySeparatorChar));
             string atlasName = texture.Identifier.Substring(0, Math.Max(0, texture.Identifier.Length - textureName.Length - 1));
@@ -145,62 +128,24 @@ public sealed class Assets : Workspace.Service
 
         return resultBag.ToArray();
     }
-    public AtlasAsset[] CreateAtlasAssets(IEnumerable<TextureAsset> textureAssets)
-    {
-        var atlasGroups = new Dictionary<string, List<TextureAsset>>();
 
-        //Grouping textures
-        foreach(var texture in textureAssets)
-        {
-            string textureName = Path.GetFileName(texture.Identifier.Replace('·', Path.DirectorySeparatorChar));
-            string atlasName = texture.Identifier.Substring(0, Math.Max(0, texture.Identifier.Length - textureName.Length - 1));
-
-            if(string.IsNullOrWhiteSpace(atlasName))
-                atlasName = textureName;
-
-            if (!atlasGroups.TryGetValue(atlasName, out var group))
-            {
-                group = new List<TextureAsset>();
-                atlasGroups[atlasName] = group;
-            }
-            group.Add(texture);
-        }
-        
-        //Making Atlases
-        var groupKeys   = atlasGroups.Keys.ToArray();
-        var groupValues = atlasGroups.Values.ToArray();
-
-        var resultBag = new ConcurrentBag<AtlasAsset>();
-        Parallel.ForAsync(0, atlasGroups.Count, async (index, ct) =>
-        {
-            var atlasMaker = new AtlasMaker();
-            var atlasName = groupKeys[index];
-            var textures  = groupValues[index];
-
-            for(int i = 0; i < textures.Count; i++)
-                atlasMaker.Add(textures[i]);
-
-            var atlasResults = atlasMaker.Pack(atlasName);
-            
-            for(int i = 0; i < atlasResults.Length; i++)
-                resultBag.Add(atlasResults[i]);
-        }).GetAwaiter().GetResult();
-
-        return resultBag.ToArray();
-    }
+    public AssetIO GetAssetIO() => assetIO;
 
     internal void FinalizeAssets(bool makeAtlases, out bool hadAssets)
     {
         var defs = Workspace.Current.GetService<Defs>();
         var assets = new List<Asset>();
 
-        AssetIO.AssetInfo[] textureInfos = textureAssetInfos.Values.ToArray();
-        TextureAsset[] textureResults = new TextureAsset[textureInfos.Length];
-        var textureTask = Parallel.ForAsync(0, textureInfos.Length, async (i, ct) =>
+        (TextureAsset, AssetIO.AssetInfo)[] textures = textureAssets.Values.ToArray();
+        TextureAsset[] textureResults = new TextureAsset[textures.Length];
+        var textureTask = Parallel.ForAsync(0, textures.Length, async (i, ct) =>
         {
             try
             {
-                textureResults[i] = await assetIO.LoadTextureAssetAsync(textureInfos[i]);
+                if(textures[i].Item1 != null)
+                    textureResults[i] = textures[i].Item1;
+                else
+                    textureResults[i] = assetIO.LoadTextureAsset(textures[i].Item2);
             }
             catch (Exception ex)
             {
@@ -209,13 +154,16 @@ public sealed class Assets : Workspace.Service
             }
         });
 
-        AssetIO.AssetInfo[] audioInfos = audioAssetInfos.Values.ToArray();
-        AudioAsset[] audioResults = new AudioAsset[audioInfos.Length];
-        var audioTask = Parallel.ForAsync(0, audioInfos.Length, async (i, ct) =>
+        (AudioAsset, AssetIO.AssetInfo)[] audios = audioAssets.Values.ToArray();
+        AudioAsset[] audioResults = new AudioAsset[audios.Length];
+        var audioTask = Parallel.ForAsync(0, audios.Length, async (i, ct) =>
         {
             try
             {
-                audioResults[i] = await assetIO.LoadAudioAssetAsync(audioInfos[i]);
+                if(audios[i].Item1 != null)
+                    audioResults[i] = audios[i].Item1;
+                else
+                    audioResults[i] = assetIO.LoadAudioAsset(audios[i].Item2);
             }
             catch (Exception ex)
             {
@@ -224,9 +172,6 @@ public sealed class Assets : Workspace.Service
             }
         });
 
-        assets.AddRange(textureAssets.Values);
-        assets.AddRange(atlasAssets.Values);
-        assets.AddRange(audioAssets.Values);
         assets.AddRange(shaderAssets.Values);
         assets.AddRange(fontAssets.Values);
 
@@ -241,24 +186,26 @@ public sealed class Assets : Workspace.Service
             defs.ParseDataAsset(dataAssets[i]);
         }
 
-        var assetTasks = new List<Task>();
         foreach(var asset in assets)
         {
-            assetTasks.Add(resources.CreateResourceFromAsset(asset));
+            try
+            {
+                resources.CreateResource(asset);
+            }
+            catch(Exception ex)
+            {
+                Logger.NewLog(Logger.Log.Level.Error, $"Failed to create resource, reason: {ex}");
+            }
         }
 
         Task.WhenAll(assetTasks).GetAwaiter().GetResult();
 
-        textureAssetInfos.Clear();
-        audioAssetInfos.Clear(); 
-
         textureAssets.Clear();
         audioAssets.Clear();
-        atlasAssets.Clear();
         shaderAssets.Clear();
         fontAssets.Clear();
         dataAssets.Clear();
 
-        hadAssets = assetTasks.Count > 0;
+        hadAssets = assets.Count > 0;
     }
 }

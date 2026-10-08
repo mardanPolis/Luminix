@@ -11,7 +11,7 @@ public sealed partial class ModuleManager
         private readonly ModuleManager manager;
         public ModuleEnumerable(ModuleManager manager) => this.manager = manager;
 
-        public DenseMap<string, Module>.Enumerator GetEnumerator() => new(manager.modules);
+        public DenseMap<string, Module>.RightEnumerable.Enumerator GetEnumerator() => new(manager.modules);
         IEnumerator<Module> IEnumerable<Module>.GetEnumerator() => GetEnumerator();
         IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
     }
@@ -45,7 +45,7 @@ public sealed partial class ModuleManager
             private readonly ModuleManager manager;
             private Module current;
 
-            private DenseMap<string, Module>.Enumerator innerEnumerator;
+            private DenseMap<string, Module>.RightEnumerable.Enumerator innerEnumerator;
 
             public Module Current => current;
             object IEnumerator.Current => Current;

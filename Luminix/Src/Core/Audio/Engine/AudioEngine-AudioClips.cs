@@ -15,6 +15,9 @@ internal sealed partial class AudioEngine : IAudioEngine, IDisposable
     public AudioClip GetOrCreateClip(ReadOnlySpan<byte> pcmData, AudioClip.Format audioFormat, AudioClip.SampleRate sampleRate)
     {
         ValidateDevice();
+
+        if(pcmData == ReadOnlySpan<byte>.Empty) 
+            throw new ArgumentException("Cant get or create a audio clip, reason: The provided pcmData is empty.");
         
         if(audioFormat == AudioClip.Format.Unknown) 
             throw new ArgumentException("Cant get or create a audio clip, reason: The provided audioFormat is unknown.");

@@ -29,7 +29,7 @@ public sealed class RenderingSystem : Workspace.Service
     private Renderer renderer;
     private GraphicsDeviceManager graphics;
     private GameWindow window;
-    private ResourceManager resourceManager;
+    private GraphicResourceManager resourceManager;
 
     private TripleBufferBridge<RenderBuffer> renderBridge;
     private RenderBuffer renderBuffer;
@@ -54,9 +54,9 @@ public sealed class RenderingSystem : Workspace.Service
     public bool IsFullScreen => graphics.IsFullScreen;
     public bool IsVSync => graphics.SynchronizeWithVerticalRetrace;
 
-    public ResourceManager ResourceManager => resourceManager;
+    public GraphicResourceManager ResourceManager => resourceManager;
     public GraphicsDeviceManager GraphicsDeviceManager => graphics;
-    public GraphicsDevice GraphicsDevice => graphics.GraphicsDevice;
+    public Microsoft.Xna.Framework.Graphics.GraphicsDevice GraphicsDevice => graphics.GraphicsDevice;
     public long FrameCount => frameCount;
     public long DrawCount => drawCount;
     public Viewport Viewport => viewport;

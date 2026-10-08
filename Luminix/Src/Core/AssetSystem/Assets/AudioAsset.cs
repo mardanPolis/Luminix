@@ -5,7 +5,7 @@ namespace Luminix;
 
 public sealed class AudioAsset : Asset
 {
-    internal AudioAsset(string identifier, byte[] pcmData, AudioClip.Format audioFormat, AudioClip.SampleRate sampleRate) : base(identifier)
+    public AudioAsset(string identifier, byte[] pcmData, AudioClip.Format audioFormat, AudioClip.SampleRate sampleRate) : base(identifier)
     {
         ArgumentNullException.ThrowIfNull(pcmData, nameof(pcmData));
 

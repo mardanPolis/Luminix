@@ -7,9 +7,11 @@ namespace Luminix.Collections;
 
 public sealed class DenseList<T> : ICollection<T>, IEnumerable<T>, IList<T>, IReadOnlyDenseList<T>, IEnumerable, ICollection where T : notnull
 {
-    public DenseList(int capacity = 32)
+    private const int MIN_CAPACITY = 8;
+
+    public DenseList(int capacity = MIN_CAPACITY)
     {
-        capacity = Math.Max(capacity, 32);
+        capacity = Math.Max(capacity, MIN_CAPACITY);
         this.items = new T[capacity];
         this.indexDict = new Dictionary<T, int>(capacity);
         this.count = 0;
@@ -18,10 +20,10 @@ public sealed class DenseList<T> : ICollection<T>, IEnumerable<T>, IList<T>, IRe
 
     public DenseList(IEnumerable<T> source)
     {
-        items = new T[32];
-        this.indexDict = new Dictionary<T, int>(32);
+        items = new T[MIN_CAPACITY];
+        this.indexDict = new Dictionary<T, int>(MIN_CAPACITY);
         count = 0;
-        defaultCapacity = 32;
+        defaultCapacity = MIN_CAPACITY;
 
         foreach (var item in source)
             Add(item);
@@ -199,7 +201,7 @@ public sealed class DenseList<T> : ICollection<T>, IEnumerable<T>, IList<T>, IRe
         if (capacity <= items.Length)
             return;
 
-        int newCapacity = items.Length == 0 ? Math.Max(defaultCapacity, 32) : items.Length;
+        int newCapacity = items.Length == 0 ? Math.Max(defaultCapacity, MIN_CAPACITY) : items.Length;
         while (newCapacity < capacity)
             newCapacity *= 2;
 

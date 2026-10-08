@@ -3,7 +3,7 @@ using Microsoft.Xna.Framework;
 
 namespace Luminix;
 
-public sealed class AtlasAsset : Asset
+internal sealed class AtlasAsset : Asset
 {
     public readonly record struct Region
     {

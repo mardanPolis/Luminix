@@ -43,9 +43,7 @@ internal sealed partial class AudioEngine : IAudioEngine, IDisposable
             Array.Resize(ref audioGroupStates, newSize);
             
             for(int i = oldSize; i < audioGroups.Length; i++)
-            {
-                
-            }
+                audioGroups[i] = new AudioGroup(i);
 
             audioBridge.SetGroups(audioGroups);
             audioBridge.SetStates(audioGroupStates);

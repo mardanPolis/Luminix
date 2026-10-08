@@ -92,11 +92,11 @@ internal static class ThreadBridges
 }
 
 //Thread specific
-//RenderBridge : TripleBufferBridge
-//RenderInfoBridge : DoubleBufferBridge
-//InputBridge : DoubleBufferBridge
-//WindowBridge : WindowBridge
+//RenderBridge      : TripleBufferBridge
+//RenderInfoBridge  : DoubleBufferBridge
+//InputBridge       : DoubleBufferBridge
+//ResourceBridge    : DoubleCommandBufferBridge
+//WindowBridge      : WindowBridge
 
 //Global
-//ResourceBridge : ResourceBridge
 //AudioBridge : AudioBridge

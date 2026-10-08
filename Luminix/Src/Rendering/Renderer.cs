@@ -71,7 +71,7 @@ internal sealed class Renderer
     }
 
     private readonly RenderingSystem  renderingSystem;
-    private readonly ResourceManager resources;
+    private readonly GraphicResourceManager resources;
     private readonly SpriteBatch      spriteBatch;
 
     private readonly ShaderResource  defaultShader;
@@ -87,7 +87,7 @@ internal sealed class Renderer
 
     private Data[] dataArray;
 
-    private GraphicsDevice device;
+    private Microsoft.Xna.Framework.Graphics.GraphicsDevice device;
 
     private RenderBuffer renderBuffer;
 

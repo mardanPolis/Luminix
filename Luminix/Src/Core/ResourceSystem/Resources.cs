@@ -1,204 +1,293 @@
 using System;
 using System.Collections;
-using System.Collections.Frozen;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.Threading.Tasks;
+using System.Linq;
+using Luminix.Collections;
+using Luminix.IO;
 using Luminix.Threading.Bridges;
 using Luminix.Threading.Commands;
 using Microsoft.Xna.Framework;
-using Microsoft.Xna.Framework.Graphics;
 
 namespace Luminix;
 
 public sealed class Resources : Workspace.Service, IEnumerable<Resource>
 {
-    internal static class BuiltIn
+    internal Resources()
     {
-        public static Color[] NullTextureColor
+        container = new();
+        audioMedia = Workspace.Current.GetService<AudioMedia>();
+        var assetIO = Workspace.Current.GetService<Assets>().GetAssetIO();
+        resourceBridge = ThreadBridges.GetBridge<CommandBridge<GraphicResourceCommand>>(Application.RENDER_THREAD_NAME);
+
+        // --- GENERIC RESOURCES ---
+
+        // FONT BOLD
         {
-            get
-            {
-                Color[] pixels = new Color[32 * 32];
-                for (int y = 0; y < 32; y++)
-                    for (int x = 0; x < 32; x++)
-                        pixels[y * 32 + x] = ((x / 16 ^ y / 16) & 1) == 1
-                            ? Color.Magenta
-                            : Color.Black;
-                return pixels;
-            }
+            XnbAsset asset = assetIO.LoadXnbAsset(Application.EngineAssembly, "Assets.Built-In.Fonts.IBMPlexMono-Bold.xnb");
+            Resource resource = new FontResource("font_bold");
+            container.Add((resource.GetType(), "font_bold"), resource);
+
+            var sourceCreateCommand = GraphicResourceCommand.Create("font_bold", asset.Data, asset.Type);
+            resourceBridge.NewCommand(sourceCreateCommand);
+
+            var sourceLinkCommand = GraphicResourceCommand.Link("font_bold", resource);
+            resourceBridge.NewCommand(sourceLinkCommand);
         }
 
-        public static Color[] PixelTextureColor
+        // FONT MEDIUM
         {
-            get
-            {
-                Color[] pixels = new Color[1];
-                pixels[0] = Color.White;
-                return pixels;
-            }
+            XnbAsset asset = assetIO.LoadXnbAsset(Application.EngineAssembly, "Assets.Built-In.Fonts.IBMPlexMono-Medium.xnb");
+            Resource resource = new FontResource("font_medium");
+            container.Add((resource.GetType(), "font_medium"), resource);
+
+            var sourceCreateCommand = GraphicResourceCommand.Create("font_medium", asset.Data, asset.Type);
+            resourceBridge.NewCommand(sourceCreateCommand);
+
+            var sourceLinkCommand = GraphicResourceCommand.Link("font_medium", resource);
+            resourceBridge.NewCommand(sourceLinkCommand);
+        }
+
+        // FONT REGULAR
+        {
+            XnbAsset asset = assetIO.LoadXnbAsset(Application.EngineAssembly, "Assets.Built-In.Fonts.IBMPlexMono-Regular.xnb");
+            Resource resource = new FontResource("font_regular");
+            container.Add((resource.GetType(), "font_regular"), resource);
+
+            var sourceCreateCommand = GraphicResourceCommand.Create("font_regular", asset.Data, asset.Type);
+            resourceBridge.NewCommand(sourceCreateCommand);
+
+            var sourceLinkCommand = GraphicResourceCommand.Link("font_regular", resource);
+            resourceBridge.NewCommand(sourceLinkCommand);
+
+        }
+
+        // GENERIC SHADER
+        {
+            XnbAsset asset = assetIO.LoadXnbAsset(Application.EngineAssembly, "Assets.Built-In.Shaders.GenericShader.xnb");
+            Resource resource = new FontResource("generic_shader");
+            container.Add((resource.GetType(), "generic_shader"), resource);
+
+            var sourceCreateCommand = GraphicResourceCommand.Create("generic_shader", asset.Data, asset.Type);
+            resourceBridge.NewCommand(sourceCreateCommand);
+
+            var sourceLinkCommand = GraphicResourceCommand.Link("generic_shader", resource);
+            resourceBridge.NewCommand(sourceLinkCommand);
         }
     }
-    internal Resources() { this.resourceBridge = ThreadBridges.GetBridge<ResourceBridge>(Application.RENDER_THREAD_NAME); }
- 
-    public int ResourceCount => resources != null ? resources.Count : 0;
- 
-    private FrozenDictionary<(Type, string), Resource> resources;
 
-    private ResourceBridge resourceBridge;
+    private AudioMedia audioMedia;
+    private CommandBridge<GraphicResourceCommand> resourceBridge;
+    private Dictionary<(Type, string), Resource> container;
+    public int ResourceCount => container.Count;
+ 
+    public void CreateResource(Asset asset)
+    {
+        switch(asset)
+        {
+            case AudioAsset audioAsset:
+                {
+                    if(container.ContainsKey((typeof(AudioResource), asset.Identifier)))
+                        throw new InvalidOperationException($"Audio resource with identifier '{asset.Identifier}' already exists");
 
+                    var clip = audioMedia.GetClip(audioAsset);
+                    var resource = new AudioResource(clip, asset.Identifier);
+                    container.Add((typeof(AudioResource), asset.Identifier), resource);
+                }
+            break;
+            case TextureAsset textureAsset:
+                {
+                    if(container.ContainsKey((typeof(TextureResource), asset.Identifier)))
+                        throw new InvalidOperationException($"Texture resource with identifier '{asset.Identifier}' already exists");
+
+                    var identifier = asset.Identifier;
+                    var colors = textureAsset.Colors;
+                    var size = textureAsset.Size;
+
+                    var resource = new TextureResource(identifier, 0, 0, (int)size.X, (int)size.Y, []);
+                    container.Add((resource.GetType(), asset.Identifier), resource);
+
+                    //Source commands
+                    var sourceCreateCommand = GraphicResourceCommand.Create(identifier, colors, (int)size.X, (int)size.Y);
+                    resourceBridge.NewCommand(sourceCreateCommand);
+
+                    var sourceLinkCommand = GraphicResourceCommand.Link(identifier, resource);
+                    resourceBridge.NewCommand(sourceLinkCommand);
+                }
+            break;
+            case AtlasAsset atlasAsset:
+                {
+                    if(container.ContainsKey((typeof(TextureResource), asset.Identifier)))
+                        throw new InvalidOperationException($"Texture resource with identifier '{asset.Identifier}' already exists");
+
+                    var identifier = asset.Identifier;
+                    var colors = atlasAsset.Colors;
+                    var size = atlasAsset.Size;
+
+                    var subTextures = new DenseList<TextureResource>(atlasAsset.Regions.Length);
+                    var resource = new TextureResource(identifier, 0, 0, (int)size.X, (int)size.Y, subTextures);
+                    container.Add((resource.GetType(), identifier), resource);
+
+                    //Source commands
+                    var sourceCreateCommand = GraphicResourceCommand.Create(identifier, colors, (int)size.X, (int)size.Y);
+                    resourceBridge.NewCommand(sourceCreateCommand);
+
+                    var sourceLinkCommand = GraphicResourceCommand.Link(identifier, resource);
+                    resourceBridge.NewCommand(sourceLinkCommand);
+
+                    var regions = atlasAsset.Regions;
+                    for(int i = 0; i < regions.Length; i++)
+                    {
+                        var region = regions[i];
+                        var regionIdentifier = region.Identifier;
+                        var regionRect = region.Rectangle;
+
+                        if(container.ContainsKey((typeof(TextureResource), regionIdentifier)))
+                        {
+                            Logger.NewLog(Logger.Log.Level.Warning, $"Unable to create atlas region, reason: Texture resource with identifier '{regionIdentifier}' already exists.");
+                            continue;
+                        }
+
+                        var regionResource = new TextureResource(regionIdentifier, regionRect);
+                        container.Add((regionResource.GetType(), regionIdentifier), regionResource);
+
+                        subTextures.Add(regionResource);
+
+                        var regionLinkCommand = GraphicResourceCommand.Link(identifier, regionResource);
+                        resourceBridge.NewCommand(regionLinkCommand);
+                    }
+                }
+            break;
+            case XnbAsset xnbAsset:
+                {
+                    switch(xnbAsset.Type)
+                    {
+                        case XnbAsset.XnbType.Font:
+                            if(container.ContainsKey((typeof(FontResource), asset.Identifier)))
+                                throw new InvalidOperationException($"Font resource with identifier '{asset.Identifier}' already exists");
+                        break;
+                        case XnbAsset.XnbType.Shader:
+                            if(container.ContainsKey((typeof(ShaderResource), asset.Identifier)))
+                                throw new InvalidOperationException($"Shader resource with identifier '{asset.Identifier}' already exists");
+                        break;
+                    }
+
+                    var identifier = asset.Identifier;
+                    var data = xnbAsset.Data;
+                    var type = xnbAsset.Type;
+                    Resource resource = type switch
+                    {
+                        XnbAsset.XnbType.Font   => new FontResource(identifier),
+                        XnbAsset.XnbType.Shader => new ShaderResource(identifier),
+                        _                       => throw new NotSupportedException($"Unsupported xnb type: {type}")
+                    };
+                    container.Add((resource.GetType(), asset.Identifier), resource);
+
+                    var sourceCreateCommand = GraphicResourceCommand.Create(identifier, data, type);
+                    resourceBridge.NewCommand(sourceCreateCommand);
+
+                    var sourceLinkCommand = GraphicResourceCommand.Link(identifier, resource);
+                    resourceBridge.NewCommand(sourceLinkCommand);
+                }
+            break;
+            default:
+                throw new ArgumentException($"Unsupported asset type '{asset.GetType()}'", nameof(asset));
+        }
+
+    }
     public T GetResource<T>(string identifier) where T : Resource
     {
         identifier = identifier.ToLower();
         Type type = typeof(T);
 
-        if (resources != null && resources.TryGetValue((type, identifier), out Resource resource))
+        if (container.TryGetValue((type, identifier), out Resource resource))
             return (T)resource;
 
         Logger.NewLog(Logger.Log.Level.Warning, $"Resource identified '{identifier}' was not found.");
         return null;
     }
-
-    internal void Reset()
+    public void UnloadResource(Resource resource)
     {
-        this.resources = resourceBridge.GetResourceContainer();
+        switch (resource)
+        {
+            case AudioResource audio:
+                if (!container.Remove((typeof(AudioResource), audio.Identifier))) return;
+                audioMedia.DisposeClip(audio);
+                break;
+
+            case TextureResource texture:
+            {
+                if (!texture.IsSource)           // region: owner decides
+                {
+                    Logger.NewLog(Logger.Log.Level.Warning,
+                        $"Cannot unload region '{texture.Identifier}' individually; unload its atlas.");
+                    return;
+                }
+                if (!container.Remove((typeof(TextureResource), texture.Identifier))) return;
+
+                var regions = texture.SubTextures;    // your DenseList
+                for (int i = 0; i < regions.Count; i++)
+                {
+                    resourceBridge.NewCommand(GraphicResourceCommand.Unlink(regions[i]));
+                    container.Remove((typeof(TextureResource), regions[i].Identifier));
+                }
+
+                resourceBridge.NewCommand(GraphicResourceCommand.Unlink(texture));
+                resourceBridge.NewCommand(GraphicResourceCommand.Unload(texture.Identifier, GraphicResourceType.Texture));
+                break;
+            }
+
+            case ShaderResource shader:
+                if (!container.Remove((typeof(ShaderResource), shader.Identifier))) return;
+                resourceBridge.NewCommand(GraphicResourceCommand.Unlink(shader));
+                resourceBridge.NewCommand(GraphicResourceCommand.Unload(shader.Identifier, GraphicResourceType.Shader));
+                break;
+
+            case FontResource font:
+                if (!container.Remove((typeof(FontResource), font.Identifier))) return;
+                resourceBridge.NewCommand(GraphicResourceCommand.Unlink(font));
+                resourceBridge.NewCommand(GraphicResourceCommand.Unload(font.Identifier, GraphicResourceType.Font));
+                break;
+
+            default:
+                throw new ArgumentException($"Unsupported resource type '{resource.GetType()}'", nameof(resource));
+        }
     }
 
-    internal void TryReset()
+    public Enumerator GetEnumerator() => new(this);
+    IEnumerator<Resource> IEnumerable<Resource>.GetEnumerator() => GetEnumerator();
+    IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+
+    public struct Enumerator: IEnumerator<Resource>
     {
-        if(resourceBridge.ChangedResources)
-            this.resources = resourceBridge.GetResourceContainer();
+        public Enumerator(Resources resources)
+        {
+            this.resources = resources;
+            Reset();
+        }
+
+        private Resources resources;
+        private Dictionary<(Type, string), Resource>.Enumerator inner;
+        private Resource current;
+
+        public Resource Current => current;
+        object IEnumerator.Current => Current;
+
+        public bool MoveNext()
+        {
+            return inner.MoveNext();
+        }
+
+        public void Reset()
+        {
+            current = default;
+            inner = resources.container.GetEnumerator();
+        }
+
+        public void Dispose()
+        {
+            resources = null;
+            current = null;
+        }
     }
 
-    internal FrozenDictionary<(Type, string), Resource> GetResources() => resources;
-
-    public IEnumerator<Resource> GetEnumerator()
-    {
-        if (resources == null)
-            yield break;
-
-        foreach (var resource in resources.Values)
-            yield return resource;
-    }
-
-    IEnumerator IEnumerable.GetEnumerator()
-    {
-        return GetEnumerator();
-    }
-
-    public Task CreateResourceFromAsset(Asset asset)
-    {
-        var command = new ResourceCommand();
-        command.Asset = asset;
-        command.Identifier = asset.Identifier;
-        command.Kind = ResourceCommand.Type.create;
-        return resourceBridge.NewCommand(command);
-    }
-
-    public Task UnloadResource(Resource resource)
-    {
-        var command = new ResourceCommand();
-        command.Identifier = resource.Identifier;
-        command.Kind = ResourceCommand.Type.unload;
-        return resourceBridge.NewCommand(command);
-    }
-}
-
-
-public abstract class Resource
-{
-    public readonly string Identifier;
-    internal Resource(string name)
-    {
-        ArgumentNullException.ThrowIfNullOrWhiteSpace(name, nameof(name));
-
-        Identifier = name;
-    }
-}
-
-public sealed class TextureResource : Resource
-{
-    internal TextureResource(Texture2D source, string name, Rectangle rectangle) 
-        : base(name)
-    {
-        ArgumentNullException.ThrowIfNull(source, nameof(source));
-
-        Source = source;
-        Rectangle = rectangle;
-    }
-
-    internal TextureResource(Texture2D source, string name, int posX, int posY, int width, int height) 
-        : this(source, name, new Rectangle(posX, posY, width, height)) { }
-        
-    internal readonly Texture2D Source;
-    
-    public readonly Rectangle Rectangle;
-
-    public int Width => Rectangle.Width;
-    public int Height => Rectangle.Height;
-
-    public int SourceWidth  => Source.Width;
-    public int SourceHeight => Source.Height;
-
-    public bool IsDisposed => Source.IsDisposed;
-
-    public sealed override string ToString() => $"{Identifier} {Rectangle}";
-}
-
-public sealed class FontResource : Resource
-{
-    internal FontResource(SpriteFont source, string name)
-        : base(name)
-    {
-        ArgumentNullException.ThrowIfNull(source, nameof(source));
-
-        Source = source;
-    }
-
-    internal readonly SpriteFont Source;
-
-    public ReadOnlyCollection<char> Characters => Source.Characters;
-
-    public bool IsDisposed => Source.Texture.IsDisposed;
-
-    public sealed override string ToString() => Identifier;
-}
-
-public sealed class ShaderResource : Resource
-{
-    internal ShaderResource(Effect source, string name)
-        : base(name)
-    {
-        ArgumentNullException.ThrowIfNull(source, nameof(source));
-
-        Source = source;
-    }
-
-    internal readonly Effect Source;
-
-    public bool IsDisposed => Source.IsDisposed;
-
-    public sealed override string ToString() => Source.ToString();
-}
-
-public sealed class AudioResource : Resource
-{
-    internal AudioResource(AudioClip clip, string name) 
-        : base(name)
-    {
-        ArgumentNullException.ThrowIfNull(clip, nameof(clip));
-
-        this.clip = clip;
-    }
-
-    private AudioClip clip;
-    
-    public AudioClip Clip => clip;
-    public bool IsDisposed => clip.IsDisposed;
-
-    public sealed override string ToString()
-    {
-        string identifier = !string.IsNullOrEmpty(Identifier) ? Identifier : "Unset";
-        return $"[AudioResource: '{identifier}' | {clip}]";
-    }
 }

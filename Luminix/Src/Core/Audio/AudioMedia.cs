@@ -18,7 +18,6 @@ public sealed class AudioMedia : Workspace.Service
         
         return audioMedia;
     }
-
     public AudioMedia()
     {
         AudioEngine = ThreadBridges.GetGlobalBridge<AudioBridge>();
@@ -47,6 +46,7 @@ public sealed class AudioMedia : Workspace.Service
     public AudioClip GetClip(AudioAsset audioAsset) => GetAudioEngine().GetOrCreateClip(audioAsset.PCMData, audioAsset.AudioFormat, audioAsset.SampleRate);
     public AudioClip GetClip(byte[] pcmData, AudioClip.Format audioFormat, AudioClip.SampleRate sampleRate) => GetAudioEngine().GetOrCreateClip(pcmData, audioFormat, sampleRate);
     public void DisposeClip(AudioClip audio) => GetAudioEngine().DisposeClip(audio);
+    public void DisposeClip(AudioResource audio) => GetAudioEngine().DisposeClip(audio.Clip);
 
     // <================================= AUDIO GROUPS =================================> \\
 
