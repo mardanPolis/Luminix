@@ -1,10 +1,9 @@
 using System;
-using System.IO;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using Microsoft.Xna.Framework.Input;
 using Luminix.Threading.Buffers;
 using Luminix.Threading.Bridges;
+using System.Runtime.CompilerServices;
 
 namespace Luminix.Rendering;
 
@@ -29,12 +28,11 @@ public sealed class RenderingSystem : Workspace.Service
     private Renderer renderer;
     private GraphicsDeviceManager graphics;
     private GameWindow window;
-    private GraphicResourceManager resourceManager;
+    private GraphicsResourceManager resourceManager;
 
     private TripleBufferBridge<RenderBuffer> renderBridge;
     private RenderBuffer renderBuffer;
 
-    private SpriteBatch spriteBatch;
     private RenderTarget2D renderTarget;
     private RenderTarget2D unscaledRenderTarget;
     private Rectangle renderTargetDestination;
@@ -54,7 +52,7 @@ public sealed class RenderingSystem : Workspace.Service
     public bool IsFullScreen => graphics.IsFullScreen;
     public bool IsVSync => graphics.SynchronizeWithVerticalRetrace;
 
-    public GraphicResourceManager ResourceManager => resourceManager;
+    public GraphicsResourceManager ResourceManager => resourceManager;
     public GraphicsDeviceManager GraphicsDeviceManager => graphics;
     public Microsoft.Xna.Framework.Graphics.GraphicsDevice GraphicsDevice => graphics.GraphicsDevice;
     public long FrameCount => frameCount;
@@ -85,30 +83,13 @@ public sealed class RenderingSystem : Workspace.Service
         {       
             renderBuffer = renderBridge.ReadBuffer;
             
-            var settingsChanged = false;
-
             ref RenderSettings renderSettings = ref renderBuffer.RenderSettings;
 
             var resolution = renderSettings.Resolution;
             var frameRate = renderSettings.FrameRate;
             var vSync = renderSettings.VSync;
 
-            //TODO framerate
-
-            if(this.resolution.X != resolution.X || this.resolution.Y != resolution.Y)
-            {
-                this.resolution = new Rectangle(0, 0, resolution.X, resolution.Y);
-                settingsChanged = true;
-            }
-
-            if(this.IsVSync != vSync)
-            {
-                this.graphics.SynchronizeWithVerticalRetrace = vSync;
-                settingsChanged = true;
-            }
-
-            if(settingsChanged)
-                Apply();
+            //TODO set settings
         }
 
 
@@ -142,110 +123,13 @@ public sealed class RenderingSystem : Workspace.Service
 
         //final
         GraphicsDevice.SetRenderTarget(null);
-        spriteBatch.Begin();
-        spriteBatch.Draw(this.renderTarget, renderTargetDestination, Color.White);
+        GraphicsDevice.Clear(Color.Black);
+        renderer.Render(this.renderTarget, renderTargetDestination, Color.White);
         spriteBatch.Draw(this.unscaledRenderTarget, unscaledRenderTargetDestination, Color.White);
         spriteBatch.End();
 
         frameCount++;
         drawCount = GraphicsDevice.Metrics.DrawCount;
-    }
-
-    public void TakeScreenshot(float partialTick)
-    {
-        string screenshotPath = Path.Combine("Screenshots", $"screenshot_{DateTime.Now:yyyyMMdd_HHmmss}.png");
-
-        try
-        {
-            if (!Directory.Exists("Screenshots"))
-                Directory.CreateDirectory("Screenshots");
-
-            using (var stream = new FileStream(screenshotPath, FileMode.Create))
-            {
-                // var screenShotRect = new Rectangle(0, 0, Settings.ScreenshotWidth, Settings.ScreenshotHeight);
-                // var screenShotTarget = new RenderTarget2D(GraphicsDevice, Settings.ScreenshotWidth, Settings.ScreenshotHeight);
-
-                // TODO : add screenshot resolution settings
-
-                var screenShotRect = new Rectangle(0, 0, 1920, 1080);
-                var screenShotTarget = new RenderTarget2D(GraphicsDevice, 1920, 1080);
-
-                NewFrame(partialTick);
-
-                var renderTargetDestination = this.renderTargetDestination;
-                var unscaledRenderTargetDestination = this.unscaledRenderTargetDestination;
-
-                {
-                    float scaleX = (float)screenShotTarget.Width / renderTarget.Width;
-                    float scaleY = (float)screenShotTarget.Height / renderTarget.Height;
-                    float scale = Math.Min(scaleX, scaleY);
-
-                    int newWidth = (int)(renderTarget.Width * scale);
-                    int newHeight = (int)(renderTarget.Height * scale);
-
-                    int posX = (screenShotTarget.Width - newWidth) / 2;
-                    int posY = (screenShotTarget.Height - newHeight) / 2;
-
-                    renderTargetDestination = new Rectangle(posX, posY, newWidth, newHeight);
-                }
-                {
-                    float scaleX = (float)screenShotTarget.Width / unscaledRenderTarget.Width;
-                    float scaleY = (float)screenShotTarget.Height / unscaledRenderTarget.Height;
-                    float scale = Math.Min(scaleX, scaleY);
-
-                    int newWidth = (int)(unscaledRenderTarget.Width * scale);
-                    int newHeight = (int)(unscaledRenderTarget.Height * scale);
-
-                    int posX = (screenShotTarget.Width - newWidth) / 2;
-                    int posY = (screenShotTarget.Height - newHeight) / 2;
-
-                    unscaledRenderTargetDestination = new Rectangle(posX, posY, newWidth, newHeight);
-                }
-
-                GraphicsDevice.SetRenderTarget(screenShotTarget);
-
-                spriteBatch.Begin();
-                spriteBatch.Draw(this.renderTarget, renderTargetDestination, Color.White);
-                spriteBatch.Draw(this.unscaledRenderTarget, unscaledRenderTargetDestination, Color.White);
-                spriteBatch.End();
-
-                GraphicsDevice.SetRenderTarget(null);
-
-                screenShotTarget.SaveAsPng(stream, screenShotRect.Width, screenShotRect.Height);
-                screenShotTarget.Dispose();
-
-                Logger.NewLog(Logger.Log.Level.Info, $"Screenshot saved to: {screenshotPath}");
-            }
-
-            GC.Collect();
-        }
-        catch (Exception e)
-        {
-            Logger.NewLog(Logger.Log.Level.Error, $"RenderingSystem: failed to produce a screenshot, reason: {e.Message}");
-        }
-    }
-
-    public void SetWindowMode(Window.Mode windowMode)
-    {
-        this.graphics.IsFullScreen = windowMode == Window.Mode.Fullscreen;
-    }
-
-    public void Apply()
-    {
-        var prevWindowPos = new Vector2(window.ClientBounds.X, window.ClientBounds.Y);
-        MouseState mouse = Mouse.GetState();
-
-        graphics.ApplyChanges();
-
-        if(resolution.Width != renderTarget.Width || resolution.Height != renderTarget.Height)
-        {
-            renderTarget.Dispose();
-            renderTarget = new RenderTarget2D(GraphicsDevice, resolution.Width, resolution.Height);
-        }
-
-        var currWindowPos = new Vector2(window.ClientBounds.X, window.ClientBounds.Y);
-        var pos = prevWindowPos - currWindowPos;
-        Mouse.SetPosition((int)(pos.X + mouse.X), (int)(pos.Y + mouse.Y));
     }
 
     private Matrix? GetViewMatrix(in Camera? cameraData, Viewport viewport, float partialTick)
@@ -318,5 +202,82 @@ public sealed class RenderingSystem : Workspace.Service
         }
 
         screenBounds = screenSize;
+    }
+
+
+    public void SetData(ReadOnlySpan<RenderInstance> instances, float partialTick)
+    {
+        activeCommandCount = instances.Length;
+        if (activeCommandCount == 0) return;
+
+        EnsureCapacity(activeCommandCount);
+
+        for (int i = 0; i < instances.Length; i++)
+        {
+            ref readonly var instance = ref instances[i];
+
+            var transform = Interpolate(instance.Transform, partialTick);
+
+            ushort layerBits = (ushort)Math.Clamp((int)(transform.Position.X * 100.0f), 0, 65535);
+
+            var key = BuildKey(layerBits, instance.Shader, instance.Resource);
+
+            commands[i] = new RenderCommand(key, i);
+            gpuInstanceBuffer[i] = new GPUInstanceData(instance.Shader, instance.Resource, instance.Color, transform, instance.Text);
+        }
+
+        Array.Sort(commands, 0, activeCommandCount);
+    }
+    public void SetData(ReadOnlySpan<RenderInstanceUI> instances)
+    {
+        activeCommandCount = instances.Length;
+        if (activeCommandCount == 0) return;
+
+        EnsureCapacity(activeCommandCount);
+
+        for (int i = 0; i < instances.Length; i++)
+        {
+            ref readonly var instance = ref instances[i];
+
+            var transform = new Transform(new Vector3(instance.X, instance.Y, 0), instance.Rotation);
+
+            ushort layerBits = (ushort)Math.Clamp((int)(transform.Position.X * 100.0f), 0, 65535);
+
+            var key = BuildKey(layerBits, instance.Shader, instance.Resource);
+
+            commands[i] = new RenderCommand(key, i);
+            gpuInstanceBuffer[i] = new GPUInstanceData(instance.Shader, instance.Resource, instance.Color, transform, instance.Text);
+        }
+
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)] private void EnsureCapacity(int requiredCapacity)
+    {
+        if (commands.Length < requiredCapacity)
+        {
+            int newCapacity = Math.Max(commands.Length * 2, requiredCapacity);
+            Array.Resize(ref commands, newCapacity);
+            Array.Resize(ref gpuInstanceBuffer, newCapacity);
+        }
+    }
+    [MethodImpl(MethodImplOptions.AggressiveInlining)] private static ulong BuildKey(uint layer, ShaderResource shader, Resource resource)
+    {
+        uint resourceIndex = resource is TextureResource texture ? texture.Index : ((FontResource)resource).Index;
+
+        ulong layerBits = ((ulong)layer & 0xFFFF) << 48;
+        ulong shaderBits = ((ulong)(shader.Index & 0xFF_FFFF)) << 24;
+        ulong textureBits = (ulong)(resourceIndex & 0xFF_FFFF);
+
+        return layerBits | shaderBits | textureBits;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)] 
+    private static Transform Interpolate(in TransformInterp transform, float partialTick)
+    {
+        return new Transform(
+            Vector3.Lerp(transform.Position0, transform.Position, partialTick),
+            Vector2.Lerp(transform.Scale0, transform.Scale, partialTick),
+            MathHelper.Lerp(transform.Rotation0, transform.Rotation, partialTick)
+        );
     }
 }

@@ -8,9 +8,9 @@ using System.Linq;
 
 namespace Luminix;
 
-public sealed class GraphicResourceManager : Microsoft.Xna.Framework.Content.ContentManager
+public sealed class GraphicsResourceManager : Microsoft.Xna.Framework.Content.ContentManager
 {
-    internal GraphicResourceManager(MainRender main) : base(main.Services)
+    internal GraphicsResourceManager(MainRender main) : base(main.Services)
     {
         this.main = main;
 
@@ -194,7 +194,7 @@ public sealed class GraphicResourceManager : Microsoft.Xna.Framework.Content.Con
 
     public Texture2D GetTexture(string identifier)
     {
-        return (Texture2D)sourceResources[(GraphicResourceType.Texture, identifier)];
+        return sourceResources.TryGetValue((GraphicResourceType.Texture, identifier), out object source) ? (Texture2D)source : NullTexture;
     }
     public Effect GetShader(string identifier)
     {
@@ -203,6 +203,23 @@ public sealed class GraphicResourceManager : Microsoft.Xna.Framework.Content.Con
     public SpriteFont GetFont(string identifier)
     {
         return (SpriteFont)sourceResources[(GraphicResourceType.Font, identifier)];
+    }
+
+    public Texture2D GetTexture(TextureResource resource)
+    {
+        if(linked.TryGetValue(resource, out object source))
+            return (Texture2D)source;
+        
+        Logger.NewLog(Logger.Log.Level.Error, $"TextureResource '{resource.Identifier}' is not linked to a source!");
+        return NullTexture;
+    }
+    public Effect GetShader(ShaderResource resource)
+    {
+        return linked.TryGetValue(resource, out object source) ? (Effect)source : throw new KeyNotFoundException($"ShaderResource '{resource.Identifier}' is not linked to a source!");
+    }
+    public SpriteFont GetFont(FontResource resource)
+    {
+        return linked.TryGetValue(resource, out object source) ? (SpriteFont)source : throw new KeyNotFoundException($"FontResource '{resource.Identifier}' is not linked to a source!");
     }
 
     private T Create<T>(string identifier, Stream stream) where T : class

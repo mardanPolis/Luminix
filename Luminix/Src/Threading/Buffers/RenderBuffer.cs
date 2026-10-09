@@ -27,6 +27,7 @@ internal sealed class RenderBuffer
     public RenderBuffer()
     {
         renderInstances = new(5120);
+        renderInstancesUI = new(256);
     }
 
     private Camera? cameraData;

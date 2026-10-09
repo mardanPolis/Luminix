@@ -29,7 +29,7 @@ internal sealed class MainRender : Microsoft.Xna.Framework.Game
         graphics.HardwareModeSwitch = false;
         graphics.PreferHalfPixelOffset = false;
 
-        resourceManager = new GraphicResourceManager(this);
+        resourceManager = new GraphicsResourceManager(this);
         IsMouseVisible = true;
     }
 
@@ -58,7 +58,7 @@ internal sealed class MainRender : Microsoft.Xna.Framework.Game
     private Workspace workspace;
     private RenderingSystem renderingSystem;
 
-    private GraphicResourceManager resourceManager;
+    private GraphicsResourceManager resourceManager;
     private GraphicsDeviceManager graphics;
 
     private InputHandler inputHandler;
@@ -71,7 +71,7 @@ internal sealed class MainRender : Microsoft.Xna.Framework.Game
     public Thread MainThread => mainThread;
     public TickedThread CoreThread => coreThread;
 
-    internal GraphicResourceManager ResourceManager => resourceManager;
+    internal GraphicsResourceManager ResourceManager => resourceManager;
     internal GraphicsDeviceManager GraphicsDeviceManager => graphics;
 
     public double FrameTime => frameTime;

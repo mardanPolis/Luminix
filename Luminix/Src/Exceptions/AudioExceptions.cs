@@ -7,14 +7,14 @@ namespace Luminix.Exceptions;
 public class AudioException : Exception
 {
     public AudioException(string message) : base(message) { }
-    public AudioException(string message, Exception? innerException) : base(message, innerException) { }
+    public AudioException(string message, Exception innerException) : base(message, innerException) { }
 }
 
 public sealed class UnavailableAudioEngine : AudioException
 {
     public string Operation { get; }
  
-    internal UnavailableAudioEngine(string operation, Exception? innerException = null)
+    internal UnavailableAudioEngine(string operation, Exception innerException = null)
         : base($"Cannot perform '{operation}', reason: AudioEngine is not available", innerException)
     {
         Operation = operation;
@@ -26,7 +26,7 @@ public sealed class AudioDeviceException : AudioException
     internal AudioDeviceResult Result { get; }
     public string Operation { get; }
  
-    internal AudioDeviceException(string operation, AudioDeviceResult result, Exception? innerException = null)
+    internal AudioDeviceException(string operation, AudioDeviceResult result, Exception innerException = null)
         : base($"Audio device failed during '{operation}', result: {result}.", innerException)
     {
         Operation = operation;
