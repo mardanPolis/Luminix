@@ -113,8 +113,6 @@ internal sealed class MainRender : Microsoft.Xna.Framework.Game
 
             startBytes = GC.GetAllocatedBytesForCurrentThread();
             
-            AssetIO assetIO = new AssetIO();
-
             //systems
             renderingSystem = new RenderingSystem(this, renderBridge);
 

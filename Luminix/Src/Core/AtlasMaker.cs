@@ -7,7 +7,7 @@ using RectpackSharp;
 
 namespace Luminix;
 
-public sealed class AtlasMaker
+internal sealed class AtlasMaker
 {
     private readonly record struct Entry(string Identifier, Color[] Colors, Vector2 Size);
     private readonly List<Entry> entries = new();
