@@ -1,6 +1,6 @@
 namespace Luminix;
 
-internal enum GraphicResourceType : byte
+public enum GraphicResourceType : byte
 {
     Texture,
     Shader,

@@ -112,14 +112,27 @@ internal sealed class MainRender : Microsoft.Xna.Framework.Game
             inputBridge.PopulateIfEmpty();
 
             startBytes = GC.GetAllocatedBytesForCurrentThread();
-            
+
             //systems
             renderingSystem = new RenderingSystem(this, renderBridge);
 
             //handlers
             inputHandler = new InputHandler(inputBridge);
             
-            windowBridge.ConsumeCreateCommands(HandleWindowCreateCommand);
+            windowBridge.ConsumeCreateCommands((command) =>
+            {
+                Window.Title = command.Title;
+                if(command.Position.HasValue) Window.Position = command.Position.Value;
+                if(command.WindowMode.HasValue) renderingSystem.SetWindowMode(command.WindowMode.Value);
+
+                var response = new WindowCreateCommandResponse
+                {
+                    Handle = Window.Handle,
+                    Position = Window.Position,
+                    WindowMode = renderingSystem.IsFullScreen ? Luminix.Window.Mode.Fullscreen : Luminix.Window.Mode.Windowed
+                };
+                return response;
+            });
 
             //base initialization
             base.Initialize();
@@ -147,23 +160,23 @@ internal sealed class MainRender : Microsoft.Xna.Framework.Game
                             break;
 
                         case (GraphicResourceCommandType.Unload, _):
-                            resourceManager.Unload(command.ResourceType, command.Identifier);
+                            resourceManager.UnloadResource(command.ResourceType, command.Identifier);
                             break;
 
                         case (GraphicResourceCommandType.Link, GraphicResourceType.Texture):
-                            resourceManager.LinkTexture(command.Identifier, (TextureResource)command.Data);
+                            resourceManager.LinkResource(command.Identifier, (TextureResource)command.Data);
                             break;
 
                         case (GraphicResourceCommandType.Link, GraphicResourceType.Font):
-                            resourceManager.LinkFont(command.Identifier, (FontResource)command.Data);
+                            resourceManager.LinkResource(command.Identifier, (FontResource)command.Data);
                             break;
 
                         case (GraphicResourceCommandType.Link, GraphicResourceType.Shader):
-                            resourceManager.LinkShader(command.Identifier, (ShaderResource)command.Data);
+                            resourceManager.LinkResource(command.Identifier, (ShaderResource)command.Data);
                             break;
 
                         case (GraphicResourceCommandType.Unlink, _):
-                            resourceManager.Unlink((Resource)command.Data);
+                            resourceManager.UnlinkResource((Resource)command.Data);
                             break;
                     }
                 }
@@ -225,7 +238,7 @@ internal sealed class MainRender : Microsoft.Xna.Framework.Game
         if(resourceBridge.CommandsIncoming)
             resourceBridge.ConsumeCommands(resourceCommandHandler);
 
-        if(windowBridge.CommandsIncoming) // TODO : look into the window clunky syncing where 
+        if(windowBridge.CommandsIncoming)
         {
             windowBridge.ConsumeCommands(windowCommandHandler);
             windowBridge.ClearSyncCommands();
@@ -266,21 +279,6 @@ internal sealed class MainRender : Microsoft.Xna.Framework.Game
         startBytes = GC.GetAllocatedBytesForCurrentThread();
     }
     
-    private WindowCreateCommandResponse HandleWindowCreateCommand(WindowCreateCommand command)
-    {
-        Window.Title = command.Title;
-        if(command.Position.HasValue) Window.Position = command.Position.Value;
-        if(command.WindowMode.HasValue) renderingSystem.SetWindowMode(command.WindowMode.Value);
-
-        var response = new WindowCreateCommandResponse
-        {
-            Handle = Window.Handle,
-            Position = Window.Position,
-            WindowMode = renderingSystem.IsFullScreen ? Luminix.Window.Mode.Fullscreen : Luminix.Window.Mode.Windowed
-        };
-        return response;
-    }
-
     private void SendWindowSyncCommand()
     {
         var command = new WindowSyncCommand

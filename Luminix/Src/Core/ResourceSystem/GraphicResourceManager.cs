@@ -1,7 +1,6 @@
 using System;
 using System.IO;
 using System.Collections.Generic;
-using System.Reflection;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Luminix.IO;
@@ -9,7 +8,7 @@ using System.Linq;
 
 namespace Luminix;
 
-internal sealed class GraphicResourceManager : Microsoft.Xna.Framework.Content.ContentManager
+public sealed class GraphicResourceManager : Microsoft.Xna.Framework.Content.ContentManager
 {
     internal GraphicResourceManager(MainRender main) : base(main.Services)
     {
@@ -27,6 +26,33 @@ internal sealed class GraphicResourceManager : Microsoft.Xna.Framework.Content.C
 
         NullTexture = new Texture2D(main.GraphicsDevice, 32, 32);
         NullTexture.SetData(nullTexturePixels);
+        
+        var assetIO = new AssetIO();
+
+        {
+            XnbAsset asset = assetIO.LoadXnbAsset(Application.EngineAssembly, "Assets.Built-In.Fonts.IBMPlexMono-Bold.xnb");
+            CreateFont("font_bold", asset.Data);
+            GenericFontBold = GetFont("font_bold");
+        }
+
+        {
+            XnbAsset asset = assetIO.LoadXnbAsset(Application.EngineAssembly, "Assets.Built-In.Fonts.IBMPlexMono-Medium.xnb");
+            CreateFont("font_medium", asset.Data);   
+            GenericFontMedium = GetFont("font_medium");
+        }
+
+        {
+            XnbAsset asset = assetIO.LoadXnbAsset(Application.EngineAssembly, "Assets.Built-In.Fonts.IBMPlexMono-Regular.xnb");
+            CreateFont("font_regular", asset.Data);
+            GenericFontRegular = GetFont("font_regular");   
+        }
+        
+        {
+            XnbAsset asset = assetIO.LoadXnbAsset(Application.EngineAssembly, "Assets.Built-In.Shaders.GenericShader.xnb");
+            CreateFont("generic_shader", asset.Data); 
+            GenericShader = GetShader("generic_shader");  
+        }
+
     }
 
     public new string RootDirectory => AssetIO.ASSET_DIRECTORY;
@@ -36,12 +62,16 @@ internal sealed class GraphicResourceManager : Microsoft.Xna.Framework.Content.C
 
     private Stream openedStream = null; 
 
-    private Texture2D NullTexture { get; }
-
     private readonly Dictionary<(GraphicResourceType, string), object>  sourceResources;
     private readonly Dictionary<Resource, object> linked;
 
-    public void CreateTexture(string identifier, Color[] colors, int X, int Y)
+    public Texture2D NullTexture { get; }
+    public Effect GenericShader { get; }
+    public SpriteFont GenericFontBold { get; }
+    public SpriteFont GenericFontMedium { get; }
+    public SpriteFont GenericFontRegular { get; }
+
+    internal void CreateTexture(string identifier, Color[] colors, int X, int Y)
     {
         ObjectDisposedException.ThrowIf(disposed, this);
         var source = new Texture2D(main.GraphicsDevice, X, Y);
@@ -49,14 +79,14 @@ internal sealed class GraphicResourceManager : Microsoft.Xna.Framework.Content.C
 
         sourceResources[(GraphicResourceType.Texture, identifier)] = source;
     }
-    public void CreateFont(string identifier, byte[] data)
+    internal void CreateFont(string identifier, byte[] data)
     {
         ObjectDisposedException.ThrowIf(disposed, this);
         var stream = new MemoryStream(data);
         var source = Create<SpriteFont>(identifier, stream);
         sourceResources[(GraphicResourceType.Font, identifier)] = source;
     }
-    public void CreateShader(string identifier, byte[] data)
+    internal void CreateShader(string identifier, byte[] data)
     {
         ObjectDisposedException.ThrowIf(disposed, this);
         var stream = new MemoryStream(data);
@@ -64,7 +94,7 @@ internal sealed class GraphicResourceManager : Microsoft.Xna.Framework.Content.C
         sourceResources[(GraphicResourceType.Shader, identifier)] = source;
     }
 
-    public void UpdateTexture(string identifier, Color[] colors)
+    internal void UpdateTexture(string identifier, Color[] colors)
     {
         ObjectDisposedException.ThrowIf(disposed, this);
         if(!sourceResources.TryGetValue((GraphicResourceType.Texture, identifier), out object source))
@@ -72,7 +102,8 @@ internal sealed class GraphicResourceManager : Microsoft.Xna.Framework.Content.C
 
         ((Texture2D)source).SetData(colors);
     }
-    public void Unload(GraphicResourceType resourceType, string identifier)
+    
+    public void UnloadResource(GraphicResourceType resourceType, string identifier)
     {
         ObjectDisposedException.ThrowIf(disposed, this);
 
@@ -82,6 +113,7 @@ internal sealed class GraphicResourceManager : Microsoft.Xna.Framework.Content.C
         var staleLinks = linked.Where(p => ReferenceEquals(p.Value, source))
                             .Select(p => p.Key)
                             .ToList();
+                            
         foreach (var resource in staleLinks)
             linked.Remove(resource);
             
@@ -90,15 +122,15 @@ internal sealed class GraphicResourceManager : Microsoft.Xna.Framework.Content.C
         
         sourceResources.Remove((resourceType, identifier));
     }
-    public sealed override void Unload()
+    public void UnloadResources()
     {
         foreach(var key in sourceResources.Keys)
         {
-            Unload(key.Item1, key.Item2);
+            UnloadResource(key.Item1, key.Item2);
         }
     }
 
-    public void LinkTexture(string identifier, TextureResource resource)
+    internal void LinkResource(string identifier, TextureResource resource)
     {
         ObjectDisposedException.ThrowIf(disposed, this);
 
@@ -115,7 +147,7 @@ internal sealed class GraphicResourceManager : Microsoft.Xna.Framework.Content.C
 
         linked[resource] = source;
     }
-    public void LinkFont(string identifier, FontResource resource)
+    internal void LinkResource(string identifier, FontResource resource)
     {
         ObjectDisposedException.ThrowIf(disposed, this);
 
@@ -132,7 +164,7 @@ internal sealed class GraphicResourceManager : Microsoft.Xna.Framework.Content.C
 
         linked[resource] = source;
     }
-    public void LinkShader(string identifier, ShaderResource resource)
+    internal void LinkResource(string identifier, ShaderResource resource)
     {
         ObjectDisposedException.ThrowIf(disposed, this);
 
@@ -150,7 +182,7 @@ internal sealed class GraphicResourceManager : Microsoft.Xna.Framework.Content.C
         linked[resource] = source;
     }
 
-    public void Unlink(Resource resource)
+    internal void UnlinkResource(Resource resource)
     {
         ObjectDisposedException.ThrowIf(disposed, this);
 
@@ -158,6 +190,19 @@ internal sealed class GraphicResourceManager : Microsoft.Xna.Framework.Content.C
             return;
 
         linked.Remove(resource);
+    }
+
+    public Texture2D GetTexture(string identifier)
+    {
+        return (Texture2D)sourceResources[(GraphicResourceType.Texture, identifier)];
+    }
+    public Effect GetShader(string identifier)
+    {
+        return (Effect)sourceResources[(GraphicResourceType.Shader, identifier)];
+    }
+    public SpriteFont GetFont(string identifier)
+    {
+        return (SpriteFont)sourceResources[(GraphicResourceType.Font, identifier)];
     }
 
     private T Create<T>(string identifier, Stream stream) where T : class
@@ -184,16 +229,20 @@ internal sealed class GraphicResourceManager : Microsoft.Xna.Framework.Content.C
         return base.OpenStream(relativePath);
     }
     
-    [Obsolete("Use Unload(Resource) instead")]
+    [Obsolete("Use UnloadResource(Resource) instead")]
     public sealed override void UnloadAsset(string assetName)
     {
         throw new NotSupportedException(nameof(UnloadAsset));
     }
-
-    [Obsolete("Use Unload() or Unload(Resource) instead")]
+    [Obsolete("Use UnloadResources() or UnloadResource(GraphicResourceType, string) instead")]
     public sealed override void UnloadAssets(IList<string> assetNames)
     {
         throw new NotSupportedException(nameof(UnloadAssets));
+    }
+    [Obsolete("Use UnloadResources() or UnloadResource(GraphicResourceType, string) instead")]
+    public sealed override void Unload()
+    {
+        throw new NotSupportedException(nameof(Unload));
     }
 
     protected override void Dispose(bool disposing)

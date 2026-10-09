@@ -1,6 +1,5 @@
 using System;
-using System.Collections.Frozen;
-using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using Luminix.Threading.Buffers;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
@@ -12,7 +11,6 @@ internal sealed class Renderer
     private const string MATRIX_PARAMETER = "MatrixTransform";
     private const string TEXTURE_PARAMETER = "Texture";
     private const string TEXTURE_SIZE_PARAMETER = "TextureSize";
-
     private struct Data : IVertexType
     {
         public Vector3 Position;
@@ -32,17 +30,19 @@ internal sealed class Renderer
 
         VertexDeclaration IVertexType.VertexDeclaration => VertexDeclaration;
     }
+    private record struct GPUInstanceData(ShaderResource Shader, Resource Resource, Color Color, Transform Transform, string Text);
+    
     public Renderer()
     {
         renderingSystem = Workspace.Current.GetService<RenderingSystem>();
         resources = renderingSystem.ResourceManager;
         spriteBatch = renderingSystem.SpriteBatch;
 
-        defaultShader = resources.GetResource<ShaderResource>("generic_shader");
-        defaultTexture = resources.GetResource<TextureResource>("NullTexture");
-        defaultFontBold = resources.GetResource<FontResource>("font-bold");
-        defaultFontMedium = resources.GetResource<FontResource>("font-medium");
-        defaultFontRegular = resources.GetResource<FontResource>("font-regular");
+        defaultTexture = resources.NullTexture;
+        defaultShader = resources.GenericShader;
+        defaultFontBold = resources.GenericFontBold;
+        defaultFontMedium = resources.GenericFontMedium;
+        defaultFontRegular = resources.GenericFontRegular;
 
         var vertices = new VertexPositionColorTexture[] {
             new (new Vector3(-0.5f, -0.5f, 0), Color.White, new Vector2(0, 0)),
@@ -58,8 +58,8 @@ internal sealed class Renderer
         indexBuffer = new IndexBuffer(renderingSystem.GraphicsDevice, IndexElementSize.SixteenBits, 6, BufferUsage.WriteOnly);
         indexBuffer.SetData(indices);
         
-        dataArray = new Data[8192];
-        dataBuffer = new DynamicVertexBuffer(renderingSystem.GraphicsDevice, typeof(Data), 8192, BufferUsage.WriteOnly);
+        dataArray = new Data[4096];
+        dataBuffer = new DynamicVertexBuffer(renderingSystem.GraphicsDevice, typeof(Data), 4096, BufferUsage.WriteOnly);
 
         bindings =
         [
@@ -74,11 +74,11 @@ internal sealed class Renderer
     private readonly GraphicResourceManager resources;
     private readonly SpriteBatch      spriteBatch;
 
-    private readonly ShaderResource  defaultShader;
-    private readonly TextureResource defaultTexture;
-    private readonly FontResource    defaultFontBold;
-    private readonly FontResource    defaultFontMedium;
-    private readonly FontResource    defaultFontRegular;
+    private readonly Effect     defaultShader;
+    private readonly Texture2D  defaultTexture;
+    private readonly SpriteFont defaultFontBold;
+    private readonly SpriteFont defaultFontMedium;
+    private readonly SpriteFont defaultFontRegular;
 
     private DynamicVertexBuffer dataBuffer;
     private IndexBuffer indexBuffer;
@@ -89,17 +89,55 @@ internal sealed class Renderer
 
     private Microsoft.Xna.Framework.Graphics.GraphicsDevice device;
 
-    private RenderBuffer renderBuffer;
+    private RenderCommand[] commands = new RenderCommand[4096];
+    private GPUInstanceData[] gpuInstanceBuffer = new GPUInstanceData[4096];
+    private int activeCommandCount = 0;
 
-    private float partialTick;
-
-
-    private readonly HashSet<int> frustumCulledGroups = new();
-
-    public void SetData(RenderBuffer buffer, float partialTick)
+    private void SetData(ReadOnlySpan<RenderInstance> instances, float partialTick)
     {
-        this.renderBuffer = buffer;
-        this.partialTick = partialTick;
+        activeCommandCount = instances.Length;
+        if (activeCommandCount == 0) return;
+
+        EnsureCapacity(activeCommandCount);
+
+        for (int i = 0; i < instances.Length; i++)
+        {
+            ref readonly var instance = ref instances[i];
+
+            var transform = Interpolate(instance.Transform, partialTick);
+
+            ushort layerBits = (ushort)Math.Clamp((int)(transform.Position.X * 100.0f), 0, 65535);
+
+            var key = BuildKey(layerBits, instance.Shader, instance.Resource);
+
+            commands[i] = new RenderCommand(key, i);
+            gpuInstanceBuffer[i] = new GPUInstanceData(instance.Shader, instance.Resource, instance.Color, transform, instance.Text);
+        }
+
+        Array.Sort(commands, 0, activeCommandCount);
+    }
+
+    private void SetData(ReadOnlySpan<RenderInstanceUI> instances)
+    {
+        activeCommandCount = instances.Length;
+        if (activeCommandCount == 0) return;
+
+        EnsureCapacity(activeCommandCount);
+
+        for (int i = 0; i < instances.Length; i++)
+        {
+            ref readonly var instance = ref instances[i];
+
+            var transform = new Transform(new Vector3(instance.X, instance.Y, 0), instance.Rotation);
+
+            ushort layerBits = (ushort)Math.Clamp((int)(transform.Position.X * 100.0f), 0, 65535);
+
+            var key = BuildKey(layerBits, instance.Shader, instance.Resource);
+
+            commands[i] = new RenderCommand(key, i);
+            gpuInstanceBuffer[i] = new GPUInstanceData(instance.Shader, instance.Resource, instance.Color, transform, instance.Text);
+        }
+
     }
 
     public void Render()
@@ -107,23 +145,11 @@ internal sealed class Renderer
         Matrix? transformMatrix = renderingSystem.TransformMatrix;
 
         if(!transformMatrix.HasValue) return;
-        if(renderBuffer == null) return;
+        if(activeCommandCount == 0) return;
         
         Matrix transformMatrixValue = transformMatrix.Value;
 
         spriteBatch.Begin(transformMatrix:transformMatrixValue, sortMode:SpriteSortMode.Immediate);
-
-        Vector2 frustumTopLeft, frustumBtmRight;
-        ComputeFrustumBounds(renderingSystem.ViewMatrix.Value, out frustumTopLeft, out frustumBtmRight);
- 
-        frustumCulledGroups.Clear();
-        var groups = renderBuffer.GetGroups();
-        for (int g = 0; g < groups.Length; g++)
-        {
-            var grp = groups[g];
-            if (FrustumCulled(grp.topLeft, grp.btmRight, frustumTopLeft, frustumBtmRight))
-                frustumCulledGroups.Add(g);
-        }
 
         int commandIndex = 0;
         int commandCount = 0;
@@ -132,14 +158,6 @@ internal sealed class Renderer
  
         try
         {
-            var commands = renderBuffer.GetWorldRenderCommands();
-            commandCount = commands.Length;
- 
-            var nonInterpolatedSprites = renderBuffer.GetSprites();
-            var nonInterpolatedTexts   = renderBuffer.GetTexts();
-            var interpolatedSprites    = renderBuffer.GetInterpolatedSprites();
-            var interpolatedTexts      = renderBuffer.GetInterpolatedTexts();
- 
             Effect    prevEffect  = null;
             Texture2D prevTexture = null;
  
@@ -205,59 +223,6 @@ internal sealed class Renderer
                         break;
                     }
  
-                    case RenderBuffer.RenderObjectType.SpriteInterpolated:
-                    {
-                        var instance = interpolatedSprites[commandDataIndex];
-                        var transform = instance.Transform;
-                        var from = transform.StartTransform;
-                        var to = transform.EndTransform;
- 
-                        var textureResource = instance.Texture ?? defaultTexture;
-                        var shaderResource  = instance.Shader ?? defaultShader;
-
-                        var textureSource = textureResource.Source;
-                        var textureRegion = textureResource.Rectangle;
-                        var effect        = shaderResource.Source;
- 
-                        if ((prevEffect != null && prevEffect != effect) ||
-                            (prevTexture != null && prevTexture != textureSource))
-                        {
-                            Flush(prevEffect, ref flushed, ref currentInstanceCount);
-                        }
- 
-                        if (prevEffect != effect || prevTexture != textureSource)
-                        {
-                            effect.Parameters[MATRIX_PARAMETER].SetValue(transformMatrixValue);
-                            effect.Parameters[TEXTURE_PARAMETER].SetValue(textureSource);
-                            effect.Parameters[TEXTURE_SIZE_PARAMETER].SetValue(new Vector2(textureSource.Width, textureSource.Height));
-                        }
- 
-                        prevEffect  = effect;
-                        prevTexture = textureSource;
- 
-                        Vector3 position = Vector3.Lerp(from.Position, to.Position, partialTick);
-                        Vector2 size     = Vector2.Lerp(from.Scale, to.Scale, partialTick);
-                        float   rotation = MathHelper.Lerp(from.Rotation, to.Rotation, partialTick);
- 
-                        float texW = textureSource.Width;
-                        float texH = textureSource.Height;
- 
-                        flushed = false;
-                        dataArray[currentInstanceCount++] = new Data
-                        {
-                            Position = position,
-                            Scale     = size,
-                            Rotation = rotation,
-                            RectPos  = new Vector2(textureRegion.X / texW, textureRegion.Y / texH),
-                            RectSize = new Vector2(textureRegion.Width / texW, textureRegion.Height / texH)
-                        };
- 
-                        if (currentInstanceCount >= dataArray.Length)
-                            Flush(prevEffect, ref flushed, ref currentInstanceCount);
- 
-                        break;
-                    }
- 
                     case RenderBuffer.RenderObjectType.TextNonInterpolated:
                     {
                         //FIXME : Shader ignored
@@ -270,24 +235,6 @@ internal sealed class Renderer
 
                         spriteBatch.DrawString(instance.Font?.Source ?? defaultFontRegular.Source, instance.Text, new Vector2(transform.Position.X, transform.Position.Y), Color.White,
                         transform.Rotation, new Vector2(0, 0), transform.Scale, SpriteEffects.None, transform.Position.Z);
-                        break;
-                    }
- 
-                    case RenderBuffer.RenderObjectType.TextInterpolated:
-                    {
-                        //FIXME : Shader ignored
-
-                        var instance = interpolatedTexts[commandDataIndex];
-                        var transform = instance.Transform;
-                        var from = transform.StartTransform;
-                        var to = transform.EndTransform;
-
-                        var position = Vector3.Lerp(from.Position, to.Position, partialTick);
-                        var size = Vector2.Lerp(from.Scale, to.Scale, partialTick);
-                        var rotation = MathHelper.Lerp(from.Rotation, to.Rotation, partialTick);
-
-                        spriteBatch.DrawString(instance.Font?.Source ?? defaultFontRegular.Source, instance.Text, new Vector2(position.X, position.Y), Color.White,
-                        rotation, new Vector2(0, 0), size, SpriteEffects.None, position.Z);
                         break;
                     }
                 }
@@ -304,123 +251,6 @@ internal sealed class Renderer
 
         spriteBatch.End();
     }
-
-    public void UnscaledRender()
-    {
-        if(renderBuffer == null)
-            return;
-
-        int commandIndex = 0;
-        int commandCount = 0;
-
-        int imageCount = 0;
-        int labelCount = 0;
-
-        RenderBuffer.UiRenderObjectType commandDataType = RenderBuffer.UiRenderObjectType.Image;
-
-        try
-        {
-            var commands = renderBuffer.GetUiRenderCommands();
-            commandCount = commands.Length;
- 
-            var images = renderBuffer.GetImages();
-            var labels = renderBuffer.GetLabels();
-            imageCount = images.Length;
-            labelCount = labels.Length;
-            
-            ShaderResource currentShader = null;
-
-            spriteBatch.Begin(sortMode:SpriteSortMode.Deferred);
-            for (commandIndex = 0; commandIndex < commandCount; commandIndex++)
-            {
-                var command         = commands[commandIndex];
-                var commandDataIndex = command.DataIndex;
-                commandDataType = command.Type;
-
-                switch(commandDataType)
-                {
-                    case RenderBuffer.UiRenderObjectType.Image:
-                        var image = images[commandDataIndex];
-
-                        if(image.Shader != currentShader)
-                        {
-                            currentShader = image.Shader;
-                            spriteBatch.End();
-                            spriteBatch.Begin(effect:currentShader?.Source);
-                        }
-
-                        spriteBatch.Draw(image.Texture?.Source ?? defaultTexture.Source, new Vector2(image.X, image.Y), image.Texture.Rectangle, image.Color, image.Rotation, Vector2.Zero, new Vector2(image.Width, image.Height), SpriteEffects.None, 0f);
-                    break;
-                    case RenderBuffer.UiRenderObjectType.Label:
-
-                        var label = labels[commandDataIndex];
-
-                        if(label.Shader != currentShader)
-                        {
-                            currentShader = label.Shader;
-                            spriteBatch.End();
-                            spriteBatch.Begin(effect:currentShader?.Source);
-                        }
-
-                        spriteBatch.DrawString(label.Font?.Source ?? defaultFontMedium.Source, label.Text, new Vector2(label.X, label.Y), label.Color);
-                    break;
-                }
-
-            }
-            spriteBatch.End();
-
-            if(!renderingSystem.TransformMatrix.HasValue)
-            {
-                spriteBatch.Begin();
-                Vector2 textSize = defaultFontBold.Source.MeasureString("No camera detected!");
-                Vector2 Center = new Vector2(
-                    renderingSystem.Viewport.Width / 2 - textSize.X / 2,
-                    renderingSystem.Viewport.Height / 2 - textSize.Y / 2
-                );
-
-                spriteBatch.DrawString(defaultFontBold.Source, "No camera detected!", Center, Color.White);
-                spriteBatch.End();
-            }
-        }
-        catch(Exception ex)
-        {
-            switch(commandDataType)
-            {
-                case RenderBuffer.UiRenderObjectType.Image:
-                    Logger.NewLog(Logger.Log.Level.Error, $"Exception happened during rendering (CommandIndex/CommandCount/ImageCount : {commandIndex}/{commandCount}/{imageCount}), exception: {ex}");
-                break;
-                case RenderBuffer.UiRenderObjectType.Label:
-                    Logger.NewLog(Logger.Log.Level.Error, $"Exception happened during rendering (CommandIndex/CommandCount/LabelCount : {commandIndex}/{commandCount}/{labelCount}), exception: {ex}");
-                break;
-            }
-            throw;
-        }
-    }
-
-    private void ComputeFrustumBounds(Matrix viewMatrix, out Vector2 topLeft, out Vector2 btmRight)
-    {
-        Matrix invView = Matrix.Invert(viewMatrix);
- 
-        float halfW = renderingSystem.Viewport.Width  * 0.5f;
-        float halfH = renderingSystem.Viewport.Height * 0.5f;
- 
-        Vector2 camPos = new Vector2(invView.Translation.X, invView.Translation.Y);
- 
-        topLeft  = camPos - new Vector2(halfW, halfH);
-        btmRight = camPos + new Vector2(halfW, halfH);
-    }
-    
-    //TODO : Complete Frustum Culling
-
-    private bool FrustumCulled(Vector2 groupTopLeft, Vector2 groupBtmRight,
-                                Vector2 frustumTopLeft, Vector2 frustumBtmRight)
-    {
-        return groupBtmRight.X < frustumTopLeft.X  ||
-               groupTopLeft.X  > frustumBtmRight.X ||
-               groupTopLeft.Y  < frustumBtmRight.Y ||
-               groupBtmRight.Y > frustumTopLeft.Y;
-    }
-
 
     private void Flush(Effect effect, ref bool flushed, ref int currentInstanceCount)
     {
@@ -440,5 +270,35 @@ internal sealed class Renderer
     
         currentInstanceCount = 0;
         flushed = true;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)] private void EnsureCapacity(int requiredCapacity)
+    {
+        if (commands.Length < requiredCapacity)
+        {
+            int newCapacity = Math.Max(commands.Length * 2, requiredCapacity);
+            Array.Resize(ref commands, newCapacity);
+            Array.Resize(ref gpuInstanceBuffer, newCapacity);
+        }
+    }
+    [MethodImpl(MethodImplOptions.AggressiveInlining)] private static ulong BuildKey(uint layer, ShaderResource shader, Resource resource)
+    {
+        uint resourceIndex = resource is TextureResource texture ? texture.Index : ((FontResource)resource).Index;
+
+        ulong layerBits = ((ulong)layer & 0xFFFF) << 48;
+        ulong shaderBits = ((ulong)(shader.Index & 0xFF_FFFF)) << 24;
+        ulong textureBits = (ulong)(resourceIndex & 0xFF_FFFF);
+
+        return layerBits | shaderBits | textureBits;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)] 
+    private static Transform Interpolate(in TransformInterp transform, float partialTick)
+    {
+        return new Transform(
+            Vector3.Lerp(transform.Position0, transform.Position, partialTick),
+            Vector2.Lerp(transform.Scale0, transform.Scale, partialTick),
+            MathHelper.Lerp(transform.Rotation0, transform.Rotation, partialTick)
+        );
     }
 }

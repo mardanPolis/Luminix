@@ -1,9 +1,7 @@
 using System;
 using System.Collections.Generic;
-using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Luminix.Rendering;
-using Luminix.Rendering.RenderInstances;
 using Microsoft.Xna.Framework;
 
 namespace Luminix.Threading.Buffers;
@@ -22,49 +20,22 @@ internal sealed class RenderBuffer
         Image,
         Label,
     }
-
-    internal readonly record struct RenderCommand(ulong SortKey, RenderObjectType Type, int DataIndex) : IComparable<RenderCommand>
-    {
-        public int CompareTo(RenderCommand other) => SortKey.CompareTo(other.SortKey);
-    }
-    internal readonly record struct UiRenderCommand(UiRenderObjectType Type, int DataIndex);
+    
+    public readonly record struct RenderCommand(uint Identifier);
+    internal readonly record struct UiRenderCommand(uint DataIndex);
    
-    internal readonly record struct RenderGroup(Vector2 topLeft, Vector2 btmRight);
-
     public RenderBuffer()
     {
-        instanceSprites = new(2560);
-        instanceTexts = new(128);
-        interpolatedInstanceSprites = new(2560);
-        interpolatedInstanceTexts = new(128);
-
-        instanceImages = new(128);
-        instanceLabels = new(128);
-
-        renderGroups = new(512);
-
-        worldRenderCommands = new(4096);
-        uiRenderCommands = new(256);
+        renderInstances = new(5120);
     }
 
     private Camera? cameraData;
 
     //WorldSpace
-    private readonly List<InstanceSprite>  instanceSprites;
-    private readonly List<InstanceText>    instanceTexts;
-
-    private readonly List<InterpolatedInstanceSprite>  interpolatedInstanceSprites;
-    private readonly List<InterpolatedInstanceText>    interpolatedInstanceTexts;
- 
-    private readonly List<RenderGroup> renderGroups;
-
+    private readonly List<RenderInstance>  renderInstances;
+    
     //ScreenSpace
-    private readonly List<InstanceImage> instanceImages;
-    private readonly List<InstanceLabel> instanceLabels;
-
-    //Commands
-    private readonly List<RenderCommand> worldRenderCommands;
-    private readonly List<UiRenderCommand> uiRenderCommands;
+    private readonly List<RenderInstanceUI> renderInstancesUI;
 
     public RenderSettings RenderSettings;
 
@@ -75,148 +46,43 @@ internal sealed class RenderBuffer
 
     internal void PushSprite(ShaderResource shader, TextureResource texture, Color color, in Transform transform)
     {
-        ulong key = BuildSpriteKey(shader, texture);
- 
-        int dataIndex = instanceSprites.Count;
-        instanceSprites.Add(new InstanceSprite(shader, texture, color, transform));
-        NewCommand(key, RenderObjectType.SpriteNonInterpolated, dataIndex);
+        renderInstances.Add(new RenderInstance(shader, texture, color, new(transform), null));
     }
     internal void PushInterpolatedSprite(ShaderResource shader, TextureResource texture, Color color, in TransformInterp transform)
     {
-        ulong key = BuildSpriteKey(shader, texture);
- 
-        int dataIndex = interpolatedInstanceSprites.Count;
-        interpolatedInstanceSprites.Add(new InterpolatedInstanceSprite(shader, texture, color, transform));
-        NewCommand(key, RenderObjectType.SpriteInterpolated, dataIndex);
+        renderInstances.Add(new RenderInstance(shader, texture, color, transform, null));
     }
-
-
     internal void PushText(ShaderResource shader, FontResource font, Color color, string text, in Transform transform)
     {
-        ulong key = BuildFontKey(shader, font);
- 
-        int dataIndex = instanceTexts.Count;
-        instanceTexts.Add(new InstanceText(shader, font, color, text, transform));
-        NewCommand(key, RenderObjectType.TextNonInterpolated, dataIndex);
+        renderInstances.Add(new RenderInstance(shader, font, color, new(transform), text));
     }
-
     internal void PushInterpolatedText(ShaderResource shader, FontResource font, Color color, string text, in TransformInterp transform)
     {
-        ulong key = BuildFontKey(shader, font);
- 
-        int dataIndex = interpolatedInstanceTexts.Count;
-        interpolatedInstanceTexts.Add(new InterpolatedInstanceText(shader, font, color, text, transform));
-        NewCommand(key, RenderObjectType.TextInterpolated, dataIndex);
+        renderInstances.Add(new RenderInstance(shader, font, color, transform, text));
     }
 
     internal void PushImage(ShaderResource shader, TextureResource image, Color color, int x, int y, int width, int height, float rotation)
     {
-        int dataIndex = instanceImages.Count;
-        NewCommand(UiRenderObjectType.Image, dataIndex);
-        instanceImages.Add(new InstanceImage(shader, image, color, x, y, width, height, rotation));
+        renderInstancesUI.Add(new RenderInstanceUI(shader, image, color, x, y, width, height, rotation, null));
     }
-
     internal void PushLabel(ShaderResource shader, FontResource font, Color color, string text, int x, int y, int width, int height, float rotation)
     {
-        int dataIndex = instanceLabels.Count;
-        NewCommand(UiRenderObjectType.Label, dataIndex);
-        instanceLabels.Add(new InstanceLabel(shader, font, color, text, x, y, width, height, rotation));
+        renderInstancesUI.Add(new RenderInstanceUI(shader, font, color, x, y, width, height, rotation, text));
     }
-
-
-    //TODO : Add RenderGroups, NonInterpolated only.
-    internal void PushSpriteGroup()
-    {
-        
-    }
-
-    //TODO : Add PushBatch, batched sprites only.
 
     internal Camera? GetCameraData()
         => cameraData;
 
-    internal ReadOnlySpan<InstanceSprite> GetSprites() 
-        => CollectionsMarshal.AsSpan(instanceSprites);
+    internal ReadOnlySpan<RenderInstance> GetRenderInstances() 
+        => CollectionsMarshal.AsSpan(renderInstances);
 
-    internal ReadOnlySpan<InstanceText> GetTexts() 
-        => CollectionsMarshal.AsSpan(instanceTexts);
-
-    internal ReadOnlySpan<InterpolatedInstanceSprite> GetInterpolatedSprites() 
-        => CollectionsMarshal.AsSpan(interpolatedInstanceSprites);
-
-    internal ReadOnlySpan<InterpolatedInstanceText> GetInterpolatedTexts() 
-        => CollectionsMarshal.AsSpan(interpolatedInstanceTexts);
-
-    internal ReadOnlySpan<RenderGroup> GetGroups() 
-        => CollectionsMarshal.AsSpan(renderGroups);
-
-    internal ReadOnlySpan<InstanceImage> GetImages()
-        => CollectionsMarshal.AsSpan(instanceImages);
-
-    internal ReadOnlySpan<InstanceLabel> GetLabels()
-        => CollectionsMarshal.AsSpan(instanceLabels);
-
-    internal ReadOnlySpan<RenderCommand> GetWorldRenderCommands() 
-        => CollectionsMarshal.AsSpan(worldRenderCommands);
-
-    internal ReadOnlySpan<UiRenderCommand> GetUiRenderCommands() 
-        => CollectionsMarshal.AsSpan(uiRenderCommands);
-
-    internal void Sort()
-    {
-        worldRenderCommands.Sort();
-    }
+    internal ReadOnlySpan<RenderInstanceUI> GetUIRenderInstances()
+        => CollectionsMarshal.AsSpan(renderInstancesUI);
 
     internal void Reset()
     {
-        worldRenderCommands.Clear();
-        uiRenderCommands.Clear();
-
-        instanceSprites.Clear();
-        instanceTexts.Clear();
-        interpolatedInstanceSprites.Clear();
-        interpolatedInstanceTexts.Clear();
-
-        instanceLabels.Clear();
-        instanceImages.Clear();
-
-        renderGroups.Clear();
-    }
-
-    private void NewCommand(ulong SortKey, RenderObjectType Type, int DataIndex)
-    {
-        worldRenderCommands.Add(new RenderCommand(SortKey, Type, DataIndex));
-    }
-
-    private void NewCommand(UiRenderObjectType Type, int DataIndex)
-    {
-        uiRenderCommands.Add(new UiRenderCommand(Type, DataIndex));
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static ulong BuildSpriteKey(ShaderResource shader, TextureResource texture)
-    {
-        int shaderHash = RuntimeHelpers.GetHashCode(shader?.Source);
-        int textureHash = RuntimeHelpers.GetHashCode(texture?.Source);
-
-        uint shaderCode = (uint)shaderHash;
-        uint textureCode = (uint)textureHash;
-
-        ulong combinedHash = ((ulong)shaderCode << 32) | (ulong)textureCode;
-        return combinedHash;
-    }
- 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static ulong BuildFontKey(ShaderResource shader, FontResource font)
-    {
-        int shaderHash = RuntimeHelpers.GetHashCode(shader?.Source);
-        int fontHash = RuntimeHelpers.GetHashCode(font?.Source);
-
-        uint shaderCode = (uint)shaderHash;
-        uint fontCode = (uint)fontHash;
-
-        ulong combinedHash = ((ulong)shaderCode << 32) | (ulong)fontCode;
-        return combinedHash;
+        renderInstances.Clear();
+        renderInstancesUI.Clear();
     }
 }
 

@@ -23,12 +23,8 @@ public sealed class Resources : Workspace.Service, IEnumerable<Resource>
 
         // FONT BOLD
         {
-            XnbAsset asset = assetIO.LoadXnbAsset(Application.EngineAssembly, "Assets.Built-In.Fonts.IBMPlexMono-Bold.xnb");
             Resource resource = new FontResource("font_bold");
             container.Add((resource.GetType(), "font_bold"), resource);
-
-            var sourceCreateCommand = GraphicResourceCommand.Create("font_bold", asset.Data, asset.Type);
-            resourceBridge.NewCommand(sourceCreateCommand);
 
             var sourceLinkCommand = GraphicResourceCommand.Link("font_bold", resource);
             resourceBridge.NewCommand(sourceLinkCommand);
@@ -36,25 +32,17 @@ public sealed class Resources : Workspace.Service, IEnumerable<Resource>
 
         // FONT MEDIUM
         {
-            XnbAsset asset = assetIO.LoadXnbAsset(Application.EngineAssembly, "Assets.Built-In.Fonts.IBMPlexMono-Medium.xnb");
             Resource resource = new FontResource("font_medium");
-            container.Add((resource.GetType(), "font_medium"), resource);
+            container.Add((resource.GetType(), resource.Identifier), resource);
 
-            var sourceCreateCommand = GraphicResourceCommand.Create("font_medium", asset.Data, asset.Type);
-            resourceBridge.NewCommand(sourceCreateCommand);
-
-            var sourceLinkCommand = GraphicResourceCommand.Link("font_medium", resource);
+            var sourceLinkCommand = GraphicResourceCommand.Link(resource.Identifier, resource);
             resourceBridge.NewCommand(sourceLinkCommand);
         }
 
         // FONT REGULAR
         {
-            XnbAsset asset = assetIO.LoadXnbAsset(Application.EngineAssembly, "Assets.Built-In.Fonts.IBMPlexMono-Regular.xnb");
             Resource resource = new FontResource("font_regular");
             container.Add((resource.GetType(), "font_regular"), resource);
-
-            var sourceCreateCommand = GraphicResourceCommand.Create("font_regular", asset.Data, asset.Type);
-            resourceBridge.NewCommand(sourceCreateCommand);
 
             var sourceLinkCommand = GraphicResourceCommand.Link("font_regular", resource);
             resourceBridge.NewCommand(sourceLinkCommand);
@@ -63,13 +51,9 @@ public sealed class Resources : Workspace.Service, IEnumerable<Resource>
 
         // GENERIC SHADER
         {
-            XnbAsset asset = assetIO.LoadXnbAsset(Application.EngineAssembly, "Assets.Built-In.Shaders.GenericShader.xnb");
             Resource resource = new FontResource("generic_shader");
             container.Add((resource.GetType(), "generic_shader"), resource);
-
-            var sourceCreateCommand = GraphicResourceCommand.Create("generic_shader", asset.Data, asset.Type);
-            resourceBridge.NewCommand(sourceCreateCommand);
-
+            
             var sourceLinkCommand = GraphicResourceCommand.Link("generic_shader", resource);
             resourceBridge.NewCommand(sourceLinkCommand);
         }

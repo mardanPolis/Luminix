@@ -37,6 +37,17 @@ public struct TransformInterp
         Rotation = rotation;
     }
 
+    internal TransformInterp(in Transform transform)
+    {
+        Position0 = transform.Position;
+        Rotation0 = transform.Rotation;
+        Scale0 = transform.Scale;
+
+        Position = transform.Position;
+        Rotation = transform.Rotation;
+        Scale = transform.Scale;
+    }
+
     public Vector3 Position0;
     public Vector2 Scale0;
     public float Rotation0;

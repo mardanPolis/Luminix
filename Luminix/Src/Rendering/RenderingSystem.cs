@@ -68,13 +68,6 @@ public sealed class RenderingSystem : Workspace.Service
     public Matrix ProjectionMatrix => projectionMatrix;
     public Matrix? TransformMatrix => viewMatrix.HasValue ? viewMatrix.Value * projectionMatrix : null;
 
-    public double FrameTime => main.FrameTime;
-    public double FrameDeltaTime => main.FrameDeltaTime;
-    public double FPS => main.FPS;
-    public long FrameRate => main.FrameRate;
-    public long FrameAllocationAmount => main.FrameAllocationAmount;
-
-
     internal SpriteBatch SpriteBatch => spriteBatch;
 
     internal void Initialize()
@@ -116,11 +109,8 @@ public sealed class RenderingSystem : Workspace.Service
 
             if(settingsChanged)
                 Apply();
-
-            renderBuffer.Sort();
         }
 
-        partialTick = Math.Clamp(partialTick, 0f, 1f);
 
         var cameraData = renderBuffer?.GetCameraData();
 
@@ -130,7 +120,7 @@ public sealed class RenderingSystem : Workspace.Service
         if(GraphicsDevice.PresentationParameters.Bounds != screenBounds)
             CreateRenderTargetDestination();
 
-        renderer.SetData(renderBuffer, partialTick);
+        partialTick = Math.Clamp(partialTick, 0f, 1f);
 
         //scaled
         GraphicsDevice.SetRenderTarget(this.renderTarget);
@@ -138,6 +128,7 @@ public sealed class RenderingSystem : Workspace.Service
         projectionMatrix = GetProjectionMatrix(viewport, out viewport);
         viewMatrix = GetViewMatrix(cameraData, viewport, partialTick);
         
+        renderer.SetData(renderBuffer.GetRenderInstances(), partialTick);
         renderer.Render();
 
         //unscaled
@@ -146,7 +137,8 @@ public sealed class RenderingSystem : Workspace.Service
         projectionMatrix = GetProjectionMatrix(viewport, out viewport);
         viewMatrix = GetViewMatrix(cameraData, viewport, partialTick);
     
-        renderer.UnscaledRender();
+        renderer.SetData(renderBuffer.GetUIRenderInstances());
+        renderer.Render();
 
         //final
         GraphicsDevice.SetRenderTarget(null);
