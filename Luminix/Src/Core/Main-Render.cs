@@ -184,7 +184,7 @@ internal sealed class MainRender : Microsoft.Xna.Framework.Game
                 }
                 catch(Exception ex)
                 {
-                    Logger.NewLog(Logger.Log.Level.Error, $"Failed to resolve graphic resource command, reason: {ex}");
+                    Logger.NewLog(Logger.Log.Level.Error, $"Failed to resolve graphic resource {command.CommandType} command, reason: {ex}");
                 }
             };
             windowCommandHandler = (command) =>

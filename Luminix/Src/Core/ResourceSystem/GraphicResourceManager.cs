@@ -50,53 +50,55 @@ public sealed class GraphicsResourceManager : Microsoft.Xna.Framework.Content.Co
             NullTexture.SetData(nullTexturePixels);
         }
         
-        {
+        { // does not use CreateShader since I don't want it to be disposable.
             var identifier = "generic_shader";
             XnbAsset asset = assetIO.LoadXnbAsset(Application.EngineAssembly, "Assets.Built-In.Shaders.GenericShader.xnb");
             var stream = new MemoryStream(asset.Data);
             GenericShader = Create<Effect>(identifier, stream);  
         }
 
-        {
-            XnbAsset asset = assetIO.LoadXnbAsset(Application.EngineAssembly, "Assets.Built-In.Fonts.IBMPlexMono-Bold.xnb");
-            CreateFont("font_bold", asset.Data);
-            GenericFontBold = GetFont("font_bold");
+        { // does not use CreateFont since I don't want it to be disposable.
+            var identifier = "font_medium";
+            XnbAsset asset = assetIO.LoadXnbAsset(Application.EngineAssembly, "Assets.Built-In.Fonts.IBMPlexMono-Medium.xnb");
+            var stream = new MemoryStream(asset.Data);
+            GenericFontMedium = Create<SpriteFont>(identifier, stream);  
         }
 
         {
-            XnbAsset asset = assetIO.LoadXnbAsset(Application.EngineAssembly, "Assets.Built-In.Fonts.IBMPlexMono-Medium.xnb");
-            CreateFont("font_medium", asset.Data);   
-            GenericFontMedium = GetFont("font_medium");
+            XnbAsset asset = assetIO.LoadXnbAsset(Application.EngineAssembly, "Assets.Built-In.Fonts.IBMPlexMono-Bold.xnb");
+            GenericFontBold = CreateFont("font_bold", asset.Data);
         }
 
         {
             XnbAsset asset = assetIO.LoadXnbAsset(Application.EngineAssembly, "Assets.Built-In.Fonts.IBMPlexMono-Regular.xnb");
-            CreateFont("font_regular", asset.Data);
-            GenericFontRegular = GetFont("font_regular");   
+            GenericFontRegular = CreateFont("font_regular", asset.Data); 
         }
     }
 
-    internal void CreateTexture(string identifier, Color[] colors, int X, int Y)
+    internal Texture2D CreateTexture(string identifier, Color[] colors, int X, int Y)
     {
         ObjectDisposedException.ThrowIf(disposed, this);
         var source = new Texture2D(main.GraphicsDevice, X, Y);
         source.SetData(colors);
 
         sourceResources[(GraphicResourceType.Texture, identifier)] = source;
+        return source;
     }
-    internal void CreateFont(string identifier, byte[] data)
+    internal SpriteFont CreateFont(string identifier, byte[] data)
     {
         ObjectDisposedException.ThrowIf(disposed, this);
         var stream = new MemoryStream(data);
         var source = Create<SpriteFont>(identifier, stream);
         sourceResources[(GraphicResourceType.Font, identifier)] = source;
+        return source;
     }
-    internal void CreateShader(string identifier, byte[] data)
+    internal Effect CreateShader(string identifier, byte[] data)
     {
         ObjectDisposedException.ThrowIf(disposed, this);
         var stream = new MemoryStream(data);
         var source = Create<Effect>(identifier, stream);
         sourceResources[(GraphicResourceType.Shader, identifier)] = source;
+        return source;
     }
 
     internal void UpdateTexture(string identifier, Color[] colors)
@@ -142,6 +144,9 @@ public sealed class GraphicsResourceManager : Microsoft.Xna.Framework.Content.Co
         if(!sourceResources.TryGetValue((GraphicResourceType.Texture, identifier), out object source))
             throw new KeyNotFoundException($"Failed to find source texture with '{identifier}' identifier.");
 
+        if(source is not Texture2D)
+            throw new InvalidOperationException($"Failed to link resource '{resource}' with an source '{identifier}', because source is not {typeof(Texture2D).Name}.");
+
         if(linked.TryGetValue(resource, out object otherSource))
         {
             if(otherSource == source)
@@ -159,6 +164,9 @@ public sealed class GraphicsResourceManager : Microsoft.Xna.Framework.Content.Co
         if(!sourceResources.TryGetValue((GraphicResourceType.Font, identifier), out object source))
             throw new KeyNotFoundException($"Failed to find source font with '{identifier}' identifier.");
 
+        if(source is not SpriteFont)
+            throw new InvalidOperationException($"Failed to link resource '{resource}' with an source '{identifier}', because source is not {typeof(SpriteFont).Name}.");
+
         if(linked.TryGetValue(resource, out object otherSource))
         {
             if(otherSource == source)
@@ -175,6 +183,9 @@ public sealed class GraphicsResourceManager : Microsoft.Xna.Framework.Content.Co
 
         if(!sourceResources.TryGetValue((GraphicResourceType.Shader, identifier), out object source))
             throw new KeyNotFoundException($"Failed to find source shader with '{identifier}' identifier.");
+
+        if(source is not Effect)
+            throw new InvalidOperationException($"Failed to link resource '{resource}' with an source '{identifier}', because source is not {typeof(Effect).Name}.");
 
         if(linked.TryGetValue(resource, out object otherSource))
         {
@@ -195,19 +206,6 @@ public sealed class GraphicsResourceManager : Microsoft.Xna.Framework.Content.Co
             return;
 
         linked.Remove(resource);
-    }
-
-    public Texture2D GetTexture(string identifier)
-    {
-        return sourceResources.TryGetValue((GraphicResourceType.Texture, identifier), out object source) ? (Texture2D)source : NullTexture;
-    }
-    public Effect GetShader(string identifier)
-    {
-        return (Effect)sourceResources[(GraphicResourceType.Shader, identifier)];
-    }
-    public SpriteFont GetFont(string identifier)
-    {
-        return (SpriteFont)sourceResources[(GraphicResourceType.Font, identifier)];
     }
 
     public Texture2D GetTexture(TextureResource resource)
@@ -234,11 +232,14 @@ public sealed class GraphicsResourceManager : Microsoft.Xna.Framework.Content.Co
     }
     public SpriteFont GetFont(FontResource resource)
     {
-        return linked.TryGetValue(resource, out object source) ? (SpriteFont)source : throw new KeyNotFoundException($"FontResource '{resource.Identifier}' is not linked to a source!");
-    }
-    public object GetTextureOrFont(Resource resource)
-    {
-        return resource is TextureResource texture ? GetTexture(texture) : GetFont((FontResource)resource);
+        if(resource == null)
+            return GenericFontMedium;
+
+        if(linked.TryGetValue(resource, out object source))
+            return (SpriteFont)source;
+        
+        Logger.NewLog(Logger.Log.Level.Error, $"ShaderResource '{resource.Identifier}' is not linked to a source!");
+        return GenericFontMedium;
     }
 
     private T Create<T>(string identifier, Stream stream) where T : class

@@ -290,11 +290,19 @@ public sealed class RenderingSystem : Workspace.Service
                 var transform = Interpolate(instance.Transform, partialTick);
 
                 ushort layerBits = (ushort)Math.Clamp((int)(transform.Position.X * 100.0f), 0, 65535);
-
                 var key = BuildKey(layerBits, instance.Shader, instance.Resource);
 
                 commands[i] = new RenderCommand(key, i);
-                instances[i] = new GPUInstance(resourceManager.GetShader(instance.Shader), resourceManager.GetTextureOrFont(instance.Resource), instance.Color, transform, instance.Text);
+
+                object resource = instance.Resource switch
+                {
+                    null => instance.Text == null ? resourceManager.NullTexture : resourceManager.GenericFontMedium,
+                    _    => instance.Text == null 
+                                ? resourceManager.GetTexture((TextureResource)instance.Resource)
+                                : resourceManager.GetFont((FontResource)instance.Resource)
+                };
+
+                instances[i] = new GPUInstance(resourceManager.GetShader(instance.Shader), resource, instance.Color, transform, instance.Text);
             }
             catch(Exception ex)
             {
@@ -318,9 +326,17 @@ public sealed class RenderingSystem : Workspace.Service
             try
             {
                 ref readonly var instance = ref newInstances[i];
-
                 var transform = new Transform(new Vector3(instance.X, instance.Y, 0), new Vector2(instance.Width, instance.Height), instance.Rotation);
-                instances[i] = new GPUInstance(resourceManager.GetShader(instance.Shader), resourceManager.GetTextureOrFont(instance.Resource), instance.Color, transform, instance.Text);
+
+                object resource = instance.Resource switch
+                {
+                    null => instance.Text == null ? resourceManager.NullTexture : resourceManager.GenericFontMedium,
+                    _    => instance.Text == null 
+                                ? resourceManager.GetTexture((TextureResource)instance.Resource)
+                                : resourceManager.GetFont((FontResource)instance.Resource)
+                };
+
+                instances[i] = new GPUInstance(resourceManager.GetShader(instance.Shader), resource, instance.Color, transform, instance.Text);
             }
             catch(Exception ex)
             {

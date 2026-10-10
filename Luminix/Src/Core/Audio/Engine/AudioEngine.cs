@@ -162,7 +162,7 @@ internal sealed partial class AudioEngine : IAudioEngine, IDisposable
 
     private void ValidateDevice()
     {
-        if (!audioDevice.IsInvalid)
+        if (audioDevice.IsInvalid)
             throw new InvalidOperationException("The audio device is invalid, has not been initialized or is disposed.");
     }
     public void Dispose()

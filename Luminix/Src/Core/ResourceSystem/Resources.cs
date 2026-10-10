@@ -29,15 +29,6 @@ public sealed class Resources : Workspace.Service, IEnumerable<Resource>
             resourceBridge.NewCommand(sourceLinkCommand);
         }
 
-        // FONT MEDIUM
-        {
-            Resource resource = new FontResource("font_medium");
-            container.Add((resource.GetType(), resource.Identifier), resource);
-
-            var sourceLinkCommand = GraphicResourceCommand.Link(resource.Identifier, resource);
-            resourceBridge.NewCommand(sourceLinkCommand);
-        }
-
         // FONT REGULAR
         {
             Resource resource = new FontResource("font_regular");
@@ -46,15 +37,6 @@ public sealed class Resources : Workspace.Service, IEnumerable<Resource>
             var sourceLinkCommand = GraphicResourceCommand.Link("font_regular", resource);
             resourceBridge.NewCommand(sourceLinkCommand);
 
-        }
-
-        // GENERIC SHADER
-        {
-            Resource resource = new FontResource("generic_shader");
-            container.Add((resource.GetType(), "generic_shader"), resource);
-            
-            var sourceLinkCommand = GraphicResourceCommand.Link("generic_shader", resource);
-            resourceBridge.NewCommand(sourceLinkCommand);
         }
     }
 

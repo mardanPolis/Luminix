@@ -55,11 +55,11 @@ internal sealed class RenderBuffer
     }
     internal void PushText(ShaderResource shader, FontResource font, Color color, string text, in Transform transform)
     {
-        renderInstances.Add(new RenderInstance(shader, font, color, new(transform), text));
+        renderInstances.Add(new RenderInstance(shader, font, color, new(transform), text ?? string.Empty));
     }
     internal void PushInterpolatedText(ShaderResource shader, FontResource font, Color color, string text, in TransformInterp transform)
     {
-        renderInstances.Add(new RenderInstance(shader, font, color, transform, text));
+        renderInstances.Add(new RenderInstance(shader, font, color, transform, text ?? string.Empty));
     }
 
     internal void PushImage(ShaderResource shader, TextureResource image, Color color, int x, int y, int width, int height, float rotation)
@@ -68,7 +68,7 @@ internal sealed class RenderBuffer
     }
     internal void PushLabel(ShaderResource shader, FontResource font, Color color, string text, int x, int y, int width, int height, float rotation)
     {
-        renderInstancesUI.Add(new RenderInstanceUI(shader, font, color, x, y, width, height, rotation, text));
+        renderInstancesUI.Add(new RenderInstanceUI(shader, font, color, x, y, width, height, rotation, text ?? string.Empty));
     }
 
     internal Camera? GetCameraData()

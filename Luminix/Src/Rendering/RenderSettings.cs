@@ -1,6 +1,6 @@
 using Luminix;
 
-namespace Luminix.Rendering;
+namespace Luminix;
 
 public struct RenderSettings
 {
