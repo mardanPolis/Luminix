@@ -51,12 +51,7 @@ internal struct GraphicResourceCommand
         return new GraphicResourceCommand()
         {
             CommandType = commandType,
-            ResourceType = xnbType switch
-            {
-                XnbAsset.XnbType.Font   => GraphicResourceType.Font,
-                XnbAsset.XnbType.Shader => GraphicResourceType.Shader,
-                _                       => throw new ArgumentOutOfRangeException(nameof(xnbType), $"Unsupported xnb type: {xnbType}")
-            },
+            ResourceType = GraphicResourceType.Shader,
             Identifier = identifier,
             Data = data,
         };
@@ -80,7 +75,6 @@ internal struct GraphicResourceCommand
             ResourceType = resource switch
             {
                 TextureResource => GraphicResourceType.Texture,
-                FontResource    => GraphicResourceType.Font,
                 ShaderResource  => GraphicResourceType.Shader,
                 _               => throw new ArgumentOutOfRangeException(nameof(resource), $"Unsupported resource type: {resource.GetType()}")
             },

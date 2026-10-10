@@ -100,7 +100,7 @@ public sealed class World : Workspace.Service
 
     protected override void Start()
     {
-        var defs = Workspace.Current.GetService<Defs>();
+        var defs = Workspace.GetService<Defs>();
         var entityTypes = defs.GetDefs<EntityType>();
         entityContainers = CreateEntityContainers(entityTypes);
         entities = [];

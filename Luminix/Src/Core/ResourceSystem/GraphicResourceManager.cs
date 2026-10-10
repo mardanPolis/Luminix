@@ -30,9 +30,6 @@ public sealed class GraphicsResourceManager : Microsoft.Xna.Framework.Content.Co
 
     public Texture2D NullTexture { get; private set; }
     public Effect GenericShader {  get; private set;  }
-    public SpriteFont GenericFontBold {  get; private set;  }
-    public SpriteFont GenericFontMedium {  get; private set;  }
-    public SpriteFont GenericFontRegular {  get; private set;  }
 
     internal void Initialize()
     {
@@ -50,28 +47,11 @@ public sealed class GraphicsResourceManager : Microsoft.Xna.Framework.Content.Co
             NullTexture.SetData(nullTexturePixels);
         }
         
-        { // does not use CreateShader since I don't want it to be disposable.
+        {
             var identifier = "generic_shader";
             XnbAsset asset = assetIO.LoadXnbAsset(Application.EngineAssembly, "Assets.Built-In.Shaders.GenericShader.xnb");
             var stream = new MemoryStream(asset.Data);
             GenericShader = Create<Effect>(identifier, stream);  
-        }
-
-        { // does not use CreateFont since I don't want it to be disposable.
-            var identifier = "font_medium";
-            XnbAsset asset = assetIO.LoadXnbAsset(Application.EngineAssembly, "Assets.Built-In.Fonts.IBMPlexMono-Medium.xnb");
-            var stream = new MemoryStream(asset.Data);
-            GenericFontMedium = Create<SpriteFont>(identifier, stream);  
-        }
-
-        {
-            XnbAsset asset = assetIO.LoadXnbAsset(Application.EngineAssembly, "Assets.Built-In.Fonts.IBMPlexMono-Bold.xnb");
-            GenericFontBold = CreateFont("font_bold", asset.Data);
-        }
-
-        {
-            XnbAsset asset = assetIO.LoadXnbAsset(Application.EngineAssembly, "Assets.Built-In.Fonts.IBMPlexMono-Regular.xnb");
-            GenericFontRegular = CreateFont("font_regular", asset.Data); 
         }
     }
 
@@ -82,14 +62,6 @@ public sealed class GraphicsResourceManager : Microsoft.Xna.Framework.Content.Co
         source.SetData(colors);
 
         sourceResources[(GraphicResourceType.Texture, identifier)] = source;
-        return source;
-    }
-    internal SpriteFont CreateFont(string identifier, byte[] data)
-    {
-        ObjectDisposedException.ThrowIf(disposed, this);
-        var stream = new MemoryStream(data);
-        var source = Create<SpriteFont>(identifier, stream);
-        sourceResources[(GraphicResourceType.Font, identifier)] = source;
         return source;
     }
     internal Effect CreateShader(string identifier, byte[] data)
@@ -157,26 +129,6 @@ public sealed class GraphicsResourceManager : Microsoft.Xna.Framework.Content.Co
 
         linked[resource] = source;
     }
-    internal void LinkResource(string identifier, FontResource resource)
-    {
-        ObjectDisposedException.ThrowIf(disposed, this);
-
-        if(!sourceResources.TryGetValue((GraphicResourceType.Font, identifier), out object source))
-            throw new KeyNotFoundException($"Failed to find source font with '{identifier}' identifier.");
-
-        if(source is not SpriteFont)
-            throw new InvalidOperationException($"Failed to link resource '{resource}' with an source '{identifier}', because source is not {typeof(SpriteFont).Name}.");
-
-        if(linked.TryGetValue(resource, out object otherSource))
-        {
-            if(otherSource == source)
-                return;
-                
-            throw new InvalidOperationException($"Failed to link resource '{resource}' with an source, resource is already linked with another source.");
-        }
-
-        linked[resource] = source;
-    }
     internal void LinkResource(string identifier, ShaderResource resource)
     {
         ObjectDisposedException.ThrowIf(disposed, this);
@@ -229,17 +181,6 @@ public sealed class GraphicsResourceManager : Microsoft.Xna.Framework.Content.Co
         
         Logger.NewLog(Logger.Log.Level.Error, $"ShaderResource '{resource.Identifier}' is not linked to a source!");
         return GenericShader;
-    }
-    public SpriteFont GetFont(FontResource resource)
-    {
-        if(resource == null)
-            return GenericFontMedium;
-
-        if(linked.TryGetValue(resource, out object source))
-            return (SpriteFont)source;
-        
-        Logger.NewLog(Logger.Log.Level.Error, $"ShaderResource '{resource.Identifier}' is not linked to a source!");
-        return GenericFontMedium;
     }
 
     private T Create<T>(string identifier, Stream stream) where T : class

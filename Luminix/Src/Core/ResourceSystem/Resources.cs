@@ -1,70 +1,76 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
+using System.IO;
 using Luminix.Collections;
-using Luminix.IO;
 using Luminix.Threading.Bridges;
 using Luminix.Threading.Commands;
-using Microsoft.Xna.Framework;
+using StbImageWriteSharp;
 
 namespace Luminix;
 
 public sealed class Resources : Workspace.Service, IEnumerable<Resource>
 {
-    internal Resources()
+    internal Resources() 
     {
         container = new();
-        audioMedia = Workspace.Current.GetService<AudioMedia>();
         resourceBridge = ThreadBridges.GetBridge<CommandBridge<GraphicResourceCommand>>(Application.RENDER_THREAD_NAME);
-
-        // --- GENERIC RESOURCES ---
-
-        // FONT BOLD
-        {
-            Resource resource = new FontResource("font_bold");
-            container.Add((resource.GetType(), "font_bold"), resource);
-
-            var sourceLinkCommand = GraphicResourceCommand.Link("font_bold", resource);
-            resourceBridge.NewCommand(sourceLinkCommand);
-        }
-
-        // FONT REGULAR
-        {
-            Resource resource = new FontResource("font_regular");
-            container.Add((resource.GetType(), "font_regular"), resource);
-
-            var sourceLinkCommand = GraphicResourceCommand.Link("font_regular", resource);
-            resourceBridge.NewCommand(sourceLinkCommand);
-
-        }
     }
 
-    private AudioMedia audioMedia;
     private CommandBridge<GraphicResourceCommand> resourceBridge;
     private Dictionary<(Type, string), Resource> container;
     public int ResourceCount => container.Count;
  
+    internal void LoadDefaults()
+    {
+        var assetIO = Workspace.GetService<Assets>().GetAssetIO();
+
+        {
+            var identifier = "font_bold";
+            XnbAsset asset = assetIO.LoadXnbAsset(Application.EngineAssembly, "Assets.Built-In.Fonts.IBMPlexMono-Bold.xnb");
+            CreateResource(asset, identifier);
+        }
+
+        {
+            var identifier = "font_medium";
+            XnbAsset asset = assetIO.LoadXnbAsset(Application.EngineAssembly, "Assets.Built-In.Fonts.IBMPlexMono-Medium.xnb");
+            CreateResource(asset, identifier);  
+        }
+
+        {
+            var identifier = "font_regular";
+            XnbAsset asset = assetIO.LoadXnbAsset(Application.EngineAssembly, "Assets.Built-In.Fonts.IBMPlexMono-Regular.xnb");
+            CreateResource(asset, identifier);
+        }
+
+        Workspace.GetService<Graphics>().DefaultFont = GetResource<FontResource>("font_medium");
+
+    }
+
     public void CreateResource(Asset asset)
+    {
+        CreateResource(asset, asset.Identifier);
+    }
+
+    public void CreateResource(Asset asset, string identifier)
     {
         switch(asset)
         {
             case AudioAsset audioAsset:
                 {
-                    if(container.ContainsKey((typeof(AudioResource), asset.Identifier)))
-                        throw new InvalidOperationException($"Audio resource with identifier '{asset.Identifier}' already exists");
+                    if(container.ContainsKey((typeof(AudioResource), identifier)))
+                        throw new InvalidOperationException($"Audio resource with identifier '{identifier}' already exists");
 
-                    var clip = audioMedia.GetClip(audioAsset);
-                    var resource = new AudioResource(clip, asset.Identifier);
-                    container.Add((typeof(AudioResource), asset.Identifier), resource);
+                    var clip = Workspace.GetService<AudioMedia>().GetClip(audioAsset);
+                    var resource = new AudioResource(clip, identifier);
+                    container.Add((typeof(AudioResource), identifier), resource);
                 }
             break;
             case TextureAsset textureAsset:
                 {
-                    if(container.ContainsKey((typeof(TextureResource), asset.Identifier)))
-                        throw new InvalidOperationException($"Texture resource with identifier '{asset.Identifier}' already exists");
+                    if(container.ContainsKey((typeof(TextureResource), identifier)))
+                        throw new InvalidOperationException($"Texture resource with identifier '{identifier}' already exists");
 
-                    var identifier = asset.Identifier;
                     var colors = textureAsset.Colors;
                     var size = textureAsset.Size;
 
@@ -84,7 +90,6 @@ public sealed class Resources : Workspace.Service, IEnumerable<Resource>
                     if(container.ContainsKey((typeof(TextureResource), asset.Identifier)))
                         throw new InvalidOperationException($"Texture resource with identifier '{asset.Identifier}' already exists");
 
-                    var identifier = asset.Identifier;
                     var colors = atlasAsset.Colors;
                     var size = atlasAsset.Size;
 
@@ -122,29 +127,62 @@ public sealed class Resources : Workspace.Service, IEnumerable<Resource>
                     }
                 }
             break;
+            case XnbAsset xnbAsset when xnbAsset.Type == XnbAsset.XnbType.Font:
+                {
+                    if(container.ContainsKey((typeof(FontResource), identifier)))
+                        throw new InvalidOperationException($"Font resource with identifier '{identifier}' already exists");
+ 
+                    var parsed = XnbFontParser.Parse(xnbAsset.Data);
+                    var glyphInfos = parsed.Glyphs;
+ 
+                    var atlasIdentifier = identifier + "_atlas";
+                    if(container.ContainsKey((typeof(TextureResource), atlasIdentifier)))
+                        throw new InvalidOperationException($"Texture resource with identifier '{atlasIdentifier}' already exists");
+ 
+                    var subTextures = new DenseList<TextureResource>(glyphInfos.Length);
+                    var atlas = new TextureResource(atlasIdentifier, 0, 0, parsed.AtlasWidth, parsed.AtlasHeight, subTextures);
+                    container.Add((typeof(TextureResource), atlasIdentifier), atlas);
+                    
+                    resourceBridge.NewCommand(GraphicResourceCommand.Create(atlasIdentifier, parsed.AtlasPixels, parsed.AtlasWidth, parsed.AtlasHeight));
+                    resourceBridge.NewCommand(GraphicResourceCommand.Link(atlasIdentifier, atlas));
+ 
+                    var regions = new List<TextureResource>(glyphInfos.Length);
+                    for(int i = 0; i < glyphInfos.Length; i++)
+                    {
+                        var glyph = glyphInfos[i];
+                        if(glyph.Bounds.Width <= 0 || glyph.Bounds.Height <= 0)
+                            continue;
+
+                        var regionIdentifier = atlasIdentifier + "/" + (int)glyph.Character;
+                        if(container.TryGetValue((typeof(TextureResource), regionIdentifier), out var existing))
+                        {
+                            regions.Add((TextureResource)existing);
+                            continue;
+                        }
+
+                        var region = new TextureResource(regionIdentifier, glyph.Bounds);
+                        container.Add((typeof(TextureResource), regionIdentifier), region);
+                        subTextures.Add(region);
+                        resourceBridge.NewCommand(GraphicResourceCommand.Link(atlasIdentifier, region));
+                        regions.Add(region);
+                    }
+ 
+                    var font = new FontResource(identifier, parsed, atlas, regions.ToArray());
+                    container.Add((typeof(FontResource), identifier), font);
+
+                }
+            break;
             case XnbAsset xnbAsset:
                 {
-                    switch(xnbAsset.Type)
-                    {
-                        case XnbAsset.XnbType.Font:
-                            if(container.ContainsKey((typeof(FontResource), asset.Identifier)))
-                                throw new InvalidOperationException($"Font resource with identifier '{asset.Identifier}' already exists");
-                        break;
-                        case XnbAsset.XnbType.Shader:
-                            if(container.ContainsKey((typeof(ShaderResource), asset.Identifier)))
-                                throw new InvalidOperationException($"Shader resource with identifier '{asset.Identifier}' already exists");
-                        break;
-                    }
+                    if(xnbAsset.Type != XnbAsset.XnbType.Shader)
+                        throw new NotSupportedException($"Unsupported xnb type: {xnbAsset.Type}");
 
-                    var identifier = asset.Identifier;
+                    if(container.ContainsKey((typeof(ShaderResource), asset.Identifier)))
+                        throw new InvalidOperationException($"Shader resource with identifier '{asset.Identifier}' already exists");
+
                     var data = xnbAsset.Data;
                     var type = xnbAsset.Type;
-                    Resource resource = type switch
-                    {
-                        XnbAsset.XnbType.Font   => new FontResource(identifier),
-                        XnbAsset.XnbType.Shader => new ShaderResource(identifier),
-                        _                       => throw new NotSupportedException($"Unsupported xnb type: {type}")
-                    };
+                    Resource resource = new ShaderResource(identifier);
                     container.Add((resource.GetType(), asset.Identifier), resource);
 
                     var sourceCreateCommand = GraphicResourceCommand.Create(identifier, data, type);
@@ -176,7 +214,7 @@ public sealed class Resources : Workspace.Service, IEnumerable<Resource>
         {
             case AudioResource audio:
                 if (!container.Remove((typeof(AudioResource), audio.Identifier))) return;
-                audioMedia.DisposeClip(audio);
+                Workspace.GetService<AudioMedia>().DisposeClip(audio);
                 break;
 
             case TextureResource texture:
@@ -209,8 +247,7 @@ public sealed class Resources : Workspace.Service, IEnumerable<Resource>
 
             case FontResource font:
                 if (!container.Remove((typeof(FontResource), font.Identifier))) return;
-                resourceBridge.NewCommand(GraphicResourceCommand.Unlink(font));
-                resourceBridge.NewCommand(GraphicResourceCommand.Unload(font.Identifier, GraphicResourceType.Font));
+                UnloadResource(font.Atlas);
                 break;
 
             default:
@@ -239,7 +276,13 @@ public sealed class Resources : Workspace.Service, IEnumerable<Resource>
 
         public bool MoveNext()
         {
-            return inner.MoveNext();
+            if(inner.MoveNext())
+            {
+                current = inner.Current.Value;
+                return true;
+            }
+
+            return false;
         }
 
         public void Reset()

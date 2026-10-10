@@ -12,8 +12,6 @@ public class DebugPanel : GameObject
         time = Workspace.Current.GetService<Time>();
         graphics = Workspace.Current.GetService<Graphics>();
         resourceProvider = Workspace.Current.GetService<Resources>();
-        pixel = resourceProvider.GetResource<TextureResource>("Pixel");
-        defaultFont = resourceProvider.GetResource<FontResource>("Font-Medium");
 
         tickTimes = new double[256];
         frameTimes = new double[256];
@@ -23,9 +21,6 @@ public class DebugPanel : GameObject
     protected readonly Time time;
     protected readonly Graphics graphics;
     protected readonly Resources resourceProvider;
-
-    protected readonly TextureResource pixel;
-    protected readonly FontResource defaultFont;
 
     private const int HistorySize = 256;
     private const double SecondsToMillis = 1000.0;
@@ -117,7 +112,7 @@ public class DebugPanel : GameObject
         sb.Append("RenderThread allocated : "); sb.AppendLong(frameAllocated, 3); sb.Append(" bytes\n");
         sb.Append("CoreThread allocated   : "); sb.AppendLong(tickAllocated, 3); sb.Append(" bytes\n");
 
-        graphics.DrawLabel(defaultFont, sb.ToString(), 0, 0);
+        graphics.DrawLabel(sb, new Point(0, 0), new Point(450, 800), alignment:new Vector2(0, 0), fitToBox:true);
     }
 
     // protected void DrawGraph(Vector2 position, float height, double[] data, double maxValue, int valueLineThickness, int valueMargin, int lastIndex, bool invertedWidth)

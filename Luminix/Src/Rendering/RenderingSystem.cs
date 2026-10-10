@@ -29,7 +29,7 @@ public sealed class RenderingSystem : Workspace.Service
         this.commands = new RenderCommand[4096];
     }
 
-    private record struct GPUInstance(Effect Shader, object Source, Color Color, Transform Transform, string Text);
+    private record struct GPUInstance(Effect Shader, Texture2D Source, Rectangle SourceRect, Color Color, Vector3 Position, Vector2 Scale, float Rotation);
     private record struct RenderCommand(ulong Key, int Index) : IComparable<RenderCommand> { public int CompareTo(RenderCommand other) => Key.CompareTo(other.Key); }
 
     private MainRender main;
@@ -43,8 +43,8 @@ public sealed class RenderingSystem : Workspace.Service
 
     private RenderTarget2D renderTarget;
     private RenderTarget2D unscaledRenderTarget;
-    private Transform renderTargetDestination;
-    private Transform unscaledRenderTargetDestination;
+    private Rectangle renderTargetDestination;
+    private Rectangle unscaledRenderTargetDestination;
 
     private Rectangle resolution;
     private Rectangle screenBounds;
@@ -104,7 +104,7 @@ public sealed class RenderingSystem : Workspace.Service
 
         GraphicsDevice.SetRenderTarget(this.renderTarget);
         GraphicsDevice.Clear(Color.Black);
-        if(cameraData.HasValue)
+        if(cameraData.HasValue && renderBuffer != null)
         {
             projectionMatrix = GetProjectionMatrix(viewport, out viewport);
             viewMatrix = GetViewMatrix(cameraData, viewport, partialTick);
@@ -112,22 +112,13 @@ public sealed class RenderingSystem : Workspace.Service
 
             SetData(renderBuffer.GetRenderInstances(), partialTick);
 
+            Logger.NewLog(Logger.Log.Level.Info, $"world {commandCount}");
+
             for(int i = 0; i < commandCount; i++)
             {
                 var command = commands[i];
                 var instance = instances[command.Index];
-                switch(instance.Source)
-                {
-                    case Texture2D source:
-                        renderer.Render(instance.Shader, source, instance.Color, instance.Transform);
-                    break;
-                    case SpriteFont source:
-                        renderer.Render(instance.Shader, source, instance.Text, instance.Transform, instance.Color);
-                    break;
-                    default:
-                        Logger.NewLog(Logger.Log.Level.Error, $"Unsupported source type '{instance.Source.GetType()}'");
-                    break;
-                }
+                renderer.Render(instance.Shader, instance.Source, instance.Color, instance.Position, instance.Scale, instance.Rotation, instance.SourceRect);
             }
         }
         
@@ -139,15 +130,25 @@ public sealed class RenderingSystem : Workspace.Service
         projectionMatrix = GetProjectionMatrix(viewport, out viewport);
         renderer.SetTransformMatrix(projectionMatrix);
         
-        SetData(renderBuffer.GetUIRenderInstances());
+        if(renderBuffer != null)
+        {
+            SetData(renderBuffer.GetUIRenderInstances());
 
-        renderer.Flush();
+            for(int i = 0; i < commandCount; i++)
+            {
+                var instance = instances[i];
+
+                renderer.Render(instance.Shader, instance.Source, instance.Color, instance.Position, instance.Scale, instance.Rotation, instance.SourceRect);
+            }
+
+
+            renderer.Flush();
+        }
 
         //final
         GraphicsDevice.SetRenderTarget(null);
         renderer.Render(resourceManager.GenericShader, renderTarget, Color.White, in renderTargetDestination);
         renderer.Render(resourceManager.GenericShader, unscaledRenderTarget, Color.White, in unscaledRenderTargetDestination);
-
         renderer.Flush();
 
         frameCount++;
@@ -251,10 +252,10 @@ public sealed class RenderingSystem : Workspace.Service
             int newWidth = (int)(renderTarget.Width * scale);
             int newHeight = (int)(renderTarget.Height * scale);
 
-            int posX = (screenSize.Width - newWidth) / 2;
-            int posY = (screenSize.Height - newHeight) / 2;
+            int posX = screenSize.Width - newWidth / 2; // we do it like and not "(screenSize.Width - newWidth) / 2" because we have the quad vertices from -0.5 to 0.5
+            int posY = screenSize.Height - newHeight / 2;
 
-            renderTargetDestination = new Transform(new Vector3(posX, posY, 0), new Vector2(newWidth, newHeight));
+            renderTargetDestination = new Rectangle(posX, posY, newWidth, newHeight);
         }
 
         {
@@ -265,10 +266,10 @@ public sealed class RenderingSystem : Workspace.Service
             int newWidth = (int)(unscaledRenderTarget.Width * scale);
             int newHeight = (int)(unscaledRenderTarget.Height * scale);
 
-            int posX = (screenSize.Width - newWidth) / 2;
-            int posY = (screenSize.Height - newHeight) / 2;
+            int posX = screenSize.Width - newWidth / 2;
+            int posY = screenSize.Height - newHeight / 2;
 
-            unscaledRenderTargetDestination = new Transform(new Vector3(posX, posY, 0), new Vector2(newWidth, newHeight));
+            unscaledRenderTargetDestination = new Rectangle(posX, posY, newWidth, newHeight);
         }
 
         screenBounds = screenSize;
@@ -287,22 +288,17 @@ public sealed class RenderingSystem : Workspace.Service
             {
                 ref readonly var instance = ref newInstances[i];
 
+                ShaderResource shaderResource = instance.Shader;
+                TextureResource textureResource = instance.Texture;
+
                 var transform = Interpolate(instance.Transform, partialTick);
 
                 ushort layerBits = (ushort)Math.Clamp((int)(transform.Position.X * 100.0f), 0, 65535);
-                var key = BuildKey(layerBits, instance.Shader, instance.Resource);
+                var key = BuildKey(layerBits, shaderResource, textureResource);
 
                 commands[i] = new RenderCommand(key, i);
 
-                object resource = instance.Resource switch
-                {
-                    null => instance.Text == null ? resourceManager.NullTexture : resourceManager.GenericFontMedium,
-                    _    => instance.Text == null 
-                                ? resourceManager.GetTexture((TextureResource)instance.Resource)
-                                : resourceManager.GetFont((FontResource)instance.Resource)
-                };
-
-                instances[i] = new GPUInstance(resourceManager.GetShader(instance.Shader), resource, instance.Color, transform, instance.Text);
+                instances[i] = new GPUInstance(resourceManager.GetShader(shaderResource), resourceManager.GetTexture(textureResource), textureResource.Rectangle, instance.Color, transform.Position, transform.Scale, transform.Rotation);
             }
             catch(Exception ex)
             {
@@ -326,17 +322,14 @@ public sealed class RenderingSystem : Workspace.Service
             try
             {
                 ref readonly var instance = ref newInstances[i];
-                var transform = new Transform(new Vector3(instance.X, instance.Y, 0), new Vector2(instance.Width, instance.Height), instance.Rotation);
 
-                object resource = instance.Resource switch
-                {
-                    null => instance.Text == null ? resourceManager.NullTexture : resourceManager.GenericFontMedium,
-                    _    => instance.Text == null 
-                                ? resourceManager.GetTexture((TextureResource)instance.Resource)
-                                : resourceManager.GetFont((FontResource)instance.Resource)
-                };
+                Vector3 position = new Vector3(instance.Position.X, instance.Position.Y, 0);
+                Vector2 scale = new Vector2(instance.Scale.X, instance.Scale.Y);
 
-                instances[i] = new GPUInstance(resourceManager.GetShader(instance.Shader), resource, instance.Color, transform, instance.Text);
+                ShaderResource shaderResource = instance.Shader;
+                TextureResource textureResource = instance.Texture;
+
+                instances[i] = new GPUInstance(resourceManager.GetShader(shaderResource), resourceManager.GetTexture(textureResource), textureResource.Rectangle, instance.Color, position, scale, instance.Rotation);
             }
             catch(Exception ex)
             {

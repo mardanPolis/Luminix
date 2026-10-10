@@ -47,28 +47,15 @@ internal sealed class RenderBuffer
 
     internal void PushSprite(ShaderResource shader, TextureResource texture, Color color, in Transform transform)
     {
-        renderInstances.Add(new RenderInstance(shader, texture, color, new(transform), null));
+        renderInstances.Add(new RenderInstance(shader, texture, color, new(transform)));
     }
     internal void PushInterpolatedSprite(ShaderResource shader, TextureResource texture, Color color, in TransformInterp transform)
     {
-        renderInstances.Add(new RenderInstance(shader, texture, color, transform, null));
+        renderInstances.Add(new RenderInstance(shader, texture, color, transform));
     }
-    internal void PushText(ShaderResource shader, FontResource font, Color color, string text, in Transform transform)
+    internal void PushImage(ShaderResource shader, TextureResource image, Color color, Point position, Point size, float rotation)
     {
-        renderInstances.Add(new RenderInstance(shader, font, color, new(transform), text ?? string.Empty));
-    }
-    internal void PushInterpolatedText(ShaderResource shader, FontResource font, Color color, string text, in TransformInterp transform)
-    {
-        renderInstances.Add(new RenderInstance(shader, font, color, transform, text ?? string.Empty));
-    }
-
-    internal void PushImage(ShaderResource shader, TextureResource image, Color color, int x, int y, int width, int height, float rotation)
-    {
-        renderInstancesUI.Add(new RenderInstanceUI(shader, image, color, x, y, width, height, rotation, null));
-    }
-    internal void PushLabel(ShaderResource shader, FontResource font, Color color, string text, int x, int y, int width, int height, float rotation)
-    {
-        renderInstancesUI.Add(new RenderInstanceUI(shader, font, color, x, y, width, height, rotation, text ?? string.Empty));
+        renderInstancesUI.Add(new RenderInstanceUI(shader, image, color, position, size, rotation));
     }
 
     internal Camera? GetCameraData()

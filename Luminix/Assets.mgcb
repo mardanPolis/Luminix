@@ -13,15 +13,36 @@
 
 #---------------------------------- Content ---------------------------------#
 
-#begin Assets/Textures/Circle.png
-/copy:Assets/Textures/Circle.png
+#begin Assets/Fonts/IBMPlexMono-Bold.spritefont
+/importer:FontDescriptionImporter
+/processor:FontDescriptionProcessor
+/processorParam:PremultiplyAlpha=True
+/processorParam:TextureFormat=Compressed
+/build:Assets/Fonts/IBMPlexMono-Bold.spritefont
 
-#begin Assets/Textures/Diamond.png
-/copy:Assets/Textures/Diamond.png
+#begin Assets/Fonts/IBMPlexMono-Medium.spritefont
+/importer:FontDescriptionImporter
+/processor:FontDescriptionProcessor
+/processorParam:PremultiplyAlpha=True
+/processorParam:TextureFormat=Compressed
+/build:Assets/Fonts/IBMPlexMono-Medium.spritefont
 
-#begin Assets/Textures/Square.png
-/copy:Assets/Textures/Square.png
+#begin Assets/Fonts/IBMPlexMono-Regular.spritefont
+/importer:FontDescriptionImporter
+/processor:FontDescriptionProcessor
+/processorParam:PremultiplyAlpha=True
+/processorParam:TextureFormat=Compressed
+/build:Assets/Fonts/IBMPlexMono-Regular.spritefont
 
-#begin Assets/Textures/Triangle.png
-/copy:Assets/Textures/Triangle.png
+#begin Assets/Shaders/GenericShader.fx
+/importer:EffectImporter
+/processor:EffectProcessor
+/processorParam:DebugMode=Auto
+/build:Assets/Shaders/GenericShader.fx
+
+#begin Assets/Shaders/TileShader.fx
+/importer:EffectImporter
+/processor:EffectProcessor
+/processorParam:DebugMode=Auto
+/build:Assets/Shaders/TileShader.fx
 

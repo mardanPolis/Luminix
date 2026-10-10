@@ -47,7 +47,7 @@ VertexShaderOutput MainVS(VertexInput vertex, InstanceInput instance)
     );
 
     //translate
-    float4 worldPos = float4(rotated + instance.Position.xy, 0, 1.0);
+    float4 worldPos = float4(rotated + instance.Position.xy, instance.Position.z, 1.0);
 
     output.Position = mul(worldPos, MatrixTransform);
     output.Color    = vertex.Color * instance.Color;

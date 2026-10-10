@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
+using Microsoft.Xna.Framework;
 
 namespace Luminix.UI;
 
@@ -53,7 +54,7 @@ public class UIManager : Workspace.Service
             for (int i = 0; i < count; i++)
             {
                 ref UIElement uiElement = ref uiElements[i];
-                graphics.DrawImage(uiElement.Texture, uiElement.X, uiElement.Y, uiElement.Width, uiElement.Height);
+                graphics.DrawImage(uiElement.Texture, new Point(uiElement.X, uiElement.Y), new Point(uiElement.Width, uiElement.Height));
             }
         }
 
@@ -78,14 +79,8 @@ public class UIManager : Workspace.Service
         uiColliders = new(128);
     }
 
-    protected override void Start()
-    {
-        pixelTexture = Workspace.GetService<Resources>().GetResource<TextureResource>("Pixel");
-    }
     private readonly bool controllerIssued;
     private bool handling;
-
-    private TextureResource pixelTexture;
 
     private readonly List<UIElement> uiElements;
     private readonly List<UICollider> uiColliders;
@@ -98,7 +93,7 @@ public class UIManager : Workspace.Service
             return;
         }
 
-        var textureResource = texture ?? pixelTexture;
+        var textureResource = texture;
         uiElements.Add(new UIElement(textureResource, x, y, width, height));
     }
 

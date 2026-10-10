@@ -10,10 +10,9 @@ namespace Luminix;
 
 public sealed class Assets : Workspace.Service
 {
-    internal Assets(Resources resources)
+    internal Assets()
     {
         this.assetIO = new AssetIO();
-        this.resources = resources;
 
         this.textureAssets = [];
         this.audioAssets = [];
@@ -24,7 +23,6 @@ public sealed class Assets : Workspace.Service
     }
 
     private readonly AssetIO assetIO;
-    private readonly Resources resources;
 
     private readonly SortedDictionary<string, (TextureAsset, AssetIO.AssetInfo)> textureAssets;
     private readonly Dictionary<string, (AudioAsset, AssetIO.AssetInfo)> audioAssets;
@@ -133,7 +131,7 @@ public sealed class Assets : Workspace.Service
 
     public void FinalizeAssets(bool makeAtlases, out bool hadAssets)
     {
-        var defs = Workspace.Current.GetService<Defs>();
+        var defs = Workspace.GetService<Defs>();
         var assets = new List<Asset>();
 
         (TextureAsset, AssetIO.AssetInfo)[] textures = textureAssets.Values.ToArray();
@@ -185,6 +183,8 @@ public sealed class Assets : Workspace.Service
         {
             defs.ParseDataAsset(dataAssets[i]);
         }
+
+        var resources = Workspace.GetService<Resources>();
 
         foreach(var asset in assets)
         {

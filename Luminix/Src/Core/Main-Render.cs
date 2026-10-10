@@ -149,10 +149,6 @@ internal sealed class MainRender : Microsoft.Xna.Framework.Game
                             resourceManager.CreateTexture(command.Identifier, (Color[])command.Data, command.Width, command.Height);
                             break;
 
-                        case (GraphicResourceCommandType.Create, GraphicResourceType.Font):
-                            resourceManager.CreateFont(command.Identifier, (byte[])command.Data);
-                            break;
-
                         case (GraphicResourceCommandType.Create, GraphicResourceType.Shader):
                             resourceManager.CreateShader(command.Identifier, (byte[])command.Data);
                             break;
@@ -167,10 +163,6 @@ internal sealed class MainRender : Microsoft.Xna.Framework.Game
 
                         case (GraphicResourceCommandType.Link, GraphicResourceType.Texture):
                             resourceManager.LinkResource(command.Identifier, (TextureResource)command.Data);
-                            break;
-
-                        case (GraphicResourceCommandType.Link, GraphicResourceType.Font):
-                            resourceManager.LinkResource(command.Identifier, (FontResource)command.Data);
                             break;
 
                         case (GraphicResourceCommandType.Link, GraphicResourceType.Shader):

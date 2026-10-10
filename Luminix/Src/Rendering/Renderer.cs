@@ -1,5 +1,3 @@
-using System;
-using System.Net.Http.Headers;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 
@@ -34,7 +32,7 @@ internal sealed class Renderer
     }
     public Renderer()
     {
-        renderingSystem = Workspace.Current.GetService<RenderingSystem>();
+        this.device = Workspace.Current.GetService<RenderingSystem>().GraphicsDevice;
 
         var vertices = new VertexPositionColorTexture[] {
             new (new Vector3(-0.5f, -0.5f, 0), Color.White, new Vector2(0, 0)),
@@ -43,15 +41,15 @@ internal sealed class Renderer
             new (new Vector3(-0.5f, +0.5f, 0), Color.White, new Vector2(0, 1))
         };
 
-        quadBuffer = new VertexBuffer(renderingSystem.GraphicsDevice, typeof(VertexPositionColorTexture), 4, BufferUsage.WriteOnly);
+        quadBuffer = new VertexBuffer(device, typeof(VertexPositionColorTexture), 4, BufferUsage.WriteOnly);
         quadBuffer.SetData(vertices);
 
         short[] indices = { 0, 1, 2, 0, 2, 3 };
-        indexBuffer = new IndexBuffer(renderingSystem.GraphicsDevice, IndexElementSize.SixteenBits, 6, BufferUsage.WriteOnly);
+        indexBuffer = new IndexBuffer(device, IndexElementSize.SixteenBits, 6, BufferUsage.WriteOnly);
         indexBuffer.SetData(indices);
         
         dataArray = new Data[4096];
-        dataBuffer = new DynamicVertexBuffer(renderingSystem.GraphicsDevice, typeof(Data), 4096, BufferUsage.WriteOnly);
+        dataBuffer = new DynamicVertexBuffer(device, typeof(Data), 4096, BufferUsage.WriteOnly);
 
         bindings =
         [
@@ -59,10 +57,7 @@ internal sealed class Renderer
             new VertexBufferBinding(dataBuffer, 0, 1)
         ];
 
-        this.device = renderingSystem.GraphicsDevice;
     }
-
-    private readonly RenderingSystem  renderingSystem;
 
     private DynamicVertexBuffer dataBuffer;
     private IndexBuffer indexBuffer;
@@ -92,14 +87,10 @@ internal sealed class Renderer
     public void Render(Effect shader, Texture2D source, in Color color, in Rectangle destinationRect, in Rectangle sourceRect)
     {
         Render(shader, source, in color, 
-        new Transform(new Vector3(destinationRect.X, destinationRect.Y, 0), new Vector2(destinationRect.Width, destinationRect.Height)),
+        new Vector3(destinationRect.X, destinationRect.Y, 0), new Vector2(destinationRect.Width, destinationRect.Height), 0,
         in sourceRect);
     }
-    public void Render(Effect shader, Texture2D source, in Color color, in Transform transform)
-    {
-        Render(shader, source, in color, in transform, new Rectangle(0, 0, source.Width, source.Height));
-    }
-    public void Render(Effect shader, Texture2D source, in Color color, in Transform transform, in Rectangle sourceRect)
+    public void Render(Effect shader, Texture2D source, in Color color, in Vector3 position, in Vector2 scale, float rotation, in Rectangle sourceRect)
     {
         if (shader != currShader || source != currSource)
         {
@@ -116,9 +107,9 @@ internal sealed class Renderer
         flushed = false;
         dataArray[currentInstanceCount++] = new Data
         {
-            Position = transform.Position,
-            Scale    = transform.Scale,
-            Rotation = transform.Rotation,
+            Position = position,
+            Scale    = scale,
+            Rotation = rotation,
             Color    = color,
             RectPos  = new Vector2(sourceRect.X, sourceRect.Y),
             RectSize = new Vector2(sourceRect.Width, sourceRect.Height)
@@ -128,61 +119,6 @@ internal sealed class Renderer
             Flush();
     }
     
-    public void Render(Effect shader, SpriteFont font, string text, in Transform transform, Color color)
-    {
-        ArgumentNullException.ThrowIfNull(shader);
-        ArgumentNullException.ThrowIfNull(font);
-        ArgumentNullException.ThrowIfNull(text);
-
-        var position = transform.Position;
-        var scale = transform.Scale;
-        var rotation = transform.Rotation;
-
-        var glyphs = font.GetGlyphs();
-        float cos = MathF.Cos(rotation);
-        float sin = MathF.Sin(rotation);
-        Vector2 pen = Vector2.Zero;
-
-        foreach (char c in text)
-        {
-            if (c == '\r') continue;
-
-            if (c == '\n')
-            {
-                pen.X = 0;
-                pen.Y += font.LineSpacing;
-                continue;
-            }
-
-            if (!glyphs.TryGetValue(c, out var g))
-            {
-                if (!font.DefaultCharacter.HasValue ||
-                    !glyphs.TryGetValue(font.DefaultCharacter.Value, out g))
-                    continue;
-            }
-
-            Rectangle src = g.BoundsInTexture;
-            if (src.Width > 0 && src.Height > 0)
-            {
-                Vector2 local = (pen + new Vector2(g.LeftSideBearing + g.Cropping.X, g.Cropping.Y)) * scale;
-
-                Vector2 rotated = new Vector2(
-                    local.X * cos - local.Y * sin,
-                    local.X * sin + local.Y * cos);
-
-
-                Render(shader, font.Texture, color, new Transform
-                    {
-                        Position = new Vector3(position.X + rotated.X, position.Y + rotated.Y, position.Z),
-                        Scale    = scale,
-                        Rotation = rotation
-                    }, src);
-            }
-
-            pen.X += g.WidthIncludingBearings + font.Spacing;
-        }
-    }
-
     public void Flush()
     {
         if (flushed) return;

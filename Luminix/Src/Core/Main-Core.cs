@@ -5,6 +5,7 @@ using Luminix.Threading.Commands;
 using Luminix.Threading.Bridges;
 using Luminix.Threading.Buffers;
 using Luminix.UI;
+using Microsoft.Xna.Framework;
 
 namespace Luminix;
 
@@ -70,9 +71,11 @@ internal sealed class MainCore
             gameObjectManager = new GameObjectManager(out gameObjectManagerController);
             input       = new Input(out inputController);
             resources   = new Resources();
-            assets      = new Assets(resources);
+            assets      = new Assets();
             defs        = new Defs();
             world       = new World(graphics, out worldController);
+
+            resources.LoadDefaults();
 
             audioEngine.SetListenerDirection(0, 0, 1);
             audioEngine.SetListenerWorldUp(0, 1, 0);
@@ -158,8 +161,6 @@ internal sealed class MainCore
 
             if(Application.IsDebug)
                 gameObjectManager.Add(new DebugPanel());
-
-            Logger.NewLog(Logger.Log.Level.Info, resources);
 
             Thread.CurrentThread.IsBackground = false;
         }
