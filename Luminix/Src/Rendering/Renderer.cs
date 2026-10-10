@@ -1,4 +1,5 @@
 using System;
+using System.Net.Http.Headers;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 
@@ -68,6 +69,7 @@ internal sealed class Renderer
     private VertexBuffer quadBuffer;
     private VertexBufferBinding[] bindings;
 
+    private Matrix transformMatrix;
     private Effect currShader;
     private object currSource;
 
@@ -78,7 +80,26 @@ internal sealed class Renderer
 
     private Microsoft.Xna.Framework.Graphics.GraphicsDevice device;
 
-    public void Render(in Matrix transformMatrixValue, Effect shader, Texture2D source, in Rectangle sourceRect, in Color color, in Transform transform)
+    public void SetTransformMatrix(in Matrix matrix)
+    {
+        transformMatrix = matrix;
+    }
+
+    public void Render(Effect shader, Texture2D source, in Color color, in Rectangle destinationRect)
+    {
+        Render(shader, source, in color, in destinationRect, new Rectangle(0, 0, source.Width, source.Height));
+    }
+    public void Render(Effect shader, Texture2D source, in Color color, in Rectangle destinationRect, in Rectangle sourceRect)
+    {
+        Render(shader, source, in color, 
+        new Transform(new Vector3(destinationRect.X, destinationRect.Y, 0), new Vector2(destinationRect.Width, destinationRect.Height)),
+        in sourceRect);
+    }
+    public void Render(Effect shader, Texture2D source, in Color color, in Transform transform)
+    {
+        Render(shader, source, in color, in transform, new Rectangle(0, 0, source.Width, source.Height));
+    }
+    public void Render(Effect shader, Texture2D source, in Color color, in Transform transform, in Rectangle sourceRect)
     {
         if (shader != currShader || source != currSource)
         {
@@ -87,7 +108,7 @@ internal sealed class Renderer
             currShader = shader;
             currSource = source;
 
-            shader.Parameters[MATRIX_PARAMETER].SetValue(transformMatrixValue);
+            shader.Parameters[MATRIX_PARAMETER].SetValue(transformMatrix);
             shader.Parameters[TEXTURE_PARAMETER].SetValue(source);
             shader.Parameters[TEXTURE_SIZE_PARAMETER].SetValue(new Vector2(source.Width, source.Height));
         }
@@ -106,8 +127,17 @@ internal sealed class Renderer
         if (currentInstanceCount >= dataArray.Length)
             Flush();
     }
-    public void Render(Matrix transformMatrixValue, Effect shader, SpriteFont font, string text, Vector3 position, Vector2 scale, float rotation, Color color)
+    
+    public void Render(Effect shader, SpriteFont font, string text, in Transform transform, Color color)
     {
+        ArgumentNullException.ThrowIfNull(shader);
+        ArgumentNullException.ThrowIfNull(font);
+        ArgumentNullException.ThrowIfNull(text);
+
+        var position = transform.Position;
+        var scale = transform.Scale;
+        var rotation = transform.Rotation;
+
         var glyphs = font.GetGlyphs();
         float cos = MathF.Cos(rotation);
         float sin = MathF.Sin(rotation);
@@ -140,20 +170,20 @@ internal sealed class Renderer
                     local.X * cos - local.Y * sin,
                     local.X * sin + local.Y * cos);
 
-                Render(transformMatrixValue, shader, font.Texture, src, color,
-                    new Transform
+
+                Render(shader, font.Texture, color, new Transform
                     {
                         Position = new Vector3(position.X + rotated.X, position.Y + rotated.Y, position.Z),
                         Scale    = scale,
                         Rotation = rotation
-                    });
+                    }, src);
             }
 
             pen.X += g.WidthIncludingBearings + font.Spacing;
         }
     }
 
-    private void Flush()
+    public void Flush()
     {
         if (flushed) return;
         if (currShader == null) return;

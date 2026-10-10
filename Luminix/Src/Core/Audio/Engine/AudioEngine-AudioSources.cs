@@ -20,7 +20,7 @@ internal sealed partial class AudioEngine : IAudioEngine, IDisposable
     private DenseFixedList<int> playingSourceIndexes;
     private AudioSourceState[] audioSourceStates;
     
-    public int AudioSourceCount;
+    public int AudioSourceCount => audioSourceCount;
     public int AudioSourcePlayingCount => playingSourceIndexes.Count;
 
     private void InitializeAudioSources()

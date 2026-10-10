@@ -4,8 +4,11 @@ using Microsoft.Xna.Framework.Graphics;
 using Luminix.Threading.Buffers;
 using Luminix.Threading.Bridges;
 using System.Runtime.CompilerServices;
+using Microsoft.Xna.Framework.Input;
 
 namespace Luminix.Rendering;
+
+// THE CLASS IS BECOMING A GOD CLASS.
 
 public sealed class RenderingSystem : Workspace.Service
 {
@@ -22,7 +25,12 @@ public sealed class RenderingSystem : Workspace.Service
         resolution = new Rectangle(0, 0, graphics.PreferredBackBufferWidth, graphics.PreferredBackBufferHeight);
 
         this.renderBridge = renderBridge;
+        this.instances = new GPUInstance[4096];
+        this.commands = new RenderCommand[4096];
     }
+
+    private record struct GPUInstance(Effect Shader, object Source, Color Color, Transform Transform, string Text);
+    private record struct RenderCommand(ulong Key, int Index) : IComparable<RenderCommand> { public int CompareTo(RenderCommand other) => Key.CompareTo(other.Key); }
 
     private MainRender main;
     private Renderer renderer;
@@ -35,8 +43,8 @@ public sealed class RenderingSystem : Workspace.Service
 
     private RenderTarget2D renderTarget;
     private RenderTarget2D unscaledRenderTarget;
-    private Rectangle renderTargetDestination;
-    private Rectangle unscaledRenderTargetDestination;
+    private Transform renderTargetDestination;
+    private Transform unscaledRenderTargetDestination;
 
     private Rectangle resolution;
     private Rectangle screenBounds;
@@ -49,6 +57,10 @@ public sealed class RenderingSystem : Workspace.Service
     private Matrix? viewMatrix;
     private Matrix projectionMatrix;
 
+    private GPUInstance[] instances;
+    private RenderCommand[] commands;
+    private int commandCount;
+
     public bool IsFullScreen => graphics.IsFullScreen;
     public bool IsVSync => graphics.SynchronizeWithVerticalRetrace;
 
@@ -57,20 +69,12 @@ public sealed class RenderingSystem : Workspace.Service
     public Microsoft.Xna.Framework.Graphics.GraphicsDevice GraphicsDevice => graphics.GraphicsDevice;
     public long FrameCount => frameCount;
     public long DrawCount => drawCount;
-    public Viewport Viewport => viewport;
 
     public int ResolutionWidth => resolution.Width;
     public int ResolutionHeight => resolution.Height;
 
-    public Matrix? ViewMatrix => viewMatrix;
-    public Matrix ProjectionMatrix => projectionMatrix;
-    public Matrix? TransformMatrix => viewMatrix.HasValue ? viewMatrix.Value * projectionMatrix : null;
-
-    internal SpriteBatch SpriteBatch => spriteBatch;
-
     internal void Initialize()
     {
-        spriteBatch = new SpriteBatch(GraphicsDevice);
         renderTarget = new RenderTarget2D(GraphicsDevice, ResolutionWidth, ResolutionHeight);
         unscaledRenderTarget = new RenderTarget2D(GraphicsDevice, ResolutionWidth, ResolutionHeight);
 
@@ -83,17 +87,8 @@ public sealed class RenderingSystem : Workspace.Service
         {       
             renderBuffer = renderBridge.ReadBuffer;
             
-            ref RenderSettings renderSettings = ref renderBuffer.RenderSettings;
-
-            var resolution = renderSettings.Resolution;
-            var frameRate = renderSettings.FrameRate;
-            var vSync = renderSettings.VSync;
-
-            //TODO set settings
+            SetSettings(ref renderBuffer.RenderSettings);
         }
-
-
-        var cameraData = renderBuffer?.GetCameraData();
 
         GraphicsDevice.RasterizerState = RasterizerState.CullNone;
         GraphicsDevice.BlendState = BlendState.AlphaBlend;
@@ -103,33 +98,108 @@ public sealed class RenderingSystem : Workspace.Service
 
         partialTick = Math.Clamp(partialTick, 0f, 1f);
 
-        //scaled
+        var cameraData = renderBuffer?.GetCameraData();
+
+        //World space
+
         GraphicsDevice.SetRenderTarget(this.renderTarget);
         GraphicsDevice.Clear(Color.Black);
-        projectionMatrix = GetProjectionMatrix(viewport, out viewport);
-        viewMatrix = GetViewMatrix(cameraData, viewport, partialTick);
-        
-        renderer.SetData(renderBuffer.GetRenderInstances(), partialTick);
-        renderer.Render();
+        if(cameraData.HasValue)
+        {
+            projectionMatrix = GetProjectionMatrix(viewport, out viewport);
+            viewMatrix = GetViewMatrix(cameraData, viewport, partialTick);
+            renderer.SetTransformMatrix(viewMatrix.Value * projectionMatrix);
 
-        //unscaled
+            SetData(renderBuffer.GetRenderInstances(), partialTick);
+
+            for(int i = 0; i < commandCount; i++)
+            {
+                var command = commands[i];
+                var instance = instances[command.Index];
+                switch(instance.Source)
+                {
+                    case Texture2D source:
+                        renderer.Render(instance.Shader, source, instance.Color, instance.Transform);
+                    break;
+                    case SpriteFont source:
+                        renderer.Render(instance.Shader, source, instance.Text, instance.Transform, instance.Color);
+                    break;
+                    default:
+                        Logger.NewLog(Logger.Log.Level.Error, $"Unsupported source type '{instance.Source.GetType()}'");
+                    break;
+                }
+            }
+        }
+        
+        renderer.Flush();
+
+        //Screen space
         GraphicsDevice.SetRenderTarget(this.unscaledRenderTarget);
         GraphicsDevice.Clear(Color.Transparent);
         projectionMatrix = GetProjectionMatrix(viewport, out viewport);
-        viewMatrix = GetViewMatrix(cameraData, viewport, partialTick);
-    
-        renderer.SetData(renderBuffer.GetUIRenderInstances());
-        renderer.Render();
+        renderer.SetTransformMatrix(projectionMatrix);
+        
+        SetData(renderBuffer.GetUIRenderInstances());
+
+        renderer.Flush();
 
         //final
         GraphicsDevice.SetRenderTarget(null);
-        GraphicsDevice.Clear(Color.Black);
-        renderer.Render(this.renderTarget, renderTargetDestination, Color.White);
-        spriteBatch.Draw(this.unscaledRenderTarget, unscaledRenderTargetDestination, Color.White);
-        spriteBatch.End();
+        renderer.Render(resourceManager.GenericShader, renderTarget, Color.White, in renderTargetDestination);
+        renderer.Render(resourceManager.GenericShader, unscaledRenderTarget, Color.White, in unscaledRenderTargetDestination);
+
+        renderer.Flush();
 
         frameCount++;
         drawCount = GraphicsDevice.Metrics.DrawCount;
+    }
+
+    private void SetSettings(ref RenderSettings renderSettings)
+    {
+        var settingsChanged = false;
+
+        var resolution = renderSettings.Resolution;
+        var frameRate = renderSettings.FrameRate;
+        var vSync = renderSettings.VSync;
+
+        //TODO frameRate
+
+        if(this.resolution.X != resolution.X || this.resolution.Y != resolution.Y)
+        {
+            this.resolution = new Rectangle(0, 0, resolution.X, resolution.Y);
+            settingsChanged = true;
+        }
+
+        if(this.IsVSync != vSync)
+        {
+            this.graphics.SynchronizeWithVerticalRetrace = vSync;
+            settingsChanged = true;
+        }
+
+        if(settingsChanged)
+            Apply();
+    }
+
+    public void SetWindowMode(Window.Mode windowMode)
+    {
+        this.graphics.IsFullScreen = windowMode == Window.Mode.Fullscreen;
+    }
+    public void Apply()
+    {
+        var prevWindowPos = new Vector2(window.ClientBounds.X, window.ClientBounds.Y);
+        MouseState mouse = Mouse.GetState();
+
+        graphics.ApplyChanges();
+
+        if(resolution.Width != renderTarget.Width || resolution.Height != renderTarget.Height)
+        {
+            renderTarget.Dispose();
+            renderTarget = new RenderTarget2D(GraphicsDevice, resolution.Width, resolution.Height);
+        }
+
+        var currWindowPos = new Vector2(window.ClientBounds.X, window.ClientBounds.Y);
+        var pos = prevWindowPos - currWindowPos;
+        Mouse.SetPosition((int)(pos.X + mouse.X), (int)(pos.Y + mouse.Y));
     }
 
     private Matrix? GetViewMatrix(in Camera? cameraData, Viewport viewport, float partialTick)
@@ -184,7 +254,7 @@ public sealed class RenderingSystem : Workspace.Service
             int posX = (screenSize.Width - newWidth) / 2;
             int posY = (screenSize.Height - newHeight) / 2;
 
-            renderTargetDestination = new Rectangle(posX, posY, newWidth, newHeight);
+            renderTargetDestination = new Transform(new Vector3(posX, posY, 0), new Vector2(newWidth, newHeight));
         }
 
         {
@@ -198,66 +268,80 @@ public sealed class RenderingSystem : Workspace.Service
             int posX = (screenSize.Width - newWidth) / 2;
             int posY = (screenSize.Height - newHeight) / 2;
 
-            unscaledRenderTargetDestination = new Rectangle(posX, posY, newWidth, newHeight);
+            unscaledRenderTargetDestination = new Transform(new Vector3(posX, posY, 0), new Vector2(newWidth, newHeight));
         }
 
         screenBounds = screenSize;
     }
 
-
-    public void SetData(ReadOnlySpan<RenderInstance> instances, float partialTick)
+    private void SetData(ReadOnlySpan<RenderInstance> newInstances, float partialTick)
     {
-        activeCommandCount = instances.Length;
-        if (activeCommandCount == 0) return;
+        commandCount = newInstances.Length;
+        if (commandCount == 0) return;
 
-        EnsureCapacity(activeCommandCount);
+        EnsureCapacity(commands, instances, commandCount);
 
-        for (int i = 0; i < instances.Length; i++)
+        for (int i = 0; i < commandCount; i++)
         {
-            ref readonly var instance = ref instances[i];
+            try
+            {
+                ref readonly var instance = ref newInstances[i];
 
-            var transform = Interpolate(instance.Transform, partialTick);
+                var transform = Interpolate(instance.Transform, partialTick);
 
-            ushort layerBits = (ushort)Math.Clamp((int)(transform.Position.X * 100.0f), 0, 65535);
+                ushort layerBits = (ushort)Math.Clamp((int)(transform.Position.X * 100.0f), 0, 65535);
 
-            var key = BuildKey(layerBits, instance.Shader, instance.Resource);
+                var key = BuildKey(layerBits, instance.Shader, instance.Resource);
 
-            commands[i] = new RenderCommand(key, i);
-            gpuInstanceBuffer[i] = new GPUInstanceData(instance.Shader, instance.Resource, instance.Color, transform, instance.Text);
+                commands[i] = new RenderCommand(key, i);
+                instances[i] = new GPUInstance(resourceManager.GetShader(instance.Shader), resourceManager.GetTextureOrFont(instance.Resource), instance.Color, transform, instance.Text);
+            }
+            catch(Exception ex)
+            {
+                Logger.NewLog(Logger.Log.Level.Error, $"Unable to render instance, reason: {ex}");
+                i--;
+                commandCount--;
+            }
         }
 
-        Array.Sort(commands, 0, activeCommandCount);
+        Array.Sort(commands, 0, commandCount);
     }
-    public void SetData(ReadOnlySpan<RenderInstanceUI> instances)
+    private void SetData(ReadOnlySpan<RenderInstanceUI> newInstances)
     {
-        activeCommandCount = instances.Length;
-        if (activeCommandCount == 0) return;
+        commandCount = newInstances.Length;
+        if (commandCount == 0) return;
 
-        EnsureCapacity(activeCommandCount);
+        EnsureCapacity(commands, instances, commandCount);
 
-        for (int i = 0; i < instances.Length; i++)
+        for (int i = 0; i < commandCount; i++)
         {
-            ref readonly var instance = ref instances[i];
+            try
+            {
+                ref readonly var instance = ref newInstances[i];
 
-            var transform = new Transform(new Vector3(instance.X, instance.Y, 0), instance.Rotation);
-
-            ushort layerBits = (ushort)Math.Clamp((int)(transform.Position.X * 100.0f), 0, 65535);
-
-            var key = BuildKey(layerBits, instance.Shader, instance.Resource);
-
-            commands[i] = new RenderCommand(key, i);
-            gpuInstanceBuffer[i] = new GPUInstanceData(instance.Shader, instance.Resource, instance.Color, transform, instance.Text);
+                var transform = new Transform(new Vector3(instance.X, instance.Y, 0), new Vector2(instance.Width, instance.Height), instance.Rotation);
+                instances[i] = new GPUInstance(resourceManager.GetShader(instance.Shader), resourceManager.GetTextureOrFont(instance.Resource), instance.Color, transform, instance.Text);
+            }
+            catch(Exception ex)
+            {
+                Logger.NewLog(Logger.Log.Level.Error, $"Unable to render instance, reason: {ex}");
+                i--;
+                commandCount--;
+            }
         }
 
     }
 
-    [MethodImpl(MethodImplOptions.AggressiveInlining)] private void EnsureCapacity(int requiredCapacity)
+    [MethodImpl(MethodImplOptions.AggressiveInlining)] private static void EnsureCapacity(RenderCommand[] commands, GPUInstance[] instances, int requiredCapacity)
     {
         if (commands.Length < requiredCapacity)
         {
-            int newCapacity = Math.Max(commands.Length * 2, requiredCapacity);
+            int newCapacity = commands.Length * 2;
+            while (newCapacity < requiredCapacity)
+                newCapacity *= 2;
+
             Array.Resize(ref commands, newCapacity);
-            Array.Resize(ref gpuInstanceBuffer, newCapacity);
+            Array.Resize(ref instances, newCapacity);
         }
     }
     [MethodImpl(MethodImplOptions.AggressiveInlining)] private static ulong BuildKey(uint layer, ShaderResource shader, Resource resource)
@@ -270,9 +354,7 @@ public sealed class RenderingSystem : Workspace.Service
 
         return layerBits | shaderBits | textureBits;
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)] 
-    private static Transform Interpolate(in TransformInterp transform, float partialTick)
+    [MethodImpl(MethodImplOptions.AggressiveInlining)] private static Transform Interpolate(in TransformInterp transform, float partialTick)
     {
         return new Transform(
             Vector3.Lerp(transform.Position0, transform.Position, partialTick),
@@ -280,4 +362,78 @@ public sealed class RenderingSystem : Workspace.Service
             MathHelper.Lerp(transform.Rotation0, transform.Rotation, partialTick)
         );
     }
+
+    // public void TakeScreenshot(float partialTick)
+    // {
+    //     string screenshotPath = Path.Combine("Screenshots", $"screenshot_{DateTime.Now:yyyyMMdd_HHmmss}.png");
+
+    //     try
+    //     {
+    //         if (!Directory.Exists("Screenshots"))
+    //             Directory.CreateDirectory("Screenshots");
+
+    //         using (var stream = new FileStream(screenshotPath, FileMode.Create))
+    //         {
+    //             // var screenShotRect = new Rectangle(0, 0, Settings.ScreenshotWidth, Settings.ScreenshotHeight);
+    //             // var screenShotTarget = new RenderTarget2D(GraphicsDevice, Settings.ScreenshotWidth, Settings.ScreenshotHeight);
+
+    //             // TODO : add screenshot resolution settings
+
+    //             var screenShotRect = new Rectangle(0, 0, 1920, 1080);
+    //             var screenShotTarget = new RenderTarget2D(GraphicsDevice, 1920, 1080);
+
+    //             NewFrame(partialTick);
+
+    //             var renderTargetDestination = this.renderTargetDestination;
+    //             var unscaledRenderTargetDestination = this.unscaledRenderTargetDestination;
+
+    //             {
+    //                 float scaleX = (float)screenShotTarget.Width / renderTarget.Width;
+    //                 float scaleY = (float)screenShotTarget.Height / renderTarget.Height;
+    //                 float scale = Math.Min(scaleX, scaleY);
+
+    //                 int newWidth = (int)(renderTarget.Width * scale);
+    //                 int newHeight = (int)(renderTarget.Height * scale);
+
+    //                 int posX = (screenShotTarget.Width - newWidth) / 2;
+    //                 int posY = (screenShotTarget.Height - newHeight) / 2;
+
+    //                 renderTargetDestination = new Rectangle(posX, posY, newWidth, newHeight);
+    //             }
+    //             {
+    //                 float scaleX = (float)screenShotTarget.Width / unscaledRenderTarget.Width;
+    //                 float scaleY = (float)screenShotTarget.Height / unscaledRenderTarget.Height;
+    //                 float scale = Math.Min(scaleX, scaleY);
+
+    //                 int newWidth = (int)(unscaledRenderTarget.Width * scale);
+    //                 int newHeight = (int)(unscaledRenderTarget.Height * scale);
+
+    //                 int posX = (screenShotTarget.Width - newWidth) / 2;
+    //                 int posY = (screenShotTarget.Height - newHeight) / 2;
+
+    //                 unscaledRenderTargetDestination = new Rectangle(posX, posY, newWidth, newHeight);
+    //             }
+
+    //             GraphicsDevice.SetRenderTarget(screenShotTarget);
+
+    //             spriteBatch.Begin();
+    //             spriteBatch.Draw(this.renderTarget, renderTargetDestination, Color.White);
+    //             spriteBatch.Draw(this.unscaledRenderTarget, unscaledRenderTargetDestination, Color.White);
+    //             spriteBatch.End();
+
+    //             GraphicsDevice.SetRenderTarget(null);
+
+    //             screenShotTarget.SaveAsPng(stream, screenShotRect.Width, screenShotRect.Height);
+    //             screenShotTarget.Dispose();
+
+    //             Logger.NewLog(Logger.Log.Level.Info, $"Screenshot saved to: {screenshotPath}");
+    //         }
+
+    //         GC.Collect();
+    //     }
+    //     catch (Exception e)
+    //     {
+    //         Logger.NewLog(Logger.Log.Level.Error, $"RenderingSystem: failed to produce a screenshot, reason: {e.Message}");
+    //     }
+    // }
 }

@@ -16,7 +16,6 @@ public sealed class Resources : Workspace.Service, IEnumerable<Resource>
     {
         container = new();
         audioMedia = Workspace.Current.GetService<AudioMedia>();
-        var assetIO = Workspace.Current.GetService<Assets>().GetAssetIO();
         resourceBridge = ThreadBridges.GetBridge<CommandBridge<GraphicResourceCommand>>(Application.RENDER_THREAD_NAME);
 
         // --- GENERIC RESOURCES ---

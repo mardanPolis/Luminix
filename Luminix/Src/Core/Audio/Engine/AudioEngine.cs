@@ -44,12 +44,12 @@ internal sealed partial class AudioEngine : IAudioEngine, IDisposable
         audioDevice = AudioDevice.Create();
         audioDevice.Start();
 
+        audioBridge = ThreadBridges.GetGlobalBridge<AudioBridge>();
+
         InitializeAudioListener();
         InitializeAudioSources();
         InitializeAudioClips();
         InitializeAudioGroups();
-
-        audioBridge = ThreadBridges.GetGlobalBridge<AudioBridge>();
 
         handleCommands = (command) =>
         {

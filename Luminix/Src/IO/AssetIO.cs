@@ -159,7 +159,7 @@ public sealed class AssetIO
     {
         try
         {
-            using Stream? stream = assembly.GetManifestResourceStream(identifier) ?? throw new FileNotFoundException($"Embedded resource '{identifier}' was not found.");
+            using Stream stream = assembly.GetManifestResourceStream(identifier) ?? throw new FileNotFoundException($"Embedded resource '{identifier}' was not found.");
             AudioData wav = WavReader.Read(stream);
             return new AudioAsset(identifier, wav.PcmData, wav.Format, wav.SampleRate);
         }

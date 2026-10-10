@@ -37,26 +37,26 @@ public sealed class AudioDeviceException : AudioException
 
 public sealed class InvalidAudioSourceException : ArgumentException
 {
-    public AudioSource Source { get; }
+    public AudioSource AudioSource { get; }
     public string Operation { get; }
  
     internal InvalidAudioSourceException(AudioSource source, string operation, string paramName)
         : base($"Cannot perform '{operation}', reason: audio source with index {source.Index} is invalid or has been disposed.", paramName)
     {
-        Source = source;
+        AudioSource = source;
         Operation = operation;
     }
 }
 
 public sealed class InvalidAudioGroupException : ArgumentException
 {
-    public AudioGroup Group { get; }
+    public AudioGroup AudioGroup { get; }
     public string Operation { get; }
  
     internal InvalidAudioGroupException(AudioGroup group, string operation, string paramName)
         : base($"Cannot perform '{operation}', reason: audio group with index {group.Index} is invalid or has been disposed.", paramName)
     {
-        Group = group;
+        AudioGroup = group;
         Operation = operation;
     }
 }

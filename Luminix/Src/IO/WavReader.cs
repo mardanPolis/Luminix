@@ -27,7 +27,7 @@ internal static class WavReader
         uint sampleRate = 0;
         ushort bitsPerSample = 0;
 
-        byte[]? pcmData = null;
+        byte[] pcmData = null;
 
         while (stream.Position < stream.Length)
         {
@@ -123,7 +123,7 @@ internal static class WavReader
         uint sampleRate = 0;
         ushort bitsPerSample = 0;
 
-        byte[]? pcmData = null;
+        byte[] pcmData = null;
 
         while (stream.Position < stream.Length)
         {

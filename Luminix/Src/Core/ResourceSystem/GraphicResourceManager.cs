@@ -16,18 +16,46 @@ public sealed class GraphicsResourceManager : Microsoft.Xna.Framework.Content.Co
 
         this.sourceResources = [];
         this.linked = [];
+    }
 
-        Color[] nullTexturePixels = new Color[32 * 32];
-        for (int y = 0; y < 32; y++)
-            for (int x = 0; x < 32; x++)
-                nullTexturePixels[y * 32 + x] = (x / 16 ^ y / 16) == 1
-                    ? Color.Magenta
-                    : Color.Black;
+    public new string RootDirectory => AssetIO.ASSET_DIRECTORY;
 
-        NullTexture = new Texture2D(main.GraphicsDevice, 32, 32);
-        NullTexture.SetData(nullTexturePixels);
-        
+    private MainRender main;
+    private bool disposed = false;
+
+    private Stream openedStream = null; 
+
+    private readonly Dictionary<(GraphicResourceType, string), object>  sourceResources;
+    private readonly Dictionary<Resource, object> linked;
+
+    public Texture2D NullTexture { get; private set; }
+    public Effect GenericShader {  get; private set;  }
+    public SpriteFont GenericFontBold {  get; private set;  }
+    public SpriteFont GenericFontMedium {  get; private set;  }
+    public SpriteFont GenericFontRegular {  get; private set;  }
+
+    internal void Initialize()
+    {
         var assetIO = new AssetIO();
+        
+        {
+            Color[] nullTexturePixels = new Color[32 * 32];
+            for (int y = 0; y < 32; y++)
+                for (int x = 0; x < 32; x++)
+                    nullTexturePixels[y * 32 + x] = (x / 16 ^ y / 16) == 1
+                        ? Color.Magenta
+                        : Color.Black;
+
+            NullTexture = new Texture2D(main.GraphicsDevice, 32, 32);
+            NullTexture.SetData(nullTexturePixels);
+        }
+        
+        {
+            var identifier = "generic_shader";
+            XnbAsset asset = assetIO.LoadXnbAsset(Application.EngineAssembly, "Assets.Built-In.Shaders.GenericShader.xnb");
+            var stream = new MemoryStream(asset.Data);
+            GenericShader = Create<Effect>(identifier, stream);  
+        }
 
         {
             XnbAsset asset = assetIO.LoadXnbAsset(Application.EngineAssembly, "Assets.Built-In.Fonts.IBMPlexMono-Bold.xnb");
@@ -46,30 +74,7 @@ public sealed class GraphicsResourceManager : Microsoft.Xna.Framework.Content.Co
             CreateFont("font_regular", asset.Data);
             GenericFontRegular = GetFont("font_regular");   
         }
-        
-        {
-            XnbAsset asset = assetIO.LoadXnbAsset(Application.EngineAssembly, "Assets.Built-In.Shaders.GenericShader.xnb");
-            CreateFont("generic_shader", asset.Data); 
-            GenericShader = GetShader("generic_shader");  
-        }
-
     }
-
-    public new string RootDirectory => AssetIO.ASSET_DIRECTORY;
-
-    private MainRender main;
-    private bool disposed = false;
-
-    private Stream openedStream = null; 
-
-    private readonly Dictionary<(GraphicResourceType, string), object>  sourceResources;
-    private readonly Dictionary<Resource, object> linked;
-
-    public Texture2D NullTexture { get; }
-    public Effect GenericShader { get; }
-    public SpriteFont GenericFontBold { get; }
-    public SpriteFont GenericFontMedium { get; }
-    public SpriteFont GenericFontRegular { get; }
 
     internal void CreateTexture(string identifier, Color[] colors, int X, int Y)
     {
@@ -207,6 +212,9 @@ public sealed class GraphicsResourceManager : Microsoft.Xna.Framework.Content.Co
 
     public Texture2D GetTexture(TextureResource resource)
     {
+        if(resource == null)
+            return NullTexture;
+
         if(linked.TryGetValue(resource, out object source))
             return (Texture2D)source;
         
@@ -215,11 +223,22 @@ public sealed class GraphicsResourceManager : Microsoft.Xna.Framework.Content.Co
     }
     public Effect GetShader(ShaderResource resource)
     {
-        return linked.TryGetValue(resource, out object source) ? (Effect)source : throw new KeyNotFoundException($"ShaderResource '{resource.Identifier}' is not linked to a source!");
+        if(resource == null)
+            return GenericShader;
+
+        if(linked.TryGetValue(resource, out object source))
+            return (Effect)source;
+        
+        Logger.NewLog(Logger.Log.Level.Error, $"ShaderResource '{resource.Identifier}' is not linked to a source!");
+        return GenericShader;
     }
     public SpriteFont GetFont(FontResource resource)
     {
         return linked.TryGetValue(resource, out object source) ? (SpriteFont)source : throw new KeyNotFoundException($"FontResource '{resource.Identifier}' is not linked to a source!");
+    }
+    public object GetTextureOrFont(Resource resource)
+    {
+        return resource is TextureResource texture ? GetTexture(texture) : GetFont((FontResource)resource);
     }
 
     private T Create<T>(string identifier, Stream stream) where T : class

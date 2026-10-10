@@ -135,6 +135,8 @@ internal sealed class MainRender : Microsoft.Xna.Framework.Game
             });
 
             //base initialization
+            resourceManager.Initialize();
+
             base.Initialize();
 
             resourceCommandHandler = (command) =>

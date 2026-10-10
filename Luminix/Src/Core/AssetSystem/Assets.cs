@@ -131,7 +131,7 @@ public sealed class Assets : Workspace.Service
 
     public AssetIO GetAssetIO() => assetIO;
 
-    internal void FinalizeAssets(bool makeAtlases, out bool hadAssets)
+    public void FinalizeAssets(bool makeAtlases, out bool hadAssets)
     {
         var defs = Workspace.Current.GetService<Defs>();
         var assets = new List<Asset>();
@@ -197,8 +197,6 @@ public sealed class Assets : Workspace.Service
                 Logger.NewLog(Logger.Log.Level.Error, $"Failed to create resource, reason: {ex}");
             }
         }
-
-        Task.WhenAll(assetTasks).GetAwaiter().GetResult();
 
         textureAssets.Clear();
         audioAssets.Clear();

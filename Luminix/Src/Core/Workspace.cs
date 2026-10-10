@@ -87,7 +87,7 @@ public sealed class Workspace
     public T GetService<T>() where T : Service
     {
         if (!services.TryGetValue(typeof(T), out var service))
-            throw new KeyNotFoundException($"Service of type {typeof(T).Name} is not registered.");
+            throw new KeyNotFoundException($"Service of type '{typeof(T).Name}' is not registered.");
 
         return (T)service;
     }
