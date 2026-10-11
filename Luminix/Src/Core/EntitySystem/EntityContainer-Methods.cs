@@ -15,7 +15,7 @@ internal partial class EntityContainer
 
         private readonly ComponentContainer<EntityID> entityIdContainer;
 
-        public Method(MethodInfo methodInfo, EntitySystem entitySystem, Dictionary<Type, IComponentContainer> componentContainers, bool isByInOnly)
+        public Method(EntityType entityType, MethodInfo methodInfo, EntitySystem entitySystem, Dictionary<Type, IComponentContainer> componentContainers, bool isByInOnly)
         {
             Info = methodInfo;
             Parameters = methodInfo.GetParameters();
@@ -35,7 +35,7 @@ internal partial class EntityContainer
                 Type elementType = parameterType.GetElementType();
 
                 if (!componentContainers.TryGetValue(elementType, out var container))
-                    throw new InvalidOperationException($"EntityType has no component with Type {elementType.Name}!");
+                    throw new InvalidOperationException($"{entityType.Name} has no component with Type {elementType.Name}!");
                 
                 if (parameterInfo.IsOut)
                     throw new InvalidOperationException($"Parameter '{parameterInfo.Name}' on '{methodInfo.DeclaringType?.Name}.{methodInfo.Name}' must not be passed with 'out' parameter modifier!");

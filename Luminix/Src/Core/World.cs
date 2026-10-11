@@ -5,6 +5,7 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using Luminix.Collections;
+using Microsoft.Xna.Framework;
 
 namespace Luminix;
 
@@ -143,10 +144,14 @@ public sealed class World : Workspace.Service
     private Dictionary<EntityType, EntityContainer> typeContainers;
     private EntityContainer[] entityContainers;
 
+    private bool isInitialized;
+
     private bool isPreparing;
 
-    protected override void Start()
+    protected override void Initialize()
     {
+        Logger.NewLog(Logger.Log.Level.Info, "Initializing World");
+
         var defs = Workspace.GetService<Defs>();
         var entityTypes = defs.GetDefs<EntityType>();
         entityContainers = CreateEntityContainers(entityTypes);
@@ -158,10 +163,27 @@ public sealed class World : Workspace.Service
 
         foreach(EntityContainer container in entityContainers)
             container.EntitySystem?.Initialize(container.EntityType);
+        
+        isInitialized = true;
+    }
+
+    protected override void Start()
+    {
+        var camera = Workspace.GetService<Defs>().GetDef<EntityType>("camera");
+        var cameraID = CreateEntity(camera);
+        graphics.MainCamera = cameraID;
+
+        ref Camera cameraData = ref GetEntityComponent<Camera>(cameraID);
+        cameraData.BackgroundColor = new Color(49, 77, 121);
     }
 
     public EntityID CreateEntity(EntityType entityType)
     {
+        ArgumentNullException.ThrowIfNull(entityType, nameof(entityType));
+
+        if(!isInitialized)
+            throw new InvalidOperationException("Cant create an Entity when the world is not initialized!");
+
         if(graphics.IsRendering)
             throw new InvalidOperationException("Cant create an Entity during rendering phase.");
 
@@ -427,7 +449,7 @@ public sealed class World : Workspace.Service
 
             return result.ToArray();
         }
-        EntityContainer.Method[] GetMethods(EntitySystem entitySystem, string methodName, Dictionary<Type, IComponentContainer> componentContainerMap, bool isByInOnly)
+        EntityContainer.Method[] GetMethods(EntityType entityType, EntitySystem entitySystem, string methodName, Dictionary<Type, IComponentContainer> componentContainerMap, bool isByInOnly)
         {
             try
             {
@@ -441,7 +463,7 @@ public sealed class World : Workspace.Service
                 {
                     try
                     {
-                        EntityContainer.Method method = new EntityContainer.Method(methodInfos[m], entitySystem, componentContainerMap, isByInOnly);
+                        EntityContainer.Method method = new EntityContainer.Method(entityType, methodInfos[m], entitySystem, componentContainerMap, isByInOnly);
                         updateMethods ??= new List<EntityContainer.Method>(methodInfos.Length);
                         updateMethods.Add(method);
                     }
@@ -471,7 +493,7 @@ public sealed class World : Workspace.Service
             EntitySystem entitySystem = entityType.GetEntitySystem();
 
             IComponentContainer[] componentContainerArray = entityType.GetComponentContainers();
-        
+
             Dictionary<Type, IComponentContainer> componentContainerMap = new Dictionary<Type, IComponentContainer>();
             for(int i = 0; i < componentContainerArray.Length; i++)
             {
@@ -479,11 +501,11 @@ public sealed class World : Workspace.Service
                 componentContainerMap.Add(componentContainerArray[i].ComponentType.Type, componentContainerArray[i]);
             }
 
-            EntityContainer.Method[] startMethods = GetMethods(entitySystem, "Start", componentContainerMap, false);
-            EntityContainer.Method[] preUpdateMethods = GetMethods(entitySystem, "Prepare", componentContainerMap, false);
-            EntityContainer.Method[] updateMethods = GetMethods(entitySystem, "Update", componentContainerMap, false);
-            EntityContainer.Method[] renderMethods = GetMethods(entitySystem, "Render", componentContainerMap, true);
-            EntityContainer.Method[] destroyMethods = GetMethods(entitySystem, "OnDestroy", componentContainerMap, false);
+            EntityContainer.Method[] startMethods = GetMethods(entityType, entitySystem, "Start", componentContainerMap, false);
+            EntityContainer.Method[] preUpdateMethods = GetMethods(entityType, entitySystem, "Prepare", componentContainerMap, false);
+            EntityContainer.Method[] updateMethods = GetMethods(entityType, entitySystem, "Update", componentContainerMap, false);
+            EntityContainer.Method[] renderMethods = GetMethods(entityType, entitySystem, "Render", componentContainerMap, true);
+            EntityContainer.Method[] destroyMethods = GetMethods(entityType, entitySystem, "OnDestroy", componentContainerMap, false);
 
             entityContainers.Add(new EntityContainer(entityType, entitySystem, startMethods, preUpdateMethods, updateMethods, renderMethods, destroyMethods, componentContainerArray));
             entryIndex++;

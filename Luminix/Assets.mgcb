@@ -37,12 +37,13 @@
 #begin Assets/Shaders/GenericShader.fx
 /importer:EffectImporter
 /processor:EffectProcessor
-/processorParam:DebugMode=Auto
+/processorParam:DebugMode=Optimize
+/processorParam:Defines=
 /build:Assets/Shaders/GenericShader.fx
 
 #begin Assets/Shaders/TileShader.fx
 /importer:EffectImporter
 /processor:EffectProcessor
-/processorParam:DebugMode=Auto
+/processorParam:DebugMode=Optimize
 /build:Assets/Shaders/TileShader.fx
 

@@ -5,20 +5,18 @@ namespace Luminix;
 
 public sealed class TextureResource : Resource
 {
-    private static uint globalIndex = 0;
-    internal TextureResource(string name, Rectangle rectangle, DenseList<TextureResource> subTextures = null) 
+    internal TextureResource(TextureID source, string name, Rectangle rectangle, DenseList<TextureResource> subTextures = null) 
         : base(name)
     {
         Rectangle = rectangle;
         SubTextures = subTextures;
-        Index = globalIndex;
-        globalIndex++;
+        Source = source;
     }
 
-    internal uint Index { get; }
+    internal TextureID Source { get; }
 
-    internal TextureResource(string name, int posX, int posY, int width, int height, DenseList<TextureResource> subTextures = null) 
-        : this(name, new Rectangle(posX, posY, width, height), subTextures) { }
+    internal TextureResource(TextureID source, string name, int posX, int posY, int width, int height, DenseList<TextureResource> subTextures = null) 
+        : this(source, name, new Rectangle(posX, posY, width, height), subTextures) { }
 
     internal DenseList<TextureResource> SubTextures { get; }
 

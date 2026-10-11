@@ -21,25 +21,28 @@ public sealed class Resources : Workspace.Service, IEnumerable<Resource>
     private Dictionary<(Type, string), Resource> container;
     public int ResourceCount => container.Count;
  
+    private ShaderID sourceShader = new(1);
+    private TextureID sourceTexture = new(1);
+
     internal void LoadDefaults()
     {
         var assetIO = Workspace.GetService<Assets>().GetAssetIO();
 
         {
             var identifier = "font_bold";
-            XnbAsset asset = assetIO.LoadXnbAsset(Application.EngineAssembly, "Assets.Built-In.Fonts.IBMPlexMono-Bold.xnb");
+            XnbAsset asset = assetIO.LoadXnbAsset(Application.EngineAssembly, "Asset.IBMPlexMono-Bold.xnb");
             CreateResource(asset, identifier);
         }
 
         {
             var identifier = "font_medium";
-            XnbAsset asset = assetIO.LoadXnbAsset(Application.EngineAssembly, "Assets.Built-In.Fonts.IBMPlexMono-Medium.xnb");
+            XnbAsset asset = assetIO.LoadXnbAsset(Application.EngineAssembly, "Asset.IBMPlexMono-Medium.xnb");
             CreateResource(asset, identifier);  
         }
 
         {
             var identifier = "font_regular";
-            XnbAsset asset = assetIO.LoadXnbAsset(Application.EngineAssembly, "Assets.Built-In.Fonts.IBMPlexMono-Regular.xnb");
+            XnbAsset asset = assetIO.LoadXnbAsset(Application.EngineAssembly, "Asset.IBMPlexMono-Regular.xnb");
             CreateResource(asset, identifier);
         }
 
@@ -74,15 +77,13 @@ public sealed class Resources : Workspace.Service, IEnumerable<Resource>
                     var colors = textureAsset.Colors;
                     var size = textureAsset.Size;
 
-                    var resource = new TextureResource(identifier, 0, 0, (int)size.X, (int)size.Y, []);
+                    var source = new TextureID(sourceTexture.ID++);
+
+                    var resource = new TextureResource(source, identifier, 0, 0, (int)size.X, (int)size.Y, []);
                     container.Add((resource.GetType(), asset.Identifier), resource);
 
-                    //Source commands
-                    var sourceCreateCommand = GraphicResourceCommand.Create(identifier, colors, (int)size.X, (int)size.Y);
+                    var sourceCreateCommand = GraphicResourceCommand.Create(source.ID, colors, (int)size.X, (int)size.Y);
                     resourceBridge.NewCommand(sourceCreateCommand);
-
-                    var sourceLinkCommand = GraphicResourceCommand.Link(identifier, resource);
-                    resourceBridge.NewCommand(sourceLinkCommand);
                 }
             break;
             case AtlasAsset atlasAsset:
@@ -93,16 +94,15 @@ public sealed class Resources : Workspace.Service, IEnumerable<Resource>
                     var colors = atlasAsset.Colors;
                     var size = atlasAsset.Size;
 
+                    var source = new TextureID(sourceTexture.ID++);
+
                     var subTextures = new DenseList<TextureResource>(atlasAsset.Regions.Length);
-                    var resource = new TextureResource(identifier, 0, 0, (int)size.X, (int)size.Y, subTextures);
+                    var resource = new TextureResource(source, identifier, 0, 0, (int)size.X, (int)size.Y, subTextures);
                     container.Add((resource.GetType(), identifier), resource);
 
                     //Source commands
-                    var sourceCreateCommand = GraphicResourceCommand.Create(identifier, colors, (int)size.X, (int)size.Y);
+                    var sourceCreateCommand = GraphicResourceCommand.Create(source.ID, colors, (int)size.X, (int)size.Y);
                     resourceBridge.NewCommand(sourceCreateCommand);
-
-                    var sourceLinkCommand = GraphicResourceCommand.Link(identifier, resource);
-                    resourceBridge.NewCommand(sourceLinkCommand);
 
                     var regions = atlasAsset.Regions;
                     for(int i = 0; i < regions.Length; i++)
@@ -117,13 +117,10 @@ public sealed class Resources : Workspace.Service, IEnumerable<Resource>
                             continue;
                         }
 
-                        var regionResource = new TextureResource(regionIdentifier, regionRect);
+                        var regionResource = new TextureResource(source, regionIdentifier, regionRect);
                         container.Add((regionResource.GetType(), regionIdentifier), regionResource);
 
                         subTextures.Add(regionResource);
-
-                        var regionLinkCommand = GraphicResourceCommand.Link(identifier, regionResource);
-                        resourceBridge.NewCommand(regionLinkCommand);
                     }
                 }
             break;
@@ -139,12 +136,13 @@ public sealed class Resources : Workspace.Service, IEnumerable<Resource>
                     if(container.ContainsKey((typeof(TextureResource), atlasIdentifier)))
                         throw new InvalidOperationException($"Texture resource with identifier '{atlasIdentifier}' already exists");
  
+                    var source = new TextureID(sourceTexture.ID++);
+
                     var subTextures = new DenseList<TextureResource>(glyphInfos.Length);
-                    var atlas = new TextureResource(atlasIdentifier, 0, 0, parsed.AtlasWidth, parsed.AtlasHeight, subTextures);
+                    var atlas = new TextureResource(source, atlasIdentifier, 0, 0, parsed.AtlasWidth, parsed.AtlasHeight, subTextures);
                     container.Add((typeof(TextureResource), atlasIdentifier), atlas);
                     
-                    resourceBridge.NewCommand(GraphicResourceCommand.Create(atlasIdentifier, parsed.AtlasPixels, parsed.AtlasWidth, parsed.AtlasHeight));
-                    resourceBridge.NewCommand(GraphicResourceCommand.Link(atlasIdentifier, atlas));
+                    resourceBridge.NewCommand(GraphicResourceCommand.Create(source.ID, parsed.AtlasPixels, parsed.AtlasWidth, parsed.AtlasHeight));
  
                     var regions = new List<TextureResource>(glyphInfos.Length);
                     for(int i = 0; i < glyphInfos.Length; i++)
@@ -160,10 +158,9 @@ public sealed class Resources : Workspace.Service, IEnumerable<Resource>
                             continue;
                         }
 
-                        var region = new TextureResource(regionIdentifier, glyph.Bounds);
+                        var region = new TextureResource(source, regionIdentifier, glyph.Bounds);
                         container.Add((typeof(TextureResource), regionIdentifier), region);
                         subTextures.Add(region);
-                        resourceBridge.NewCommand(GraphicResourceCommand.Link(atlasIdentifier, region));
                         regions.Add(region);
                     }
  
@@ -180,16 +177,15 @@ public sealed class Resources : Workspace.Service, IEnumerable<Resource>
                     if(container.ContainsKey((typeof(ShaderResource), asset.Identifier)))
                         throw new InvalidOperationException($"Shader resource with identifier '{asset.Identifier}' already exists");
 
+                    var source = new ShaderID(sourceShader.ID++);
+
                     var data = xnbAsset.Data;
                     var type = xnbAsset.Type;
-                    Resource resource = new ShaderResource(identifier);
+                    Resource resource = new ShaderResource(source, identifier);
                     container.Add((resource.GetType(), asset.Identifier), resource);
 
-                    var sourceCreateCommand = GraphicResourceCommand.Create(identifier, data, type);
+                    var sourceCreateCommand = GraphicResourceCommand.Create(source.ID, data, type);
                     resourceBridge.NewCommand(sourceCreateCommand);
-
-                    var sourceLinkCommand = GraphicResourceCommand.Link(identifier, resource);
-                    resourceBridge.NewCommand(sourceLinkCommand);
                 }
             break;
             default:
@@ -230,19 +226,16 @@ public sealed class Resources : Workspace.Service, IEnumerable<Resource>
                 var regions = texture.SubTextures;    // your DenseList
                 for (int i = 0; i < regions.Count; i++)
                 {
-                    resourceBridge.NewCommand(GraphicResourceCommand.Unlink(regions[i]));
                     container.Remove((typeof(TextureResource), regions[i].Identifier));
                 }
-
-                resourceBridge.NewCommand(GraphicResourceCommand.Unlink(texture));
-                resourceBridge.NewCommand(GraphicResourceCommand.Unload(texture.Identifier, GraphicResourceType.Texture));
+                
+                resourceBridge.NewCommand(GraphicResourceCommand.Unload(texture.Source.ID, GraphicResourceType.Texture));
                 break;
             }
 
             case ShaderResource shader:
                 if (!container.Remove((typeof(ShaderResource), shader.Identifier))) return;
-                resourceBridge.NewCommand(GraphicResourceCommand.Unlink(shader));
-                resourceBridge.NewCommand(GraphicResourceCommand.Unload(shader.Identifier, GraphicResourceType.Shader));
+                resourceBridge.NewCommand(GraphicResourceCommand.Unload(shader.Source.ID, GraphicResourceType.Shader));
                 break;
 
             case FontResource font:

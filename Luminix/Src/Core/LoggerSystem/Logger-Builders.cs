@@ -62,7 +62,7 @@ public static partial class Logger
 
             if(value is Exception ex)
             {
-                return Add(ex.GetType().Name) && Add(", ") && Add(ex.Message) && Add("\n") && Add(ex.StackTrace) && Add("\n\n") && (ex.InnerException == null || (Add("Inner Exception: ") && AppendFormatted(ex.InnerException)));
+                return Add(ex.GetType().Name) && Add(", ") && Add(ex.Message) && Add("\n") && Add(ex.StackTrace) && (ex.InnerException == null || (Add("Inner Exception: ") && AppendFormatted(ex.InnerException)));
             }
 
             return Add(value.ToString());

@@ -145,32 +145,24 @@ internal sealed class MainRender : Microsoft.Xna.Framework.Game
                 {
                     switch ((command.CommandType, command.ResourceType))
                     {
-                        case (GraphicResourceCommandType.Create, GraphicResourceType.Texture):
-                            resourceManager.CreateTexture(command.Identifier, (Color[])command.Data, command.Width, command.Height);
+                        case (GraphicResourceCommandType.Create, GraphicResourceType.Shader):
+                            resourceManager.CreateShader(new(command.id), (byte[])command.Data);
                             break;
 
-                        case (GraphicResourceCommandType.Create, GraphicResourceType.Shader):
-                            resourceManager.CreateShader(command.Identifier, (byte[])command.Data);
+                        case (GraphicResourceCommandType.Create, GraphicResourceType.Texture):
+                            resourceManager.CreateTexture(new(command.id), (Color[])command.Data, command.Width, command.Height);
                             break;
 
                         case (GraphicResourceCommandType.Update, GraphicResourceType.Texture):
-                            resourceManager.UpdateTexture(command.Identifier, (Color[])command.Data);
+                            resourceManager.UpdateTexture(new(command.id), (Color[])command.Data);
                             break;
 
-                        case (GraphicResourceCommandType.Unload, _):
-                            resourceManager.UnloadResource(command.ResourceType, command.Identifier);
+                        case (GraphicResourceCommandType.Unload, GraphicResourceType.Shader):
+                            resourceManager.UnloadShader(new(command.id));
                             break;
 
-                        case (GraphicResourceCommandType.Link, GraphicResourceType.Texture):
-                            resourceManager.LinkResource(command.Identifier, (TextureResource)command.Data);
-                            break;
-
-                        case (GraphicResourceCommandType.Link, GraphicResourceType.Shader):
-                            resourceManager.LinkResource(command.Identifier, (ShaderResource)command.Data);
-                            break;
-
-                        case (GraphicResourceCommandType.Unlink, _):
-                            resourceManager.UnlinkResource((Resource)command.Data);
+                        case (GraphicResourceCommandType.Unload, GraphicResourceType.Texture):
+                            resourceManager.UnloadTexture(new(command.id));
                             break;
                     }
                 }
@@ -195,21 +187,18 @@ internal sealed class MainRender : Microsoft.Xna.Framework.Game
                 }
             };
 
-            //Renderer initialization   
-            renderingSystem.Initialize();
-
             TargetElapsedTime = TimeSpan.FromSeconds(1d / 144d);
             IsFixedTimeStep = true;
 
             windowPosition = Window.Position;
+
+            workspace.Start();
         }
         catch
         {
             Logger.NewLog(Logger.Log.Level.Error, $"Exception happened during initialization");
             throw;
         }
-
-        workspace.Start();
 
         Logger.NewLog(Logger.Log.Level.Info, $"RenderThread initialized in {stopwatch.Elapsed.Milliseconds}ms");
 

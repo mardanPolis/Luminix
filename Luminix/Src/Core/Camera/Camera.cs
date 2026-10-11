@@ -11,6 +11,8 @@ public struct Camera()
     private float orthoSize0 { get; set; } = 15f;
     private float orthoSize { get; set; } = 15f;
 
+    public Color BackgroundColor { get; set; }
+
     public static void SetPosition(ref Camera camera, Vector2 position)
     {
         camera.position0 = position;

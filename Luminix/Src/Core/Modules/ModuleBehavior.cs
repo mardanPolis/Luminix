@@ -5,13 +5,15 @@ namespace Luminix;
 
 public abstract class ModuleBehavior
 {
-    internal ModuleBehavior(Module module)
+    public ModuleBehavior()
     {
-        this.module = module;
+        Workspace = Workspace.Current;
     }
 
-    private readonly Module module;
-    public Module GetModule() => module;
+    protected readonly Workspace Workspace;
+
+    internal Module Module;
+    public Module GetModule() => Module;
     public Assembly GetAssembly() => GetType().Assembly;
 
     protected virtual void Initialize() {}

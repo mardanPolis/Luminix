@@ -7,6 +7,7 @@ internal class ComponentContainer<T> : IComponentContainer where T : struct
     public ComponentContainer(ComponentType<T> componentType)
     {
         this.componentType = componentType;
+        this.data = [];
     }
 
     public IComponentType ComponentType => componentType;

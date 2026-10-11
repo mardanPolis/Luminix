@@ -112,7 +112,7 @@ public class DebugPanel : GameObject
         sb.Append("RenderThread allocated : "); sb.AppendLong(frameAllocated, 3); sb.Append(" bytes\n");
         sb.Append("CoreThread allocated   : "); sb.AppendLong(tickAllocated, 3); sb.Append(" bytes\n");
 
-        graphics.DrawLabel(sb, new Point(0, 0), new Point(450, 800), alignment:new Vector2(0, 0), fitToBox:true);
+        graphics.DrawLabel(sb, new Point(15, 15), new Point(450, 800), alignment:new Vector2(0, 0), fitToBox:true);
     }
 
     // protected void DrawGraph(Vector2 position, float height, double[] data, double maxValue, int valueLineThickness, int valueMargin, int lastIndex, bool invertedWidth)

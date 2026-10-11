@@ -66,8 +66,35 @@ public sealed class AudioMedia : Workspace.Service
     // <================================= AUDIO SOURCE =================================> \\
 
     public AudioSource CreateSource(AudioClip audio) => GetAudioEngine().CreateSource(audio);
-    public AudioSource CreateSource(AudioResource audio) => GetAudioEngine().CreateSource(audio.Clip);
+    public AudioSource CreateSource(AudioResource audio)
+    {
+        try
+        {
+            return GetAudioEngine().CreateSource(audio.Clip);
+        }
+        catch
+        {
+            Logger.NewLog(Logger.Log.Level.Error, $"Failed to create AudioSource with '{audio.Identifier}'");
+            throw;
+        }
+    }
     public AudioSource CreateSource(byte[] pcmData, AudioClip.Format bufferFormat, AudioClip.SampleRate sampleRate) => GetAudioEngine().CreateSource(GetClip(pcmData, bufferFormat, sampleRate));
+
+    public AudioSource CreateSource(AudioClip audio, AudioGroup group) => GetAudioEngine().CreateSource(audio);
+    public AudioSource CreateSource(AudioResource audio, AudioGroup group)
+    {
+        try
+        {
+            return GetAudioEngine().CreateSource(audio.Clip);
+        }
+        catch
+        {
+            Logger.NewLog(Logger.Log.Level.Error, $"Failed to create AudioSource with '{audio.Identifier}'");
+            throw;
+        }
+    }
+    public AudioSource CreateSource(byte[] pcmData, AudioClip.Format bufferFormat, AudioClip.SampleRate sampleRate, AudioGroup group) => GetAudioEngine().CreateSource(GetClip(pcmData, bufferFormat, sampleRate));
+    
     public void DisposeSource(AudioSource audioSource) => GetAudioEngine().DisposeSource(audioSource);
     public void DisposeAllSources() => GetAudioEngine().DisposeAllSources();
 

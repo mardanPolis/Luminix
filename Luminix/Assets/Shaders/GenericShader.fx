@@ -20,9 +20,9 @@ struct InstanceInput
     float3 Position : TEXCOORD1;
     float2 Size     : TEXCOORD2;
     float  Rotation : TEXCOORD3;
-    float4 Color    : TEXCOORD4;
-    float2 RectPos  : TEXCOORD5;
-    float2 RectSize : TEXCOORD6;
+    float4 Color    : COLOR1;
+    float2 RectPos  : TEXCOORD4;
+    float2 RectSize : TEXCOORD5;
 };
 
 struct VertexShaderOutput
@@ -47,7 +47,7 @@ VertexShaderOutput MainVS(VertexInput vertex, InstanceInput instance)
     );
 
     //translate
-    float4 worldPos = float4(rotated + instance.Position.xy, instance.Position.z, 1.0);
+    float4 worldPos = float4(rotated.x + instance.Position.x, rotated.y + instance.Position.y, instance.Position.z, 1.0);
 
     output.Position = mul(worldPos, MatrixTransform);
     output.Color    = vertex.Color * instance.Color;

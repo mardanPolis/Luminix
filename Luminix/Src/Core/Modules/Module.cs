@@ -73,7 +73,9 @@ public sealed class Module
             for (int i = 1; i < types.Length; i++)
                 Logger.NewLog(Logger.Log.Level.Warning, $"Ignoring additional ModuleBehavior type: {types[i].FullName}");
  
-        behavior = (ModuleBehavior)Activator.CreateInstance(type, module);
+        behavior = (ModuleBehavior)Activator.CreateInstance(type);
+        behavior.Module = module;
+
         this.behavior = behavior;
         return true;
     }

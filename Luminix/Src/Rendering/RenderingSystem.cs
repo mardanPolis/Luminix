@@ -10,7 +10,7 @@ namespace Luminix.Rendering;
 
 // THE CLASS IS BECOMING A GOD CLASS.
 
-public sealed class RenderingSystem : Workspace.Service
+internal sealed class RenderingSystem : Workspace.Service
 {
     internal RenderingSystem(MainRender main, TripleBufferBridge<RenderBuffer> renderBridge)
     {
@@ -73,7 +73,7 @@ public sealed class RenderingSystem : Workspace.Service
     public int ResolutionWidth => resolution.Width;
     public int ResolutionHeight => resolution.Height;
 
-    internal void Initialize()
+    protected override void Initialize()
     {
         renderTarget = new RenderTarget2D(GraphicsDevice, ResolutionWidth, ResolutionHeight);
         unscaledRenderTarget = new RenderTarget2D(GraphicsDevice, ResolutionWidth, ResolutionHeight);
@@ -103,16 +103,16 @@ public sealed class RenderingSystem : Workspace.Service
         //World space
 
         GraphicsDevice.SetRenderTarget(this.renderTarget);
-        GraphicsDevice.Clear(Color.Black);
         if(cameraData.HasValue && renderBuffer != null)
         {
             projectionMatrix = GetProjectionMatrix(viewport, out viewport);
             viewMatrix = GetViewMatrix(cameraData, viewport, partialTick);
             renderer.SetTransformMatrix(viewMatrix.Value * projectionMatrix);
+            renderer.Reset();
+            
+            GraphicsDevice.Clear(cameraData.Value.BackgroundColor);
 
             SetData(renderBuffer.GetRenderInstances(), partialTick);
-
-            Logger.NewLog(Logger.Log.Level.Info, $"world {commandCount}");
 
             for(int i = 0; i < commandCount; i++)
             {
@@ -120,18 +120,24 @@ public sealed class RenderingSystem : Workspace.Service
                 var instance = instances[command.Index];
                 renderer.Render(instance.Shader, instance.Source, instance.Color, instance.Position, instance.Scale, instance.Rotation, instance.SourceRect);
             }
+
+            renderer.Flush();
+            renderer.Reset();
+        }
+        else
+        {
+            GraphicsDevice.Clear(Color.Black);
         }
         
-        renderer.Flush();
-
-        //Screen space
+        // //Screen space
         GraphicsDevice.SetRenderTarget(this.unscaledRenderTarget);
         GraphicsDevice.Clear(Color.Transparent);
         projectionMatrix = GetProjectionMatrix(viewport, out viewport);
-        renderer.SetTransformMatrix(projectionMatrix);
         
         if(renderBuffer != null)
         {
+            renderer.SetTransformMatrix(projectionMatrix);
+            renderer.Reset();
             SetData(renderBuffer.GetUIRenderInstances());
 
             for(int i = 0; i < commandCount; i++)
@@ -140,7 +146,6 @@ public sealed class RenderingSystem : Workspace.Service
 
                 renderer.Render(instance.Shader, instance.Source, instance.Color, instance.Position, instance.Scale, instance.Rotation, instance.SourceRect);
             }
-
 
             renderer.Flush();
         }
@@ -288,17 +293,20 @@ public sealed class RenderingSystem : Workspace.Service
             {
                 ref readonly var instance = ref newInstances[i];
 
-                ShaderResource shaderResource = instance.Shader;
-                TextureResource textureResource = instance.Texture;
+                ShaderID shader = instance.Shader;
+                TextureID texture = instance.Texture;
 
-                var transform = Interpolate(instance.Transform, partialTick);
+                Transform transform = Interpolate(instance.Transform, partialTick);
 
                 ushort layerBits = (ushort)Math.Clamp((int)(transform.Position.X * 100.0f), 0, 65535);
-                var key = BuildKey(layerBits, shaderResource, textureResource);
+                var key = BuildKey(layerBits, shader, texture);
+
+                var transformPos = transform.Position;
+                var position = new Vector3(transformPos.X, -transformPos.Y, transformPos.Z);
 
                 commands[i] = new RenderCommand(key, i);
 
-                instances[i] = new GPUInstance(resourceManager.GetShader(shaderResource), resourceManager.GetTexture(textureResource), textureResource.Rectangle, instance.Color, transform.Position, transform.Scale, transform.Rotation);
+                instances[i] = new GPUInstance(resourceManager.GetShader(shader), resourceManager.GetTexture(texture), instance.SourceRectangle, instance.Color, position, transform.Scale, transform.Rotation);
             }
             catch(Exception ex)
             {
@@ -326,10 +334,10 @@ public sealed class RenderingSystem : Workspace.Service
                 Vector3 position = new Vector3(instance.Position.X, instance.Position.Y, 0);
                 Vector2 scale = new Vector2(instance.Scale.X, instance.Scale.Y);
 
-                ShaderResource shaderResource = instance.Shader;
-                TextureResource textureResource = instance.Texture;
+                ShaderID shader = instance.Shader;
+                TextureID texture = instance.Texture;
 
-                instances[i] = new GPUInstance(resourceManager.GetShader(shaderResource), resourceManager.GetTexture(textureResource), textureResource.Rectangle, instance.Color, position, scale, instance.Rotation);
+                instances[i] = new GPUInstance(resourceManager.GetShader(shader), resourceManager.GetTexture(texture), instance.SourceRectangle, instance.Color, position, scale, instance.Rotation);
             }
             catch(Exception ex)
             {
@@ -353,13 +361,12 @@ public sealed class RenderingSystem : Workspace.Service
             Array.Resize(ref instances, newCapacity);
         }
     }
-    [MethodImpl(MethodImplOptions.AggressiveInlining)] private static ulong BuildKey(uint layer, ShaderResource shader, Resource resource)
+    [MethodImpl(MethodImplOptions.AggressiveInlining)] private static ulong BuildKey(uint layer, ShaderID shader, TextureID texture)
     {
-        uint resourceIndex = resource is TextureResource texture ? texture.Index : ((FontResource)resource).Index;
 
         ulong layerBits = ((ulong)layer & 0xFFFF) << 48;
-        ulong shaderBits = ((ulong)(shader.Index & 0xFF_FFFF)) << 24;
-        ulong textureBits = (ulong)(resourceIndex & 0xFF_FFFF);
+        ulong shaderBits = ((ulong)(shader.ID & 0xFF_FFFF)) << 24;
+        ulong textureBits = (ulong)(texture.ID & 0xFF_FFFF);
 
         return layerBits | shaderBits | textureBits;
     }

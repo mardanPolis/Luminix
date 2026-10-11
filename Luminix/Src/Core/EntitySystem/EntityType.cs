@@ -14,7 +14,6 @@ public class EntityType : Def
         componentTypes = [];
     }
 
-
     [SetsRequiredMembers] public EntityType(string name, Type entitySystemType, params ReadOnlySpan<(Type Type, object value)> components)
     {
         Name = name;
@@ -66,10 +65,11 @@ public class EntityType : Def
             }
 
             componentType.Default = component.value;
+            componentTypes.Add(componentType);
         }
 
         this.componentTypes = [];
-        this.components = CollectionsMarshal.AsSpan(componentTypes);
+        this.SetComponents(CollectionsMarshal.AsSpan(componentTypes));
     }
 
     private Dictionary<Type, IComponentType> componentTypes;
@@ -77,21 +77,23 @@ public class EntityType : Def
     private HashSet<string> tagSet;
 
     [JsonInclude] private EntitySystem entitySystem { get; set; }
-    [JsonInclude] private ReadOnlySpan<IComponentType> components
+    [JsonInclude] private IComponentType[] components
     {
         get => componentTypes.Values.ToArray();
-        set
+        set => SetComponents(value);
+    }
+    private void SetComponents(ReadOnlySpan<IComponentType> value)
+    {
+        componentTypes.Clear();
+        for (int i = 0; i < value.Length; i++)
         {
-            componentTypes.Clear();
-            for(int i = 0; i < value.Length; i++)
-            {
-                if(value[i].Type == typeof(EntityID) || value[i].Type == typeof(Enabled))
-                    continue;
+            if (value[i].Type == typeof(EntityID) || value[i].Type == typeof(Enabled))
+                continue;
 
-                componentTypes.Add(value[i].Type, value[i]);
-            }
+            componentTypes.Add(value[i].Type, value[i]);
         }
     }
+
     [JsonInclude] private string[] tags
     {
         get => tagArray;

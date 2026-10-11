@@ -5,15 +5,13 @@ namespace Luminix;
 
 public sealed class ShaderResource : Resource
 {
-    private static uint globalIndex = 0;
-    internal ShaderResource(string identifier)
+    internal ShaderResource(ShaderID source, string identifier)
         : base(identifier)
     {
-        Index = globalIndex;
-        globalIndex++;
+        Source = source;
     }
 
-    internal uint Index { get; }
+    internal ShaderID Source { get; }
 
     public sealed override string ToString() => Identifier;
 }

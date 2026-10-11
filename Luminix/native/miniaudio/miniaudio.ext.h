@@ -135,7 +135,6 @@ MA_API ma_result ma_create_audio_source(ma_engine* pEngine, ma_audio_buffer* pAu
         return MA_OUT_OF_MEMORY;
     }
  
-    // Bind a ref to the clip's format/data with its own independent cursor.
     ma_result result = ma_audio_buffer_ref_init(
         pAudioClip->ref.format,
         pAudioClip->ref.channels,

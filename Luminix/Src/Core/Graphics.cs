@@ -117,7 +117,7 @@ public sealed class Graphics : Workspace.Service
             }
 
             var entityType = world.GetEntityType(value);
-            if(entityType.HasComponent<Camera>())
+            if(!entityType.HasComponent<Camera>())
             {
                 Logger.NewLog(Logger.Log.Level.Warning, $"Cant use entity with ID '{value.Value}', reason: entity does not have 'Camera' component.");
                 return;
@@ -129,154 +129,63 @@ public sealed class Graphics : Workspace.Service
 
     public bool IsRendering => renderBuffer != null;
 
-    public void DrawSprite(TextureResource texture, in Vector3 position)                        => DrawSprite(null, texture, Color.White, new Transform(position));
-    public void DrawSprite(TextureResource texture, in Vector3 position, float rotation)        => DrawSprite(null, texture, Color.White, new Transform(position, rotation));
-    public void DrawSprite(TextureResource texture, in Vector3 position, in Vector2 scale)      => DrawSprite(null, texture, Color.White, new Transform(position, scale));
-    public void DrawSprite(TextureResource texture, in Transform transform)                     => DrawSprite(null, texture, Color.White, in transform);
-    public void DrawSprite(TextureResource texture, Color color, in Transform transform)     => DrawSprite(null, texture, color, in transform);
-    public void DrawSprite(ShaderResource shader, TextureResource texture, Color color, in Transform transform)
+    public void DrawSprite(TextureResource texture, in Transform transform)                                     => DrawSprite(new ShaderID(0), texture.Source, texture.Rectangle, Color.White, in transform);
+    public void DrawSprite(TextureResource texture, Color color, in Transform transform)                        => DrawSprite(new ShaderID(0), texture.Source, texture.Rectangle, color, transform);
+    public void DrawSprite(ShaderResource shader, TextureResource texture, Color color, in Transform transform) => DrawSprite(shader.Source, texture.Source, texture.Rectangle, color, transform);
+    private void DrawSprite(ShaderID shader, TextureID texture, in Rectangle rectangle, Color color, in Transform transform)
     {
         if (!EnsureRenderBuffer()) return;
-        renderBuffer.PushSprite(shader, texture, color, in transform);
+        renderBuffer.PushSprite(shader, texture, rectangle, color, in transform);
     }
 
-    public void DrawText(string text, in Vector3 position)                       => DrawText(null, null, text, Color.White, new Transform(position));
-    public void DrawText(string text, in Vector3 position, float rotation)       => DrawText(null, null, text, Color.White, new Transform(position, rotation));
-    public void DrawText(string text, in Vector3 position, Vector2 scale)        => DrawText(null, null, text, Color.White, new Transform(position, scale));
-    public void DrawText(string text, in Transform transform)                    => DrawText(null, null, text, Color.White, in transform);
-    public void DrawText(string text, Color color, in Transform transform)       => DrawText(null, null, text, color, in transform);
-    public void DrawText(FontResource font, string text, in Vector3 position)                       => DrawText(null, font, text, Color.White, new Transform(position));
-    public void DrawText(FontResource font, string text, in Vector3 position, float rotation)       => DrawText(null, font, text, Color.White, new Transform(position, rotation));
-    public void DrawText(FontResource font, string text, in Vector3 position, Vector2 scale)        => DrawText(null, font, text, Color.White, new Transform(position, scale));
-    public void DrawText(FontResource font, string text, in Transform transform)                    => DrawText(null, font, text, Color.White, in transform);
-    public void DrawText(FontResource font, string text, Color color, in Transform transform)    => DrawText(null, font, text, color, in transform);
-    public void DrawText(ShaderResource shader, FontResource font, string text, Color color, in Transform transform)
+    public void DrawSprite(TextureResource texture, in TransformInterp transform)                                                   => DrawSprite(new ShaderID(0), texture.Source, texture.Rectangle, Color.White, in transform);
+    public void DrawSprite(TextureResource texture, Color color, in TransformInterp transform)                                      => DrawSprite(new ShaderID(0), texture.Source, texture.Rectangle, color, transform);
+    public void DrawSprite(ShaderResource shader, TextureResource texture, Color color, in TransformInterp transform)               => DrawSprite(shader.Source, texture.Source, texture.Rectangle, color, transform);
+    private void DrawSprite(ShaderID shader, TextureID texture, in Rectangle rectangle, Color color, in TransformInterp transform)
     {
-        font ??= DefaultFont;
-        if (font == null || string.IsNullOrEmpty(text)) return;
         if (!EnsureRenderBuffer()) return;
-    
-        Vector3 position = transform.Position;
-        float rotation = transform.Rotation;
-        Vector2 scale = transform.Scale;
-        float cos = MathF.Cos(rotation);
-        float sin = MathF.Sin(rotation);
-    
-        foreach (var glyph in font.Enumerate(text))
-        {
-            Vector2 local = glyph.Center * scale;
-            local.Y = -local.Y;
-    
-            var glyphPosition = new Vector3(
-                position.X + local.X * cos - local.Y * sin,
-                position.Y + local.X * sin + local.Y * cos,
-                position.Z);
-    
-            DrawSprite(shader, glyph.Texture, color, new Transform(glyphPosition, scale, rotation));
-        }
+        renderBuffer.PushInterpolatedSprite(shader, texture, rectangle, color, in transform);
     }
 
-
-
-    public void DrawSprite(TextureResource texture, in Vector3 position0, in Vector3 position)                                      => DrawSprite(null, texture, Color.White, new TransformInterp(position0, position));
-    public void DrawSprite(TextureResource texture, in Vector3 position0, in Vector3 position, float rotation0, float rotation)     => DrawSprite(null, texture, Color.White, new TransformInterp(position0, rotation0, position, rotation));
-    public void DrawSprite(TextureResource texture, in Vector3 position0, in Vector3 position, in Vector2 scale0, Vector2 scale)    => DrawSprite(null, texture, Color.White, new TransformInterp(position0, scale0, position, scale));
-    public void DrawSprite(TextureResource texture, in TransformInterp transform)                                                   => DrawSprite(null, texture, Color.White, in transform);
-    public void DrawSprite(TextureResource texture, Color color, in TransformInterp transform)                                      => DrawSprite(null, texture, color, in transform);
-    public void DrawSprite(ShaderResource shader, TextureResource texture, Color color, in TransformInterp transform)
+    public void DrawImage(TextureResource image, Point position, Point size)                                                        => DrawImage(new ShaderID(0), image.Source, image.Rectangle, Color.White, position, size, 0);
+    public void DrawImage(TextureResource image, Point position, Point size, float rotation)                                        => DrawImage(new ShaderID(0), image.Source, image.Rectangle, Color.White, position, size, rotation);
+    public void DrawImage(TextureResource image, Point position, float rotation)                                                    => DrawImage(new ShaderID(0), image.Source, image.Rectangle, Color.White, position, new Point(1, 1), rotation);
+    public void DrawImage(TextureResource image, Color color, Point position, Point size, float rotation)                           => DrawImage(new ShaderID(0), image.Source, image.Rectangle, color, position, size, rotation);
+    public void DrawImage(ShaderResource shader, TextureResource image, Color color, Point position, Point size, float rotation)    => DrawImage(shader.Source, image.Source, image.Rectangle, color, position, size, rotation);
+    private void DrawImage(ShaderID shader, TextureID image, Rectangle rectangle, Color color, Point position, Point size, float rotation)
     {
         if (!EnsureRenderBuffer()) return;
-        renderBuffer.PushInterpolatedSprite(shader, texture, color, in transform);
-    }
-
-    public void DrawText(string text, in Vector3 position0, in Vector3 position)                                     => DrawText(null, null, text, Color.White, new TransformInterp(position0, position));
-    public void DrawText(string text, in Vector3 position0, in Vector3 position, float rotation0, float rotation)    => DrawText(null, null, text, Color.White, new TransformInterp(position0, rotation0, position, rotation));
-    public void DrawText(string text, in Vector3 position0, in Vector3 position, Vector2 scale0, Vector2 scale)      => DrawText(null, null, text, Color.White, new TransformInterp(position0, scale0, position, scale));
-    public void DrawText(string text, in TransformInterp transform)                                                  => DrawText(null, null, text, Color.White, in transform);
-    public void DrawText(string text, Color color, in TransformInterp transform)                                     => DrawText(null, null, text, color, in transform);
-    public void DrawText(FontResource font, string text, in Vector3 position0, in Vector3 position)                                     => DrawText(null, font, text, Color.White, new TransformInterp(position0, position));
-    public void DrawText(FontResource font, string text, in Vector3 position0, in Vector3 position, float rotation0, float rotation)    => DrawText(null, font, text, Color.White, new TransformInterp(position0, rotation0, position, rotation));
-    public void DrawText(FontResource font, string text, in Vector3 position0, in Vector3 position, Vector2 scale0, Vector2 scale)      => DrawText(null, font, text, Color.White, new TransformInterp(position0, scale0, position, scale));
-    public void DrawText(FontResource font, string text, in TransformInterp transform)                                                  => DrawText(null, font, text, Color.White, in transform);
-    public void DrawText(FontResource font, string text, Color color, in TransformInterp transform)                                     => DrawText(null, font, text, color, in transform);
-    public void DrawText(ShaderResource shader, FontResource font, string text, Color color, in TransformInterp transform)
-    {
-        font ??= DefaultFont;
-        if (font == null || string.IsNullOrEmpty(text)) return;
-        if (!EnsureRenderBuffer()) return;
-    
-        Vector3 position0 = transform.Position0, position = transform.Position;
-        float rotation0 = transform.Rotation0, rotation = transform.Rotation;
-        Vector2 scale0 = transform.Scale0, scale = transform.Scale;
-        float cos0 = MathF.Cos(rotation0), sin0 = MathF.Sin(rotation0);
-        float cos1 = MathF.Cos(rotation), sin1 = MathF.Sin(rotation);
-    
-        foreach (var glyph in font.Enumerate(text))
-        {
-            // same maths as the non-interpolated version, once for each end of the interpolation
-            Vector2 local0 = glyph.Center * scale0;
-            Vector2 local1 = glyph.Center * scale;
-            local0.Y = -local0.Y;
-            local1.Y = -local1.Y;
-    
-            var glyphPosition0 = new Vector3(
-                position0.X + local0.X * cos0 - local0.Y * sin0,
-                position0.Y + local0.X * sin0 + local0.Y * cos0,
-                position0.Z);
-            var glyphPosition1 = new Vector3(
-                position.X + local1.X * cos1 - local1.Y * sin1,
-                position.Y + local1.X * sin1 + local1.Y * cos1,
-                position.Z);
-    
-            DrawSprite(shader, glyph.Texture, color,
-                    new TransformInterp(glyphPosition0, scale0, rotation0, glyphPosition1, scale, rotation));
-        }
-    }
-
-
-
-    public void DrawImage(TextureResource image, Point position, Point size)                               => DrawImage(null, image, Color.White, position, size, 0);
-    public void DrawImage(TextureResource image, Point position, Point size, float rotation)               => DrawImage(null, image, Color.White, position, size, rotation);
-    public void DrawImage(TextureResource image, Point position, float rotation)                            => DrawImage(null, image, Color.White, position, new Point(1, 1), rotation);
-    public void DrawImage(TextureResource image, Color color, Point position, Point size, float rotation)  => DrawImage(null, image, color, position, size, rotation);
-    public void DrawImage(ShaderResource shader, TextureResource image, Color color, Point position, Point size, float rotation)
-    {
-        if (!EnsureRenderBuffer()) return;
-        renderBuffer.PushImage(shader, image, color, position, size, rotation);
+        renderBuffer.PushImage(shader, image, rectangle, color, position, size, rotation);
     }
 
 
 
 
+    public void DrawLabel(StringBuilder text, Point position, Vector2? alignment = null, bool fitToBox = false)                                                                 => DrawLabel(new ShaderID(0), null, new Text(text), Color.White, position, null, 0, alignment, fitToBox);
+    public void DrawLabel(StringBuilder text, Point position, Point size, Vector2? alignment = null, bool fitToBox = false)                                                     => DrawLabel(new ShaderID(0), null, new Text(text), Color.White, position, size, 0, alignment, fitToBox);
+    public void DrawLabel(StringBuilder text, Point position, float rotation, Vector2? alignment = null, bool fitToBox = false)                                                 => DrawLabel(new ShaderID(0), null, new Text(text), Color.White, position, null, rotation, alignment, fitToBox);
+    public void DrawLabel(StringBuilder text, Point position, Point size, float rotation, Vector2? alignment = null, bool fitToBox = false)                                     => DrawLabel(new ShaderID(0), null, new Text(text), Color.White, position, size, rotation, alignment, fitToBox);
+    public void DrawLabel(Color color, StringBuilder text, Point position, Point? size, float rotation, Vector2? alignment = null, bool fitToBox = false)                       => DrawLabel(new ShaderID(0), null, new Text(text), color, position, size, rotation, alignment, fitToBox);
+    public void DrawLabel(FontResource font, StringBuilder text, Point position, Vector2? alignment = null, bool fitToBox = false)                                              => DrawLabel(new ShaderID(0), font, new Text(text), Color.White, position, null, 0, alignment, fitToBox);
+    public void DrawLabel(FontResource font, StringBuilder text, Point position, Point size, Vector2? alignment = null, bool fitToBox = false)                                  => DrawLabel(new ShaderID(0), font, new Text(text), Color.White, position, size, 0, alignment, fitToBox);
+    public void DrawLabel(FontResource font, StringBuilder text, Point position, float rotation, Vector2? alignment = null, bool fitToBox = false)                              => DrawLabel(new ShaderID(0), font, new Text(text), Color.White, position, null, rotation, alignment, fitToBox);
+    public void DrawLabel(FontResource font, StringBuilder text, Point position, Point size, float rotation, Vector2? alignment = null, bool fitToBox = false)                  => DrawLabel(new ShaderID(0), font, new Text(text), Color.White, position, size, rotation, alignment, fitToBox);
+    public void DrawLabel(FontResource font, StringBuilder text, Color color, Point position, Point size, float rotation, Vector2? alignment = null, bool fitToBox = false)     => DrawLabel(new ShaderID(0), font, new Text(text), color, position, size, rotation, alignment, fitToBox);
+    public void DrawLabel(ShaderResource shader, FontResource font, StringBuilder text, Color color, Point position, Point? size, float rotation, Vector2? alignment = null, bool fitToBox = false) => DrawLabel(shader.Source, font, new Text(text), color, position, size, rotation, alignment, fitToBox);
 
+    public void DrawLabel(ReadOnlySpan<char> text, Point position, Vector2? alignment = null, bool fitToBox = false)                                                             => DrawLabel(new ShaderID(0), null, new Text(text), Color.White, position, null, 0, alignment, fitToBox);
+    public void DrawLabel(ReadOnlySpan<char> text, Point position, Point size, Vector2? alignment = null, bool fitToBox = false)                                                 => DrawLabel(new ShaderID(0), null, new Text(text), Color.White, position, size, 0, alignment, fitToBox);
+    public void DrawLabel(ReadOnlySpan<char> text, Point position, float rotation, Vector2? alignment = null, bool fitToBox = false)                                             => DrawLabel(new ShaderID(0), null, new Text(text), Color.White, position, null, rotation, alignment, fitToBox);
+    public void DrawLabel(ReadOnlySpan<char> text, Point position, Point size, float rotation, Vector2? alignment = null, bool fitToBox = false)                                 => DrawLabel(new ShaderID(0), null, new Text(text), Color.White, position, size, rotation, alignment, fitToBox);
+    public void DrawLabel(Color color, ReadOnlySpan<char> text, Point position, Point? size, float rotation, Vector2? alignment = null, bool fitToBox = false)                   => DrawLabel(new ShaderID(0), null, new Text(text), color, position, size, rotation, alignment, fitToBox);
+    public void DrawLabel(FontResource font, ReadOnlySpan<char> text, Point position, Vector2? alignment = null, bool fitToBox = false)                                          => DrawLabel(new ShaderID(0), font, new Text(text), Color.White, position, null, 0, alignment, fitToBox);
+    public void DrawLabel(FontResource font, ReadOnlySpan<char> text, Point position, Point size, Vector2? alignment = null, bool fitToBox = false)                              => DrawLabel(new ShaderID(0), font, new Text(text), Color.White, position, size, 0, alignment, fitToBox);
+    public void DrawLabel(FontResource font, ReadOnlySpan<char> text, Point position, float rotation, Vector2? alignment = null, bool fitToBox = false)                          => DrawLabel(new ShaderID(0), font, new Text(text), Color.White, position, null, rotation, alignment, fitToBox);
+    public void DrawLabel(FontResource font, ReadOnlySpan<char> text, Point position, Point size, float rotation, Vector2? alignment = null, bool fitToBox = false)              => DrawLabel(new ShaderID(0), font, new Text(text), Color.White, position, size, rotation, alignment, fitToBox);
+    public void DrawLabel(FontResource font, ReadOnlySpan<char> text, Color color, Point position, Point size, float rotation, Vector2? alignment = null, bool fitToBox = false) => DrawLabel(new ShaderID(0), font, new Text(text), color, position, size, rotation, alignment, fitToBox);
+    public void DrawLabel(ShaderResource shader, FontResource font, ReadOnlySpan<char> text, Color color, Point position, Point? size, float rotation, Vector2? alignment = null, bool fitToBox = false) => DrawLabel(shader.Source, font, new Text(text), color, position, size, rotation, alignment, fitToBox);
 
-    public void DrawLabel(StringBuilder text, Point position, Vector2? alignment = null, bool fitToBox = false)                                                              => DrawLabel(null, null, text, Color.White, position, null, 0, alignment, fitToBox);
-    public void DrawLabel(StringBuilder text, Point position, Point size, Vector2? alignment = null, bool fitToBox = false)                                                 => DrawLabel(null, null, text, Color.White, position, size, 0, alignment, fitToBox);
-    public void DrawLabel(StringBuilder text, Point position, float rotation, Vector2? alignment = null, bool fitToBox = false)                                              => DrawLabel(null, null, text, Color.White, position, null, rotation, alignment, fitToBox);
-    public void DrawLabel(StringBuilder text, Point position, Point size, float rotation, Vector2? alignment = null, bool fitToBox = false)                                 => DrawLabel(null, null, text, Color.White, position, size, rotation, alignment, fitToBox);
-    public void DrawLabel(Color color, StringBuilder text, Point position, Point? size, float rotation, Vector2? alignment = null, bool fitToBox = false)                   => DrawLabel(null, null, text, color, position, size, rotation, alignment, fitToBox);
-    public void DrawLabel(FontResource font, StringBuilder text, Point position, Vector2? alignment = null, bool fitToBox = false)                                           => DrawLabel(null, font, text, Color.White, position, null, 0, alignment, fitToBox);
-    public void DrawLabel(FontResource font, StringBuilder text, Point position, Point size, Vector2? alignment = null, bool fitToBox = false)                              => DrawLabel(null, font, text, Color.White, position, size, 0, alignment, fitToBox);
-    public void DrawLabel(FontResource font, StringBuilder text, Point position, float rotation, Vector2? alignment = null, bool fitToBox = false)                           => DrawLabel(null, font, text, Color.White, position, null, rotation, alignment, fitToBox);
-    public void DrawLabel(FontResource font, StringBuilder text, Point position, Point size, float rotation, Vector2? alignment = null, bool fitToBox = false)              => DrawLabel(null, font, text, Color.White, position, size, rotation, alignment, fitToBox);
-    public void DrawLabel(FontResource font, StringBuilder text, Color color, Point position, Point size, float rotation, Vector2? alignment = null, bool fitToBox = false) => DrawLabel(null, font, text, color, position, size, rotation, alignment, fitToBox);
-    public void DrawLabel(ShaderResource shader, FontResource font, StringBuilder text, Color color, Point position, Point? size, float rotation, Vector2? alignment = null, bool fitToBox = false) =>
-        DrawLabel(shader, font, new Text(text), color, position, size, rotation, alignment, fitToBox);
-
-    public void DrawLabel(ReadOnlySpan<char> text, Point position, Vector2? alignment = null, bool fitToBox = false)                                                              => DrawLabel(null, null, text, Color.White, position, null, 0, alignment, fitToBox);
-    public void DrawLabel(ReadOnlySpan<char> text, Point position, Point size, Vector2? alignment = null, bool fitToBox = false)                                                 => DrawLabel(null, null, text, Color.White, position, size, 0, alignment, fitToBox);
-    public void DrawLabel(ReadOnlySpan<char> text, Point position, float rotation, Vector2? alignment = null, bool fitToBox = false)                                              => DrawLabel(null, null, text, Color.White, position, null, rotation, alignment, fitToBox);
-    public void DrawLabel(ReadOnlySpan<char> text, Point position, Point size, float rotation, Vector2? alignment = null, bool fitToBox = false)                                 => DrawLabel(null, null, text, Color.White, position, size, rotation, alignment, fitToBox);
-    public void DrawLabel(Color color, ReadOnlySpan<char> text, Point position, Point? size, float rotation, Vector2? alignment = null, bool fitToBox = false)                   => DrawLabel(null, null, text, color, position, size, rotation, alignment, fitToBox);
-    public void DrawLabel(FontResource font, ReadOnlySpan<char> text, Point position, Vector2? alignment = null, bool fitToBox = false)                                           => DrawLabel(null, font, text, Color.White, position, null, 0, alignment, fitToBox);
-    public void DrawLabel(FontResource font, ReadOnlySpan<char> text, Point position, Point size, Vector2? alignment = null, bool fitToBox = false)                              => DrawLabel(null, font, text, Color.White, position, size, 0, alignment, fitToBox);
-    public void DrawLabel(FontResource font, ReadOnlySpan<char> text, Point position, float rotation, Vector2? alignment = null, bool fitToBox = false)                           => DrawLabel(null, font, text, Color.White, position, null, rotation, alignment, fitToBox);
-    public void DrawLabel(FontResource font, ReadOnlySpan<char> text, Point position, Point size, float rotation, Vector2? alignment = null, bool fitToBox = false)              => DrawLabel(null, font, text, Color.White, position, size, rotation, alignment, fitToBox);
-    public void DrawLabel(FontResource font, ReadOnlySpan<char> text, Color color, Point position, Point size, float rotation, Vector2? alignment = null, bool fitToBox = false) => DrawLabel(null, font, text, color, position, size, rotation, alignment, fitToBox);
-    public void DrawLabel(ShaderResource shader, FontResource font, ReadOnlySpan<char> text, Color color, Point position, Point? size, float rotation, Vector2? alignment = null, bool fitToBox = false) =>
-        DrawLabel(shader, font, new Text(text), color, position, size, rotation, alignment, fitToBox);
-
-    private void DrawLabel(ShaderResource shader, FontResource font, Text text, Color color, Point position, Point? size, float rotation, Vector2? alignment = null, bool fitToBox = false)
+    private void DrawLabel(ShaderID shader, FontResource font, Text text, Color color, Point position, Point? size, float rotation, Vector2? alignment = null, bool fitToBox = false)
     {
         font ??= DefaultFont;
         if (font == null || text.Length == 0) return;
@@ -309,7 +218,7 @@ public sealed class Graphics : Workspace.Service
                 Math.Max(1, (int)MathF.Round(glyph.Texture.Width * fit)),
                 Math.Max(1, (int)MathF.Round(glyph.Texture.Height * fit)));
 
-            DrawImage(shader, glyph.Texture, color, glyphPosition, glyphSize, rotation);
+            DrawImage(shader, glyph.Texture.Source, glyph.Texture.Rectangle, color, glyphPosition, glyphSize, rotation);
         }
     }
 
@@ -350,18 +259,15 @@ public sealed class Graphics : Workspace.Service
 
         if (windowAspect > targetAspect)
         {
-            // Window is wider than target: fit to height, center horizontally (Pillarboxing)
             width = (int)(windowHeight * targetAspect);
             x = (windowWidth - width) / 2;
         }
         else
         {
-            // Window is taller than target: fit to width, center vertically (Letterboxing)
             height = (int)(windowWidth / targetAspect);
             y = (windowHeight - height) / 2;
         }
 
-        // MonoGame's built-in Viewport struct
         viewport = new Viewport(x, y, width, height);
     }
 

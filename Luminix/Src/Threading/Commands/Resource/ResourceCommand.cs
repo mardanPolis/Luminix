@@ -20,21 +20,21 @@ internal struct GraphicResourceCommand
     }
 
     // --- TEXTURE ---
-    public static GraphicResourceCommand Create(string identifier, Color[] colors, int width, int height)
+    public static GraphicResourceCommand Create(uint id, Color[] colors, int width, int height)
     {
-        return New(GraphicResourceCommandType.Create, identifier, colors, width, height);
+        return New(GraphicResourceCommandType.Create, id, colors, width, height);
     }
-    public static GraphicResourceCommand Update(string identifier, Color[] colors, int width, int height)
+    public static GraphicResourceCommand Update(uint id, Color[] colors, int width, int height)
     {
-        return New(GraphicResourceCommandType.Update, identifier, colors, width, height);
+        return New(GraphicResourceCommandType.Update, id, colors, width, height);
     }
-    private static GraphicResourceCommand New(GraphicResourceCommandType commandType, string identifier, Color[] colors, int width, int height)
+    private static GraphicResourceCommand New(GraphicResourceCommandType commandType, uint id, Color[] colors, int width, int height)
     {
         return new GraphicResourceCommand()
         {
             CommandType = commandType,
             ResourceType = GraphicResourceType.Texture,
-            Identifier = identifier,
+            id = id,
             Data = colors,
             Width = width,
             Height = height,
@@ -42,59 +42,35 @@ internal struct GraphicResourceCommand
     }
 
     // --- SHADER / FONT ---
-    public static GraphicResourceCommand Create(string identifier, byte[] data, XnbAsset.XnbType xnbType)
+    public static GraphicResourceCommand Create(uint id, byte[] data, XnbAsset.XnbType xnbType)
     {
-        return New(GraphicResourceCommandType.Create, identifier, data, xnbType);
+        return New(GraphicResourceCommandType.Create, id, data, xnbType);
     }
-    private static GraphicResourceCommand New(GraphicResourceCommandType commandType, string identifier, byte[] data, XnbAsset.XnbType xnbType)
+    private static GraphicResourceCommand New(GraphicResourceCommandType commandType, uint id, byte[] data, XnbAsset.XnbType xnbType)
     {
         return new GraphicResourceCommand()
         {
             CommandType = commandType,
             ResourceType = GraphicResourceType.Shader,
-            Identifier = identifier,
+            id = id,
             Data = data,
         };
     }
 
-    public static GraphicResourceCommand Unload(string identifier, GraphicResourceType resourceType)
+    public static GraphicResourceCommand Unload(uint id, GraphicResourceType resourceType)
     {
         return new GraphicResourceCommand()
         {
             CommandType = GraphicResourceCommandType.Unload,
             ResourceType = resourceType,
-            Identifier = identifier,
-        };
-    }
-
-    public static GraphicResourceCommand Link(string sourceIdentifier, Resource resource)
-    {
-        return new GraphicResourceCommand()
-        {
-            CommandType = GraphicResourceCommandType.Link,
-            ResourceType = resource switch
-            {
-                TextureResource => GraphicResourceType.Texture,
-                ShaderResource  => GraphicResourceType.Shader,
-                _               => throw new ArgumentOutOfRangeException(nameof(resource), $"Unsupported resource type: {resource.GetType()}")
-            },
-            Identifier = sourceIdentifier,
-            Data = resource,
-        };
-    }
-    public static GraphicResourceCommand Unlink(Resource resource)
-    {
-        return new GraphicResourceCommand()
-        {
-            CommandType = GraphicResourceCommandType.Unlink,
-            Data = resource,
+            id = id,
         };
     }
 
     public GraphicResourceCommandType CommandType { get; init; } // 0 - create, 1 - update, 2 - unload, 3 - link
     public  GraphicResourceType ResourceType { get; init; }
 
-    public string Identifier { get; init; }
+    public uint id { get; init; }
     public object Data { get; init; }
 
     public int Width { get; init; }

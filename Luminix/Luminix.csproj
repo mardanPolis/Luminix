@@ -45,8 +45,8 @@
   </Target>
 
   <ItemGroup>
-    <EmbeddedResource Include="Assets/Built-In/**/*.xnb">
-      <LogicalName>$([System.String]::Copy('%(Identity)').Replace('\', '.').Replace('/', '.'))</LogicalName>
+    <EmbeddedResource Include="build/bin/Debug/$(TargetFramework)/Assets/**/*.xnb">
+      <LogicalName>Asset.%(Filename)%(Extension)</LogicalName>
     </EmbeddedResource>
   </ItemGroup>
   

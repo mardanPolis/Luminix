@@ -23,9 +23,9 @@ internal sealed class Renderer
             new VertexElement(0,  VertexElementFormat.Vector3, VertexElementUsage.TextureCoordinate, 1),
             new VertexElement(12, VertexElementFormat.Vector2, VertexElementUsage.TextureCoordinate, 2),
             new VertexElement(20, VertexElementFormat.Single,  VertexElementUsage.TextureCoordinate, 3),
-            new VertexElement(24, VertexElementFormat.Color,   VertexElementUsage.TextureCoordinate, 4),
-            new VertexElement(28, VertexElementFormat.Vector2, VertexElementUsage.TextureCoordinate, 5),
-            new VertexElement(36, VertexElementFormat.Vector2, VertexElementUsage.TextureCoordinate, 6)
+            new VertexElement(24, VertexElementFormat.Color,   VertexElementUsage.Color, 1),
+            new VertexElement(28, VertexElementFormat.Vector2, VertexElementUsage.TextureCoordinate, 4),
+            new VertexElement(36, VertexElementFormat.Vector2, VertexElementUsage.TextureCoordinate, 5)
         );
 
         VertexDeclaration IVertexType.VertexDeclaration => VertexDeclaration;
@@ -66,7 +66,7 @@ internal sealed class Renderer
 
     private Matrix transformMatrix;
     private Effect currShader;
-    private object currSource;
+    private object currTexture;
 
     private Data[] dataArray;
     private int currentInstanceCount;
@@ -78,6 +78,12 @@ internal sealed class Renderer
     public void SetTransformMatrix(in Matrix matrix)
     {
         transformMatrix = matrix;
+    }
+
+    public void Reset()
+    {
+        currShader = null;
+        currTexture = null;
     }
 
     public void Render(Effect shader, Texture2D source, in Color color, in Rectangle destinationRect)
@@ -92,12 +98,12 @@ internal sealed class Renderer
     }
     public void Render(Effect shader, Texture2D source, in Color color, in Vector3 position, in Vector2 scale, float rotation, in Rectangle sourceRect)
     {
-        if (shader != currShader || source != currSource)
+        if (shader != currShader || source != currTexture)
         {
             Flush();
 
             currShader = shader;
-            currSource = source;
+            currTexture = source;
 
             shader.Parameters[MATRIX_PARAMETER].SetValue(transformMatrix);
             shader.Parameters[TEXTURE_PARAMETER].SetValue(source);

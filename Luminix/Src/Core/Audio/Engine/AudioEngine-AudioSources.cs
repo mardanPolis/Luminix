@@ -101,14 +101,16 @@ internal sealed partial class AudioEngine : IAudioEngine, IDisposable
         }
     }
 
-    public AudioSource CreateSource(AudioClip audio)
+    public AudioSource CreateSource(AudioClip audio) => CreateSource(audio, audioGroupStates[0].Pointer);
+    public AudioSource CreateSource(AudioClip audio, AudioGroup group) => CreateSource(audio, IsValid(group) ? audioGroupStates[group.Index].Pointer : audioGroupStates[0].Pointer);
+    private AudioSource CreateSource(AudioClip audio, IntPtr pGroup)
     {
         ValidateDevice();
 
         if(audio.IsDisposed)
             throw new ArgumentException("Cannot create AudioSource instance from the provided AudioClip, reason: Audio is disposed.");
         
-        ThrowIfFailed(audioDevice.AudioSourceNew(audio.ClipPointer, out IntPtr pSource));
+        ThrowIfFailed(audioDevice.AudioSourceNew(audio.ClipPointer, pGroup, out IntPtr pSource));
             
         audioSourceCount++;
 
@@ -128,8 +130,11 @@ internal sealed partial class AudioEngine : IAudioEngine, IDisposable
 
         int version = audioSourceStates[index].Version;
 
-        var state = new AudioSourceState(pSource, audio.Duration) { Generation = generation };
-        state.Version = version + 2;   // stays even
+        var state = new AudioSourceState(pSource, audio.Duration)
+        {
+            Generation = generation,
+            Version = version + 2   // stays even
+        };
         audioSourceStates[index] = state;
         return new AudioSource(index, generation);
     }
@@ -172,7 +177,7 @@ internal sealed partial class AudioEngine : IAudioEngine, IDisposable
             return;
         }
 
-        ThrowIfFailed(audioDevice.AudioSourcePlay(state.Pointer));
+        audioDevice.AudioSourcePlay(state.Pointer);
         SetStateField(ref state, ref state.State, 1);
     }
     public void ResumeSource(AudioSource source)
@@ -184,13 +189,13 @@ internal sealed partial class AudioEngine : IAudioEngine, IDisposable
             return;
         }
 
-        ThrowIfFailed(audioDevice.AudioSourceResume(state.Pointer));
+        audioDevice.AudioSourceResume(state.Pointer);
         SetStateField(ref state, ref state.State, 1);
     }
     public void StopSource(AudioSource source)
     {
         ref var state = ref GetState(source);
-        ThrowIfFailed(audioDevice.AudioSourceStop(state.Pointer));
+        audioDevice.AudioSourceStop(state.Pointer);
 
         playingSourceIndexes.Remove(source.Index);
         SetStateField(ref state, ref state.State, 0);
@@ -198,7 +203,7 @@ internal sealed partial class AudioEngine : IAudioEngine, IDisposable
     public void PauseSource(AudioSource source)
     {
         ref var state = ref GetState(source);
-        ThrowIfFailed(audioDevice.AudioSourcePause(state.Pointer));
+        audioDevice.AudioSourcePause(state.Pointer);
         
         playingSourceIndexes.Remove(source.Index);
         SetStateField(ref state, ref state.State, 0);

@@ -12,8 +12,8 @@ public abstract class Def
     public required string Name
     {
         get => name;
-        init => name = !string.IsNullOrWhiteSpace(value) && !name.HasWhitespace()
+        init => name = !string.IsNullOrEmpty(value) && !name.HasWhitespace()
             ? value
-            : throw new ArgumentException("Name cannot be null, empty, or has whitespace.", nameof(value));
+            : throw new ArgumentException("Name cannot be null, empty, or have whitespaces.", nameof(value));
     }
 }

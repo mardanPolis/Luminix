@@ -56,6 +56,8 @@ public struct TransformInterp
     public Vector2 Scale;
     public float Rotation;
 
+    public static implicit operator TransformInterp(Transform transform) => new(transform);
+
     public readonly Transform StartTransform => new(Position0, Scale0, Rotation0);
     public readonly Transform EndTransform => new(Position, Scale, Rotation);
 }

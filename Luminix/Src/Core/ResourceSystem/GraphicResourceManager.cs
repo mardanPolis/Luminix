@@ -4,18 +4,17 @@ using System.Collections.Generic;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Luminix.IO;
-using System.Linq;
 
 namespace Luminix;
 
-public sealed class GraphicsResourceManager : Microsoft.Xna.Framework.Content.ContentManager
+internal sealed class GraphicsResourceManager : Microsoft.Xna.Framework.Content.ContentManager
 {
     internal GraphicsResourceManager(MainRender main) : base(main.Services)
     {
         this.main = main;
 
-        this.sourceResources = [];
-        this.linked = [];
+        this.shaders = [];
+        this.textures = [];
     }
 
     public new string RootDirectory => AssetIO.ASSET_DIRECTORY;
@@ -25,8 +24,8 @@ public sealed class GraphicsResourceManager : Microsoft.Xna.Framework.Content.Co
 
     private Stream openedStream = null; 
 
-    private readonly Dictionary<(GraphicResourceType, string), object>  sourceResources;
-    private readonly Dictionary<Resource, object> linked;
+    private readonly Dictionary<ShaderID, Effect> shaders;
+    private readonly Dictionary<TextureID, Texture2D> textures;
 
     public Texture2D NullTexture { get; private set; }
     public Effect GenericShader {  get; private set;  }
@@ -48,149 +47,91 @@ public sealed class GraphicsResourceManager : Microsoft.Xna.Framework.Content.Co
         }
         
         {
-            var identifier = "generic_shader";
-            XnbAsset asset = assetIO.LoadXnbAsset(Application.EngineAssembly, "Assets.Built-In.Shaders.GenericShader.xnb");
+            XnbAsset asset = assetIO.LoadXnbAsset(Application.EngineAssembly, "Asset.GenericShader.xnb");
             var stream = new MemoryStream(asset.Data);
-            GenericShader = Create<Effect>(identifier, stream);  
+            GenericShader = Create<Effect>(0, stream);  
         }
     }
 
-    internal Texture2D CreateTexture(string identifier, Color[] colors, int X, int Y)
+    public Texture2D CreateTexture(TextureID texture, Color[] colors, int X, int Y)
     {
         ObjectDisposedException.ThrowIf(disposed, this);
         var source = new Texture2D(main.GraphicsDevice, X, Y);
         source.SetData(colors);
 
-        sourceResources[(GraphicResourceType.Texture, identifier)] = source;
+        textures[texture] = source;
         return source;
     }
-    internal Effect CreateShader(string identifier, byte[] data)
+    public Effect CreateShader(ShaderID shader, byte[] data)
     {
         ObjectDisposedException.ThrowIf(disposed, this);
         var stream = new MemoryStream(data);
-        var source = Create<Effect>(identifier, stream);
-        sourceResources[(GraphicResourceType.Shader, identifier)] = source;
+        var source = Create<Effect>(shader.ID, stream);
+        shaders[shader] = source;
         return source;
     }
 
-    internal void UpdateTexture(string identifier, Color[] colors)
+    public void UpdateTexture(TextureID texture, Color[] colors)
     {
         ObjectDisposedException.ThrowIf(disposed, this);
-        if(!sourceResources.TryGetValue((GraphicResourceType.Texture, identifier), out object source))
-            throw new KeyNotFoundException($"Failed to find source texture with '{identifier}' identifier.");
+        if(!textures.TryGetValue(texture, out Texture2D source))
+            throw new KeyNotFoundException($"Failed to find source texture with '{texture.ID}' identifier.");
 
         ((Texture2D)source).SetData(colors);
     }
     
-    public void UnloadResource(GraphicResourceType resourceType, string identifier)
+    public void UnloadTexture(TextureID texture)
     {
         ObjectDisposedException.ThrowIf(disposed, this);
 
-        if(!sourceResources.TryGetValue((resourceType, identifier), out object source))
+        if(!textures.TryGetValue(texture, out Texture2D source))
             return;
         
-        var staleLinks = linked.Where(p => ReferenceEquals(p.Value, source))
-                            .Select(p => p.Key)
-                            .ToList();
-                            
-        foreach (var resource in staleLinks)
-            linked.Remove(resource);
+        source.Dispose();
+        textures.Remove(texture);
+    }
+    public void UnloadShader(ShaderID shader)
+    {
+        ObjectDisposedException.ThrowIf(disposed, this);
+
+        if(!shaders.TryGetValue(shader, out Effect source))
+            return;
             
-        if(source is IDisposable disposable)
-            disposable.Dispose();
-        
-        sourceResources.Remove((resourceType, identifier));
+        source.Dispose();
+        shaders.Remove(shader);
     }
     public void UnloadResources()
     {
-        foreach(var key in sourceResources.Keys)
-        {
-            UnloadResource(key.Item1, key.Item2);
-        }
+        foreach(var shader in shaders.Keys)
+            UnloadShader(shader);
+        foreach(var texture in textures.Keys)
+            UnloadTexture(texture);
     }
 
-    internal void LinkResource(string identifier, TextureResource resource)
+
+    internal Effect GetShader(ShaderID resource)
     {
-        ObjectDisposedException.ThrowIf(disposed, this);
-
-        if(!sourceResources.TryGetValue((GraphicResourceType.Texture, identifier), out object source))
-            throw new KeyNotFoundException($"Failed to find source texture with '{identifier}' identifier.");
-
-        if(source is not Texture2D)
-            throw new InvalidOperationException($"Failed to link resource '{resource}' with an source '{identifier}', because source is not {typeof(Texture2D).Name}.");
-
-        if(linked.TryGetValue(resource, out object otherSource))
-        {
-            if(otherSource == source)
-                return;
-
-            throw new InvalidOperationException($"Failed to link resource '{resource}' with an source, resource is already linked with another source.");
-        }
-
-        linked[resource] = source;
-    }
-    internal void LinkResource(string identifier, ShaderResource resource)
-    {
-        ObjectDisposedException.ThrowIf(disposed, this);
-
-        if(!sourceResources.TryGetValue((GraphicResourceType.Shader, identifier), out object source))
-            throw new KeyNotFoundException($"Failed to find source shader with '{identifier}' identifier.");
-
-        if(source is not Effect)
-            throw new InvalidOperationException($"Failed to link resource '{resource}' with an source '{identifier}', because source is not {typeof(Effect).Name}.");
-
-        if(linked.TryGetValue(resource, out object otherSource))
-        {
-            if(otherSource == source)
-                return;
-                
-            throw new InvalidOperationException($"Failed to link resource '{resource}' with an source, resource is already linked with another source.");
-        }
-
-        linked[resource] = source;
-    }
-
-    internal void UnlinkResource(Resource resource)
-    {
-        ObjectDisposedException.ThrowIf(disposed, this);
-
-        if (!linked.ContainsKey(resource))
-            return;
-
-        linked.Remove(resource);
-    }
-
-    public Texture2D GetTexture(TextureResource resource)
-    {
-        if(resource == null)
-            return NullTexture;
-
-        if(linked.TryGetValue(resource, out object source))
-            return (Texture2D)source;
-        
-        Logger.NewLog(Logger.Log.Level.Error, $"TextureResource '{resource.Identifier}' is not linked to a source!");
-        return NullTexture;
-    }
-    public Effect GetShader(ShaderResource resource)
-    {
-        if(resource == null)
-            return GenericShader;
-
-        if(linked.TryGetValue(resource, out object source))
+        if(shaders.TryGetValue(resource, out Effect source))
             return (Effect)source;
         
-        Logger.NewLog(Logger.Log.Level.Error, $"ShaderResource '{resource.Identifier}' is not linked to a source!");
         return GenericShader;
     }
+    internal Texture2D GetTexture(TextureID resource)
+    {
+        if(textures.TryGetValue(resource, out Texture2D source))
+            return (Texture2D)source;
+        
+        return NullTexture;
+    }
 
-    private T Create<T>(string identifier, Stream stream) where T : class
+    private T Create<T>(uint id, Stream stream) where T : class
     {
         T result = null;
 
         try
         {
             openedStream = stream;
-            result = ReadAsset<T>(identifier, null);
+            result = ReadAsset<T>("resource", null);
         }
         finally
         {

@@ -30,14 +30,10 @@ public sealed class FontResource : Resource
         public bool IsVisible => Texture != null;
     }
 
-    private static uint globalIndex = 0;
-
     private readonly Dictionary<char, Glyph> glyphs;
 
     internal FontResource(string name, XnbFontResult data, TextureResource atlas, TextureResource[] regions) : base(name)
     {
-        Index = globalIndex++;
-
         LineSpacing = data.LineSpacing;
         Spacing = data.Spacing;
         DefaultCharacter = data.DefaultCharacter;
@@ -50,8 +46,6 @@ public sealed class FontResource : Resource
             glyphs[g.Character] = new Glyph(g.Character, regions[i], g.Bounds, g.Cropping, g.LeftBearing, g.Width, g.RightBearing);
         }
     }
-
-    internal uint Index { get; }
 
     public TextureResource Atlas { get; }
 

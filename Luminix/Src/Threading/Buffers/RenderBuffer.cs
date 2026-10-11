@@ -21,9 +21,6 @@ internal sealed class RenderBuffer
         Label,
     }
     
-    public readonly record struct RenderCommand(uint Identifier);
-    internal readonly record struct UiRenderCommand(uint DataIndex);
-   
     public RenderBuffer()
     {
         renderInstances = new(5120);
@@ -45,17 +42,17 @@ internal sealed class RenderBuffer
         cameraData = camera;
     }
 
-    internal void PushSprite(ShaderResource shader, TextureResource texture, Color color, in Transform transform)
+    internal void PushSprite(ShaderID shader, TextureID texture, Rectangle sourceRect, Color color, in Transform transform)
     {
-        renderInstances.Add(new RenderInstance(shader, texture, color, new(transform)));
+        renderInstances.Add(new RenderInstance(shader, texture, sourceRect, color, new(transform)));
     }
-    internal void PushInterpolatedSprite(ShaderResource shader, TextureResource texture, Color color, in TransformInterp transform)
+    internal void PushInterpolatedSprite(ShaderID shader, TextureID texture, Rectangle sourceRect, Color color, in TransformInterp transform)
     {
-        renderInstances.Add(new RenderInstance(shader, texture, color, transform));
+        renderInstances.Add(new RenderInstance(shader, texture, sourceRect, color, transform));
     }
-    internal void PushImage(ShaderResource shader, TextureResource image, Color color, Point position, Point size, float rotation)
+    internal void PushImage(ShaderID shader, TextureID image, Rectangle sourceRect, Color color, Point position, Point size, float rotation)
     {
-        renderInstancesUI.Add(new RenderInstanceUI(shader, image, color, position, size, rotation));
+        renderInstancesUI.Add(new RenderInstanceUI(shader, image, sourceRect, color, position, size, rotation));
     }
 
     internal Camera? GetCameraData()

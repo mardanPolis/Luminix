@@ -62,12 +62,12 @@ internal sealed class MainCore
 
             audioMedia  = AudioMedia.CreateCore();
             audioEngine = (AudioEngine)audioMedia.AudioEngine;
+            resources   = new Resources();
+            assets      = new Assets();
             graphics    = new Graphics();
             uiManager   = new UIManager(graphics, out uiManagerController);
             moduleManager     = new ModuleManager();
             input       = new Input(out inputController);
-            resources   = new Resources();
-            assets      = new Assets();
             defs        = new Defs();
             world       = new World(graphics, out worldController);
 
@@ -78,7 +78,10 @@ internal sealed class MainCore
 
             defs.NewDefType<EntityType>(); // built in
 
-            defs.AddDef(new EntityType("camera", null, (typeof(Camera), new Camera())));
+            TypeRegistry.Add(typeof(Transform), "Transform");
+            TypeRegistry.Add(typeof(TransformInterp), "TransformInterp");
+
+            defs.AddDef(new EntityType("camera", typeof(CameraSystem), (typeof(Camera), new Camera())));
 
             // --- MODULES ---
             moduleManager.FindModules();

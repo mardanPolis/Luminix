@@ -74,7 +74,7 @@ internal sealed partial class AudioDevice : SafeHandle, IDisposable
 
     // ---- source --------------------------------------------------------------
 
-    [LibraryImport(lib)] private static partial AudioDeviceResult ma_create_audio_source(IntPtr pDevice, IntPtr pClip, out IntPtr pSource);  // MUST CHECK
+    [LibraryImport(lib)] private static partial AudioDeviceResult ma_create_audio_source(IntPtr pDevice, IntPtr pClip, IntPtr pGroup, out IntPtr pSource);  // MUST CHECK
     [LibraryImport(lib)] private static partial void ma_dispose_audio_source            (IntPtr pSource);  // MUST CHECK
 
     [LibraryImport(lib)] private static partial AudioDeviceResult ma_audio_source_play  (IntPtr pSource);
@@ -102,13 +102,13 @@ internal sealed partial class AudioDevice : SafeHandle, IDisposable
     [LibraryImport(lib, EntryPoint = "ma_sound_get_cursor_in_seconds")] private static partial AudioDeviceResult ma_sound_get_cursor(IntPtr pSource, out float pCursor);
     [LibraryImport(lib, EntryPoint = "ma_sound_get_length_in_seconds")] private static partial AudioDeviceResult ma_sound_get_length(IntPtr pSource, out float pLength);
 
-    public AudioDeviceResult AudioSourceNew(IntPtr pClip, out IntPtr pSource) => ma_create_audio_source(handle, pClip, out pSource);
+    public AudioDeviceResult AudioSourceNew(IntPtr pClip, IntPtr pGroup, out IntPtr pSource) => ma_create_audio_source(handle, pClip, pGroup, out pSource);
     public void AudioSourceDispose(IntPtr pSource) => ma_dispose_audio_source(pSource);
 
-    public AudioDeviceResult AudioSourcePlay(IntPtr pSource)    => ma_audio_source_play(pSource);
-    public AudioDeviceResult AudioSourceStop(IntPtr pSource)    => ma_audio_source_stop(pSource);
-    public AudioDeviceResult AudioSourceResume(IntPtr pSource)  => ma_audio_source_resume(pSource);
-    public AudioDeviceResult AudioSourcePause(IntPtr pSource)   => ma_audio_source_pause(pSource);
+    public void AudioSourcePlay(IntPtr pSource)    => ma_audio_source_play(pSource);
+    public void AudioSourceStop(IntPtr pSource)    => ma_audio_source_stop(pSource);
+    public void AudioSourceResume(IntPtr pSource)  => ma_audio_source_resume(pSource);
+    public void AudioSourcePause(IntPtr pSource)   => ma_audio_source_pause(pSource);
 
     public void AudioSourceSetVolume(IntPtr pSource, float volume) => ma_sound_set_volume(pSource, volume);
     public void AudioSourceSetPitch(IntPtr pSource, float pitch) => ma_sound_set_pitch(pSource, pitch);

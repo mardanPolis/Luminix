@@ -23,7 +23,7 @@ public sealed partial class ModuleManager : Workspace.Service
     private readonly DenseMap<string, Module> modules;
 
     private readonly DenseList<Module> initializedModules;
-    private readonly DenseList<string> initialModules; // its a DenseList<string>, because we load initial modules from 'modules.json', and we can guarantee if a Module exist with exact same module id.
+    private readonly DenseList<string> initialModules; // its a DenseList<string>, because we load initial modules from 'modules.json', and we cant guarantee if a Module exist with exact same module id.
 
     private readonly Module coreModule;
 
@@ -330,6 +330,29 @@ public sealed partial class ModuleManager : Workspace.Service
 
 #endregion
 
+#region  StartModules
+    private void StartModule(Module module)
+    {
+        try
+        {
+            if (!IsModuleInitialized(module))
+                return;
+
+            if (!module.HasAssembly())
+                return;
+            
+            if (module.TryGetModuleBehavior(module, out var behavior))
+                startBehavior(behavior);
+        }
+        catch (Exception ex)
+        {
+            var exception = new ModuleStartException(module.ID, ex);
+            initialModuleProblems.Add(exception);
+            Logger.NewLog(Logger.Log.Level.Error, exception.Message);
+        }
+    }
+#endregion
+
     private bool ValidateInitialModules()
     {
         var success = true;
@@ -377,22 +400,25 @@ public sealed partial class ModuleManager : Workspace.Service
 
     protected override void Start()
     {
-        foreach (var module in modules.RightItems)
+        if (!ValidateInitialModules())
+        {
+            StartModule(coreModule);
+            return;
+        }
+
+        foreach (var moduleID in initialModules)
         {
             try
             {
-                if (IsModuleInitialized(module) && module.HasBehavior())
-                {
-                    var behavior = module.GetBehavior();
-                    startBehavior(behavior);
-                } 
+                StartModule(modules[moduleID]);
             }
             catch(Exception ex)
             {
-                Logger.NewLog(Logger.Log.Level.Error, $"{new ModuleStartException(module.ID, ex)}");
+                Logger.NewLog(Logger.Log.Level.Error, $"{new ModuleStartException(moduleID, ex)}");
             }
         }
     }
+
     protected override void Shutdown()
     {
         foreach (var module in modules.RightItems)

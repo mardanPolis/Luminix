@@ -110,7 +110,7 @@ internal partial class EntityContainer
         {
             if(index >= entityContainer.Capacity)
             {
-                int newLength = entityContainer.Capacity * 2;
+                int newLength = Math.Max(entityContainer.Capacity * 2, 8);
                 for(int i = 0; i < componentContainers.Length; i++)
                     componentContainers[i].Resize(newLength);
             }

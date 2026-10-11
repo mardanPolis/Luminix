@@ -25,6 +25,7 @@ public sealed class Workspace
             Workspace.services[serviceType] = this;
         }
 
+        protected virtual void Initialize() {}
         protected virtual void Start() {}
         protected virtual void Shutdown() {}
         public override string ToString()
@@ -35,16 +36,21 @@ public sealed class Workspace
 
     static Workspace()
     {
-        var method = typeof(Service).GetMethod(
+        var initMethod = typeof(Service).GetMethod(
+            "Initialize", BindingFlags.NonPublic | BindingFlags.Instance);
+
+        var startMethod = typeof(Service).GetMethod(
             "Start", BindingFlags.NonPublic | BindingFlags.Instance);
 
         var shutdownMethod = typeof(Service).GetMethod(
             "Shutdown", BindingFlags.NonPublic | BindingFlags.Instance);
 
-        startService = (Action<Service>)Delegate.CreateDelegate(typeof(Action<Service>), method);
+        initializeService = (Action<Service>)Delegate.CreateDelegate(typeof(Action<Service>), initMethod);
+        startService = (Action<Service>)Delegate.CreateDelegate(typeof(Action<Service>), startMethod);
         shutdownService = (Action<Service>)Delegate.CreateDelegate(typeof(Action<Service>), shutdownMethod);
     }
 
+    private static readonly Action<Service> initializeService;
     private static readonly Action<Service> startService;
     private static readonly Action<Service> shutdownService;
     private static ThreadLocal<Workspace> instance = new ThreadLocal<Workspace>(true);
@@ -103,6 +109,8 @@ public sealed class Workspace
             return;
 
         hasStarted = true;
+        foreach(var service in services.Values)
+            initializeService(service);
         foreach(var service in services.Values)
             startService(service);
     }
