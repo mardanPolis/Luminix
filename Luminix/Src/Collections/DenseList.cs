@@ -9,6 +9,8 @@ public sealed class DenseList<T> : ICollection<T>, IEnumerable<T>, IList<T>, IRe
 {
     private const int MIN_CAPACITY = 8;
 
+    public DenseList() : this(MIN_CAPACITY) {}
+
     public DenseList(int capacity = MIN_CAPACITY)
     {
         capacity = Math.Max(capacity, MIN_CAPACITY);

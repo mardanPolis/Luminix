@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using Luminix.Collections;
 
 namespace Luminix;
@@ -120,6 +121,10 @@ public sealed class World : Workspace.Service
         this.graphics = graphics;
         this.controllerIssued = true;
         this.gameObjects = new();
+
+        taggedEntities = new();
+        entityTags = new();
+        listPool = ObjectPool<List<string>>.Create((list) => list.Clear(), 64);
     }
 
     private Graphics graphics;
@@ -130,6 +135,10 @@ public sealed class World : Workspace.Service
 
     private Dictionary<Type, GameObject> gameObjects;
     private Dictionary<EntityID, EntityType> entities;
+
+    private Dictionary<string, DenseList<EntityID>> taggedEntities;
+    private Dictionary<EntityID, List<string>> entityTags;
+    private ObjectPool<List<string>> listPool;
 
     private Dictionary<EntityType, EntityContainer> typeContainers;
     private EntityContainer[] entityContainers;
@@ -188,6 +197,21 @@ public sealed class World : Workspace.Service
 
         container.Destroy(entityID);
         entities.Remove(entityID);
+
+        if(entityTags.TryGetValue(entityID, out List<string> tags))
+        {
+            foreach(var tag in tags)
+            {
+                if(!this.taggedEntities.TryGetValue(tag, out var taggedEntities))
+                    continue;
+                
+                taggedEntities.Remove(entityID);
+            }
+
+            entityTags.Remove(entityID);
+            listPool.Return(tags);
+        }
+
         return true;
     }
 
@@ -210,6 +234,85 @@ public sealed class World : Workspace.Service
             throw new ArgumentException($"Entity does not exist", nameof(entityID));
 
         return ref typeContainers[entityType].GetComponent<T>(entityID);
+    }
+
+    public bool EntityHasTag(EntityID entityID, string tag)
+    {
+        if (!entities.TryGetValue(entityID, out EntityType entityType))
+            throw new ArgumentException($"Entity does not exist", nameof(entityID));
+
+        if (entityType.HasTag(tag))
+            return true;
+        
+        if(!this.taggedEntities.TryGetValue(tag, out var taggedEntities))
+            return false;
+        
+        return taggedEntities.Contains(entityID);
+    }
+    public void AddEntityTag(EntityID entityID, string tag)
+    {
+        if(isPreparing)
+            throw new InvalidOperationException("Cant add a tag to an Entity during preparing phase.");
+
+        if (!entities.ContainsKey(entityID))
+            throw new ArgumentException($"Entity does not exist", nameof(entityID));
+
+        if(!this.taggedEntities.TryGetValue(tag, out var taggedEntities))
+        {
+            taggedEntities = new();
+            this.taggedEntities[tag] = taggedEntities;
+        }
+
+        if(!taggedEntities.TryAdd(entityID))
+            return;
+
+        if(!entityTags.TryGetValue(entityID, out var tags))
+        {
+            tags = listPool.Rent();
+            entityTags[entityID] = tags;
+        }
+
+        tags.Add(tag);
+    }
+    public ReadOnlySpan<string> GetEntityTags(EntityID entityID)
+    {
+        if (!entities.ContainsKey(entityID))
+            throw new ArgumentException($"Entity does not exist", nameof(entityID));
+
+        if(!this.entityTags.TryGetValue(entityID, out var tags))
+            return ReadOnlySpan<string>.Empty;
+        
+        return CollectionsMarshal.AsSpan(tags);
+    }
+
+    public bool RemoveEntityTag(EntityID entityID, string tag)
+    {
+        if(isPreparing)
+            throw new InvalidOperationException("Cant remove a tag from an Entity during preparing phase.");
+
+        if (!entities.ContainsKey(entityID))
+            throw new ArgumentException($"Entity does not exist", nameof(entityID));
+
+        if(!this.taggedEntities.TryGetValue(tag, out var taggedEntities))
+            return false;
+        
+        if(!taggedEntities.Remove(entityID))
+            return false;
+        
+        if(entityTags.TryGetValue(entityID, out var tags) && tags.Remove(tag) && tags.Count == 0)
+        {
+            entityTags.Remove(entityID);
+            listPool.Return(tags);
+        }
+
+        return true;
+    }
+    public ReadOnlySpan<EntityID> GetTaggedEntities(string tag)
+    {
+        if(!this.taggedEntities.TryGetValue(tag, out var taggedEntities))
+            return ReadOnlySpan<EntityID>.Empty;
+        
+        return taggedEntities.AsSpan();
     }
 
     public EntityType GetEntityType(EntityID entityID)
@@ -280,6 +383,11 @@ public sealed class World : Workspace.Service
         {
             var container = entityContainers[i];
             container.Clear();
+        }
+
+        foreach(var taggedEntities in this.taggedEntities.Values)
+        {
+            taggedEntities.Clear();
         }
     }
     

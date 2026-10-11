@@ -73,6 +73,8 @@ public class EntityType : Def
     }
 
     private Dictionary<Type, IComponentType> componentTypes;
+    private string[] tagArray;
+    private HashSet<string> tagSet;
 
     [JsonInclude] private EntitySystem entitySystem { get; set; }
     [JsonInclude] private ReadOnlySpan<IComponentType> components
@@ -88,6 +90,20 @@ public class EntityType : Def
 
                 componentTypes.Add(value[i].Type, value[i]);
             }
+        }
+    }
+    [JsonInclude] private string[] tags
+    {
+        get => tagArray;
+        set
+        {
+            tagSet = new HashSet<string>(value);
+            if(tagSet.Count != value.Length)
+            {
+                tagArray = tagSet.ToArray();
+                return;
+            }
+            tagArray = value;
         }
     }
 
@@ -123,6 +139,15 @@ public class EntityType : Def
 
         value = default;
         return false;
+    }
+
+    public bool HasTag(string tag)
+    {
+        return tagSet.Contains(tag);
+    }
+    public ReadOnlySpan<string> GetTags()
+    {
+        return tagArray;
     }
 
     internal IComponentContainer[] GetComponentContainers()
