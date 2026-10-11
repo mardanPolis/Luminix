@@ -5,7 +5,6 @@ using Luminix.Threading.Commands;
 using Luminix.Threading.Bridges;
 using Luminix.Threading.Buffers;
 using Luminix.UI;
-using Microsoft.Xna.Framework;
 
 namespace Luminix;
 
@@ -28,8 +27,6 @@ internal sealed class MainCore
     private AudioEngine audioEngine;
     private Input input;
     private Input.Controller inputController;
-    private GameObjectManager gameObjectManager;
-    private GameObjectManager.Controller gameObjectManagerController;
     private UIManager uiManager;
     private UIManager.Controller uiManagerController;
     private ModuleManager moduleManager;
@@ -68,7 +65,6 @@ internal sealed class MainCore
             graphics    = new Graphics();
             uiManager   = new UIManager(graphics, out uiManagerController);
             moduleManager     = new ModuleManager();
-            gameObjectManager = new GameObjectManager(out gameObjectManagerController);
             input       = new Input(out inputController);
             resources   = new Resources();
             assets      = new Assets();
@@ -160,7 +156,7 @@ internal sealed class MainCore
             defs.FinalizeDefs();
 
             if(Application.IsDebug)
-                gameObjectManager.Add(new DebugPanel());
+                world.AddGameObject(new DebugPanel());
 
             Thread.CurrentThread.IsBackground = false;
         }
@@ -194,8 +190,6 @@ internal sealed class MainCore
             worldController.PrepareEntities();
             worldController.UpdateEntities();
 
-            gameObjectManagerController.UpdateGameObjects();
-
             var mousePosition = input.MousePosition;
             inputController.IsMouseOverUI = uiManagerController.isMouseCollidingAt((int)mousePosition.X, (int)mousePosition.Y);
 
@@ -215,7 +209,6 @@ internal sealed class MainCore
             graphics.BeginRender();
 
             worldController.RenderEntities();
-            gameObjectManagerController.RenderGameObjects();
             uiManagerController.Render();
 
             graphics.StopRender();

@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using Luminix.Collections;
 using System.Reflection;
-using System.Collections;
 
 namespace Luminix;
 
@@ -53,11 +52,11 @@ internal partial class EntityContainer
 
     private readonly Action tickMethod;
 
-    private readonly Method[] startMethods;
-    private readonly Method[] prepareMethods;
-    private readonly Method[] updateMethods;
-    private readonly Method[] renderMethods;
-    private readonly Method[] destroyMethods;
+    private readonly Method[] startMethods;     // runs every on previously created entity, runs after destroy methods have completed
+    private readonly Method[] destroyMethods;   // runs every on previously destroyed entity
+    private readonly Method[] prepareMethods;   // Implemented so that to update for example TransformInterp from start positions to end positions, runs every tick before update
+    private readonly Method[] updateMethods;    // runs every tick before render
+    private readonly Method[] renderMethods;    // runs every tick as the last method
 
     private int entityCount;
     private int entityCountInternal;
@@ -144,7 +143,6 @@ internal partial class EntityContainer
         destroyedEntitiesBuffer.Clear();
         (createdEntities, createdEntitiesBuffer) = (createdEntitiesBuffer, createdEntities);
         (destroyedEntities, destroyedEntitiesBuffer) = (destroyedEntitiesBuffer, destroyedEntities);
-
     }
 
     private void ReorganizeEntities()

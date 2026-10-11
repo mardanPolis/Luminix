@@ -11,6 +11,15 @@ public sealed class World : Workspace.Service
 {
     internal readonly struct Controller 
     {
+        static Controller()
+        {
+            var updateMethodInfo = typeof(GameObject).GetMethod("Update", BindingFlags.NonPublic | BindingFlags.Instance);
+            var renderMethodInfo = typeof(GameObject).GetMethod("Render", BindingFlags.NonPublic | BindingFlags.Instance);
+
+            updateMethod = (Action<GameObject>)Delegate.CreateDelegate(typeof(Action<GameObject>), updateMethodInfo);
+            renderMethod = (Action<GameObject>)Delegate.CreateDelegate(typeof(Action<GameObject>), renderMethodInfo);
+        }
+
         internal Controller(World controlled)
         {
             if(controlled.controllerIssued)
@@ -21,8 +30,23 @@ public sealed class World : Workspace.Service
 
         private readonly World controlled;
 
+        private readonly static Action<GameObject> updateMethod;
+        private readonly static Action<GameObject> renderMethod;
+
         public readonly void Tick()
         {
+            foreach(var gameObject in controlled.gameObjects.Values)
+            {
+                try
+                {
+                    updateMethod(gameObject);
+                }
+                catch(Exception ex)
+                {
+                    Logger.NewLog(Logger.Log.Level.Error, $"Failed to Update GameObject {gameObject}, reason: {ex}");
+                }
+            }
+
             var containers = controlled.entityContainers;
             for(int i = 0; i < containers.Length; i++)
             {
@@ -61,6 +85,18 @@ public sealed class World : Workspace.Service
 
         public readonly void RenderEntities()
         {
+            foreach(var gameObject in controlled.gameObjects.Values)
+            {
+                try
+                {
+                    renderMethod(gameObject);
+                }
+                catch(Exception ex)
+                {
+                    Logger.NewLog(Logger.Log.Level.Error, $"Failed to Render GameObject {gameObject}, reason: {ex}");
+                }
+            }
+
             var containers = controlled.entityContainers;
             for(int i = 0; i < containers.Length; i++)
             {
@@ -83,6 +119,7 @@ public sealed class World : Workspace.Service
         controller = new Controller(this);
         this.graphics = graphics;
         this.controllerIssued = true;
+        this.gameObjects = new();
     }
 
     private Graphics graphics;
@@ -91,6 +128,7 @@ public sealed class World : Workspace.Service
 
     private EntityID entityID;
 
+    private Dictionary<Type, GameObject> gameObjects;
     private Dictionary<EntityID, EntityType> entities;
 
     private Dictionary<EntityType, EntityContainer> typeContainers;
@@ -196,29 +234,53 @@ public sealed class World : Workspace.Service
 
         return new(container);
     }
-
     public EntitySystem GetEntitySystem(EntityType entityType)
     {
         if(!typeContainers.TryGetValue(entityType, out EntityContainer container))
-        {
             throw new ArgumentException("Unknown entity type", nameof(entityType));
-        }
 
         return container.EntitySystem;
     }
     public int GetEntityCount(EntityType entityType)
     {
         if(!typeContainers.TryGetValue(entityType, out EntityContainer container))
-        {
             throw new ArgumentException("Unknown entity type", nameof(entityType));
-        }
 
         return container.EntityCount;
     }
     
+    public void AddGameObject(GameObject gameObject)
+    {
+        gameObjects.Add(gameObject.GetType(), gameObject);
+    }
+    public bool TryAddGameObject(GameObject gameObject)
+    {
+        return gameObjects.TryAdd(gameObject.GetType(), gameObject);
+    }
+    public void RemoveGameObject(GameObject gameObject) {
+        gameObjects.Remove(gameObject.GetType());
+    }
+
+    public bool TryGetGameObject<T>(out T gameObject) where T : GameObject
+    {
+        if (gameObjects.TryGetValue(typeof(T), out var go)) {
+            gameObject = (T)go;
+            return true;
+        }
+        gameObject = null;
+        return false;
+    }
+    
     public void Clear()
     {
-        //TODO
+        gameObjects.Clear();
+        entities.Clear();
+        entityID = new();
+        for(int i = 0; i < entityContainers.Length; i++)
+        {
+            var container = entityContainers[i];
+            container.Clear();
+        }
     }
     
     internal EntityContainer[] CreateEntityContainers(ReadOnlySpan<EntityType> entityTypes)
