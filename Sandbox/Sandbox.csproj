@@ -7,6 +7,13 @@
   </PropertyGroup>
   
   <ItemGroup>
+    <Content Include="Assets/**/*.*">
+      <Link>Assets/%(RecursiveDir)%(Filename)%(Extension)</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="../Luminix/Luminix.csproj" />
     <ProjectReference Include="../MonoGame/MonoGame.Framework/MonoGame.Framework.DesktopGL.csproj">
       <SetConfiguration>Configuration=Release</SetConfiguration>

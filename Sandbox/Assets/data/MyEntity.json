@@ -1,0 +1,17 @@
+{
+    "DefType" : "EntityType",
+    "DefName" : "MyEntity",
+    "entitySystem" : {
+        "type" : "Sandbox.MyEntitySystem",
+        "texture" : "textures/MyEntity",
+        "audio" : "audio/Step_Sound"
+    },
+    "components" : [
+        {
+            "type" : "TransformInterp"
+        },
+        {
+            "type" : "Sandbox.AudioHolder"
+        }
+    ]
+}
