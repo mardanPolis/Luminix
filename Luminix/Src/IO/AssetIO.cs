@@ -68,7 +68,11 @@ public sealed class AssetIO
 
         string targetPath = Path.GetFullPath(Path.Combine(rootPath, ASSET_DIRECTORY));
         if(!Directory.Exists(targetPath))
-            yield break;
+        {
+            targetPath = Path.GetFullPath(Path.Combine(rootPath, ASSET_DIRECTORY.ToLower()));
+            if(!Directory.Exists(targetPath))
+                yield break;
+        }
 
         foreach (var path in Directory.EnumerateFiles(targetPath, "*.*", SearchOption.AllDirectories))
         {
