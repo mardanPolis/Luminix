@@ -13,5 +13,5 @@ public sealed class ShaderResource : Resource
 
     internal ShaderID Source { get; }
 
-    public sealed override string ToString() => Identifier;
+    public sealed override string ToString() => $"[ShaderResource: '{Identifier}']";
 }

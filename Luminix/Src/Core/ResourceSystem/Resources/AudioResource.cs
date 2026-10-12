@@ -18,7 +18,7 @@ public sealed class AudioResource : Resource
     public sealed override string ToString()
     {
         string identifier = !string.IsNullOrEmpty(Identifier) ? Identifier : "Unset";
-        return $"[AudioResource: '{identifier}' | {clip}]";
+        return $"[AudioResource: '{identifier}'; {clip}]";
     }
 
     private protected override void OnDispose()

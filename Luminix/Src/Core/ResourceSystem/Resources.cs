@@ -57,6 +57,7 @@ public sealed class Resources : Workspace.Service, IEnumerable<Resource>
 
     public void CreateResource(Asset asset, string identifier)
     {
+        identifier = identifier.Replace('\\', '/').ToLower();
         switch(asset)
         {
             case AudioAsset audioAsset:
@@ -80,7 +81,7 @@ public sealed class Resources : Workspace.Service, IEnumerable<Resource>
                     var source = new TextureID(sourceTexture.ID++);
 
                     var resource = new TextureResource(source, identifier, 0, 0, (int)size.X, (int)size.Y, []);
-                    container.Add((resource.GetType(), asset.Identifier), resource);
+                    container.Add((resource.GetType(), identifier), resource);
 
                     var sourceCreateCommand = GraphicResourceCommand.Create(source.ID, colors, (int)size.X, (int)size.Y);
                     resourceBridge.NewCommand(sourceCreateCommand);
@@ -88,8 +89,8 @@ public sealed class Resources : Workspace.Service, IEnumerable<Resource>
             break;
             case AtlasAsset atlasAsset:
                 {
-                    if(container.ContainsKey((typeof(TextureResource), asset.Identifier)))
-                        throw new InvalidOperationException($"Texture resource with identifier '{asset.Identifier}' already exists");
+                    if(container.ContainsKey((typeof(TextureResource), identifier)))
+                        throw new InvalidOperationException($"Texture resource with identifier '{identifier}' already exists");
 
                     var colors = atlasAsset.Colors;
                     var size = atlasAsset.Size;
@@ -108,7 +109,7 @@ public sealed class Resources : Workspace.Service, IEnumerable<Resource>
                     for(int i = 0; i < regions.Length; i++)
                     {
                         var region = regions[i];
-                        var regionIdentifier = region.Identifier;
+                        var regionIdentifier = region.Identifier.Replace('\\', '/').ToLower();
                         var regionRect = region.Rectangle;
 
                         if(container.ContainsKey((typeof(TextureResource), regionIdentifier)))
@@ -174,15 +175,15 @@ public sealed class Resources : Workspace.Service, IEnumerable<Resource>
                     if(xnbAsset.Type != XnbAsset.XnbType.Shader)
                         throw new NotSupportedException($"Unsupported xnb type: {xnbAsset.Type}");
 
-                    if(container.ContainsKey((typeof(ShaderResource), asset.Identifier)))
-                        throw new InvalidOperationException($"Shader resource with identifier '{asset.Identifier}' already exists");
+                    if(container.ContainsKey((typeof(ShaderResource), identifier)))
+                        throw new InvalidOperationException($"Shader resource with identifier '{identifier}' already exists");
 
                     var source = new ShaderID(sourceShader.ID++);
 
                     var data = xnbAsset.Data;
                     var type = xnbAsset.Type;
                     Resource resource = new ShaderResource(source, identifier);
-                    container.Add((resource.GetType(), asset.Identifier), resource);
+                    container.Add((resource.GetType(), identifier), resource);
 
                     var sourceCreateCommand = GraphicResourceCommand.Create(source.ID, data, type);
                     resourceBridge.NewCommand(sourceCreateCommand);
@@ -195,13 +196,13 @@ public sealed class Resources : Workspace.Service, IEnumerable<Resource>
     }
     public T GetResource<T>(string identifier) where T : Resource
     {
-        identifier = identifier.ToLower();
+        identifier = identifier.Replace('\\', '/').ToLower();
         Type type = typeof(T);
 
         if (container.TryGetValue((type, identifier), out Resource resource))
             return (T)resource;
 
-        Logger.NewLog(Logger.Log.Level.Warning, $"Resource identified '{identifier}' was not found.");
+        Logger.NewLog(Logger.Log.Level.Warning, $"Resource identified '{typeof(T)}' '{identifier}' was not found.");
         return null;
     }
     public void UnloadResource(Resource resource)

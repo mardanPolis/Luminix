@@ -79,8 +79,8 @@ public sealed class AudioClip
         if (isDisposed)
             return "Disposed";
 
-        double sampleRateKhz = (int)sampleRate / 1000.0;
-        return $"s | {sampleRateKhz:0.0}kHz | {duration} sec";
+        double sampleRateKhz = (int)ClipSampleRate / 1000.0;
+        return $"clipFormat:{ClipFormat}; sampleRateKhz:{sampleRateKhz:0.0}kHz; duration:{duration} sec";
     }
 
     internal void Dispose()

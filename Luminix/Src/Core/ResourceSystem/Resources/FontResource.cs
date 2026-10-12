@@ -121,7 +121,7 @@ public sealed class FontResource : Resource
         return new Vector2(width, lines * LineSpacing);
     }
 
-    public sealed override string ToString() => Identifier;
+    public sealed override string ToString() => $"[FontResource: '{Identifier}']";
 
     public ref struct TextEnumerator
     {

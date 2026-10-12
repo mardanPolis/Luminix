@@ -27,5 +27,5 @@ public sealed class TextureResource : Resource
     public int Width => Rectangle.Width;
     public int Height => Rectangle.Height;
 
-    public sealed override string ToString() => $"{Identifier} {Rectangle}";
+    public sealed override string ToString() => $"[TextureResource: '{Identifier}'; {Rectangle}]";
 }

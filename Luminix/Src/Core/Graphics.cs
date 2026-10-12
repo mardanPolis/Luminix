@@ -47,16 +47,6 @@ public sealed class Graphics : Workspace.Service
             window.CurrentDisplay = command.CurrentDisplay;
         };
 
-        var adapters = GraphicsAdapter.Adapters;
-
-        Screen[] screens = new Screen[adapters.Count];
-
-        for(int adapterIndex = 0; adapterIndex < adapters.Count; adapterIndex++)
-            screens[adapterIndex] = new Screen(adapters[adapterIndex]);
-
-        this.screens = screens;
-        renderSettings.Resolution = screens[0].Resolutions[0];
-
         window = new Window();
         var createCommand = new WindowCreateCommand();
         createCommand.Title = Application.Name;
@@ -75,6 +65,18 @@ public sealed class Graphics : Workspace.Service
         window.Title = createCommand.Title;
         window.Position = result.Position;
         window.CurrentMode = result.WindowMode;
+        
+        //FIXME NOT THREAD SAFE, MUST FIX
+        var adapters = GraphicsAdapter.Adapters;
+
+        Screen[] screens = new Screen[adapters.Count];
+
+        for(int adapterIndex = 0; adapterIndex < adapters.Count; adapterIndex++)
+            screens[adapterIndex] = new Screen(adapters[adapterIndex]);
+
+        this.screens = screens;
+        renderSettings.Resolution = screens[0].Resolutions[0];
+
     }
     
     private RenderBuffer renderBuffer;

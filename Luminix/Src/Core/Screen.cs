@@ -9,7 +9,7 @@ public sealed class Screen
     internal Screen(GraphicsAdapter adapter)
     {
         Name = adapter.DisplayName;
-        Description = adapter.Description;
+        //Description = adapter.Description;
         IsWideScreen = adapter.IsWideScreen;
 
         resolutions = new Graphics.Resolution[adapter.SupportedDisplayModes.Length];
