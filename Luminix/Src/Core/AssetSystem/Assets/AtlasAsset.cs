@@ -22,7 +22,7 @@ internal sealed class AtlasAsset : Asset
         }
     };
 
-    internal AtlasAsset(string identifier, Color[] colors, Vector2 size, Region[] regions) : base(identifier)
+    internal AtlasAsset(string identifier, Color[] colors, Point size, Region[] regions) : base(identifier)
     {
         ArgumentNullException.ThrowIfNull(colors, nameof(colors));
         ArgumentNullException.ThrowIfNull(regions, nameof(regions));
@@ -33,7 +33,7 @@ internal sealed class AtlasAsset : Asset
     }
 
     public Color[] Colors { get; private set; }
-    public Vector2 Size { get; }
+    public Point Size { get; }
     public Region[] Regions { get; private set; }
 
     public override string ToString()

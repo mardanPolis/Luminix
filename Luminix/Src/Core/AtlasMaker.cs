@@ -9,12 +9,12 @@ namespace Luminix;
 
 internal sealed class AtlasMaker
 {
-    private readonly record struct Entry(string Identifier, Color[] Colors, Vector2 Size);
+    private readonly record struct Entry(string Identifier, Color[] Colors, Point Size);
     private readonly List<Entry> entries = new();
 
     public void Add(TextureAsset asset)
     {
-        PadColors(asset.Colors, asset.Size, out Color[] paddedColors, out Vector2 paddedSize);
+        PadColors(asset.Colors, asset.Size, out Color[] paddedColors, out Point paddedSize);
         entries.Add(new Entry(asset.Identifier, paddedColors, paddedSize));
     }
 
@@ -68,9 +68,9 @@ internal sealed class AtlasMaker
         return results.ToArray();
     }
 
-    private static void PadColors(Color[] colors, Vector2 size, out Color[] _resultColor, out Vector2 _resultSize)
+    private static void PadColors(Color[] colors, Point size, out Color[] _resultColor, out Point _resultSize)
     {
-        Vector2 paddedColorsSize = new Vector2(size.X + 2, size.Y + 2);
+        Point paddedColorsSize = new Point(size.X + 2, size.Y + 2);
         Color[] paddedColors = new Color[(int)((size.X + 2) * (size.Y + 2))];
 
         //ADDING PADDED COLORS
@@ -165,6 +165,6 @@ internal sealed class AtlasMaker
             }
         }
 
-        return new AtlasAsset(name, atlasColors, new Vector2(atlasW, atlasH), regions);
+        return new AtlasAsset(name, atlasColors, new Point(atlasW, atlasH), regions);
     }
 }

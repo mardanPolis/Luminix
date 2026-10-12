@@ -102,62 +102,72 @@ internal sealed class RenderingSystem : Workspace.Service
 
         //World space
 
-        GraphicsDevice.SetRenderTarget(this.renderTarget);
-        if(cameraData.HasValue && renderBuffer != null)
+        if(renderBuffer != null)
         {
-            projectionMatrix = GetProjectionMatrix(viewport, out viewport);
-            viewMatrix = GetViewMatrix(cameraData, viewport, partialTick);
-            renderer.SetTransformMatrix(viewMatrix.Value * projectionMatrix);
-            renderer.Reset();
-            
-            GraphicsDevice.Clear(cameraData.Value.BackgroundColor);
-
-            SetData(renderBuffer.GetRenderInstances(), partialTick);
-
-            for(int i = 0; i < commandCount; i++)
+            GraphicsDevice.SetRenderTarget(this.renderTarget);
+            if(cameraData != null)
             {
-                var command = commands[i];
-                var instance = instances[command.Index];
-                renderer.Render(instance.Shader, instance.Source, instance.Color, instance.Position, instance.Scale, instance.Rotation, instance.SourceRect);
+                projectionMatrix = GetProjectionMatrix(viewport, out viewport);
+                viewMatrix = GetViewMatrix(cameraData, viewport, partialTick);
+                renderer.SetTransformMatrix(viewMatrix.Value * projectionMatrix);
+                renderer.Reset();
+                
+                GraphicsDevice.Clear(cameraData.Value.BackgroundColor);
+
+                SetData(renderBuffer.GetRenderInstances(), partialTick);
+
+                for(int i = 0; i < commandCount; i++)
+                {
+                    var command = commands[i];
+                    var instance = instances[command.Index];
+                    renderer.Render(instance.Shader, instance.Source, instance.Color, instance.Position, instance.Scale, instance.Rotation, instance.SourceRect);
+                }
+
+                renderer.Flush();
+                renderer.Reset();
+            }
+            else
+            {
+                GraphicsDevice.Clear(Color.Black);
+            }
+            
+            // //Screen space
+            GraphicsDevice.SetRenderTarget(this.unscaledRenderTarget);
+            GraphicsDevice.Clear(Color.Transparent);
+            projectionMatrix = GetProjectionMatrix(viewport, out viewport);
+            
+            if(renderBuffer != null)
+            {
+                renderer.SetTransformMatrix(projectionMatrix);
+                renderer.Reset();
+                SetData(renderBuffer.GetUIRenderInstances());
+
+                for(int i = 0; i < commandCount; i++)
+                {
+                    var instance = instances[i];
+
+                    renderer.Render(instance.Shader, instance.Source, instance.Color, instance.Position, instance.Scale, instance.Rotation, instance.SourceRect);
+                }
+
+                renderer.Flush();
             }
 
+            //final
+            var shader = resourceManager.GetShader(new ShaderID(0));
+
+            GraphicsDevice.SetRenderTarget(null);
+            renderer.Render(shader, renderTarget, Color.White, in renderTargetDestination);
+            renderer.Render(shader, unscaledRenderTarget, Color.White, in unscaledRenderTargetDestination);
             renderer.Flush();
-            renderer.Reset();
+
+            frameCount++;
+            drawCount = GraphicsDevice.Metrics.DrawCount;
         }
         else
         {
+            GraphicsDevice.SetRenderTarget(null);
             GraphicsDevice.Clear(Color.Black);
         }
-        
-        // //Screen space
-        GraphicsDevice.SetRenderTarget(this.unscaledRenderTarget);
-        GraphicsDevice.Clear(Color.Transparent);
-        projectionMatrix = GetProjectionMatrix(viewport, out viewport);
-        
-        if(renderBuffer != null)
-        {
-            renderer.SetTransformMatrix(projectionMatrix);
-            renderer.Reset();
-            SetData(renderBuffer.GetUIRenderInstances());
-
-            for(int i = 0; i < commandCount; i++)
-            {
-                var instance = instances[i];
-
-                renderer.Render(instance.Shader, instance.Source, instance.Color, instance.Position, instance.Scale, instance.Rotation, instance.SourceRect);
-            }
-
-            renderer.Flush();
-        }
-
-        //final
-        GraphicsDevice.SetRenderTarget(null);
-        renderer.Render(resourceManager.GenericShader, renderTarget, Color.White, in renderTargetDestination);
-        renderer.Render(resourceManager.GenericShader, unscaledRenderTarget, Color.White, in unscaledRenderTargetDestination);
-        renderer.Flush();
-
-        frameCount++;
-        drawCount = GraphicsDevice.Metrics.DrawCount;
     }
 
     private void SetSettings(ref RenderSettings renderSettings)

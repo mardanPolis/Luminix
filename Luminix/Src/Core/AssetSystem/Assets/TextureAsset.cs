@@ -5,7 +5,7 @@ namespace Luminix;
 
 public sealed class TextureAsset : Asset
 {
-    public TextureAsset(string identifier, Color[] colors, Vector2 size) : base(identifier)
+    public TextureAsset(string identifier, Color[] colors, Point size) : base(identifier)
     {
         ArgumentNullException.ThrowIfNull(colors, nameof(colors));
 
@@ -14,7 +14,7 @@ public sealed class TextureAsset : Asset
     }
 
     public Color[] Colors { get; private set; }
-    public Vector2 Size { get; private set; }
+    public Point Size { get; private set; }
 
     protected override void OnDispose()
     {

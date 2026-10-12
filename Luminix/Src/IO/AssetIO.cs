@@ -148,7 +148,7 @@ public sealed class AssetIO
                 colors[i] = new Color(raw[b], raw[b + 1], raw[b + 2], raw[b + 3]);
             }
 
-            var size = new Vector2(result.Width, result.Height);
+            var size = new Point(result.Width, result.Height);
 
             return new TextureAsset(identifier, colors, size);
         }
@@ -237,7 +237,7 @@ public sealed class AssetIO
                 colors[i] = new Color(raw[b], raw[b + 1], raw[b + 2], raw[b + 3]);
             }
 
-            var size = new Vector2(result.Width, result.Height);
+            var size = new Point(result.Width, result.Height);
 
             return new TextureAsset(assetInfo.RelativePath, colors, size);
         }
@@ -330,7 +330,7 @@ public sealed class AssetIO
                 colors[i] = new Color(raw[b], raw[b + 1], raw[b + 2], raw[b + 3]);
             }
 
-            var size = new Vector2(result.Width, result.Height);
+            var size = new Point(result.Width, result.Height);
 
             return new TextureAsset(assetInfo.RelativePath, colors, size);
         }

@@ -42,11 +42,11 @@ internal struct GraphicResourceCommand
     }
 
     // --- SHADER / FONT ---
-    public static GraphicResourceCommand Create(uint id, byte[] data, XnbAsset.XnbType xnbType)
+    public static GraphicResourceCommand Create(uint id, byte[] data)
     {
-        return New(GraphicResourceCommandType.Create, id, data, xnbType);
+        return New(GraphicResourceCommandType.Create, id, data);
     }
-    private static GraphicResourceCommand New(GraphicResourceCommandType commandType, uint id, byte[] data, XnbAsset.XnbType xnbType)
+    private static GraphicResourceCommand New(GraphicResourceCommandType commandType, uint id, byte[] data)
     {
         return new GraphicResourceCommand()
         {

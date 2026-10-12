@@ -27,32 +27,6 @@ internal sealed class GraphicsResourceManager : Microsoft.Xna.Framework.Content.
     private readonly Dictionary<ShaderID, Effect> shaders;
     private readonly Dictionary<TextureID, Texture2D> textures;
 
-    public Texture2D NullTexture { get; private set; }
-    public Effect GenericShader {  get; private set;  }
-
-    internal void Initialize()
-    {
-        var assetIO = new AssetIO();
-        
-        {
-            Color[] nullTexturePixels = new Color[32 * 32];
-            for (int y = 0; y < 32; y++)
-                for (int x = 0; x < 32; x++)
-                    nullTexturePixels[y * 32 + x] = (x / 16 ^ y / 16) == 1
-                        ? Color.Magenta
-                        : Color.Black;
-
-            NullTexture = new Texture2D(main.GraphicsDevice, 32, 32);
-            NullTexture.SetData(nullTexturePixels);
-        }
-        
-        {
-            XnbAsset asset = assetIO.LoadXnbAsset(Application.EngineAssembly, "Asset.GenericShader.xnb");
-            var stream = new MemoryStream(asset.Data);
-            GenericShader = Create<Effect>(0, stream);  
-        }
-    }
-
     public Texture2D CreateTexture(TextureID texture, Color[] colors, int X, int Y)
     {
         ObjectDisposedException.ThrowIf(disposed, this);
@@ -111,17 +85,11 @@ internal sealed class GraphicsResourceManager : Microsoft.Xna.Framework.Content.
 
     internal Effect GetShader(ShaderID resource)
     {
-        if(shaders.TryGetValue(resource, out Effect source))
-            return (Effect)source;
-        
-        return GenericShader;
+        return shaders[resource];
     }
     internal Texture2D GetTexture(TextureID resource)
     {
-        if(textures.TryGetValue(resource, out Texture2D source))
-            return (Texture2D)source;
-        
-        return NullTexture;
+        return textures[resource];
     }
 
     private T Create<T>(uint id, Stream stream) where T : class
