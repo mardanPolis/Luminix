@@ -5,7 +5,7 @@ A 2D Game Engine in C# with an archetype ECS and data-driven defs, currently usi
 > [!NOTE]   
 > still a work in progress
 
-## 🌟 Features
+## Features
 
 - **Archetype-Based ECS**
 - **Data-Driven Definitions**
