@@ -86,17 +86,17 @@ internal sealed class Renderer
         currTexture = null;
     }
 
-    public void Render(Effect shader, Texture2D source, in Color color, in Rectangle destinationRect)
+    public void Render(Effect shader, Texture2D source, Color color, in Rectangle destinationRect)
     {
-        Render(shader, source, in color, in destinationRect, new Rectangle(0, 0, source.Width, source.Height));
+        Render(shader, source, color, in destinationRect, new Rectangle(0, 0, source.Width, source.Height));
     }
-    public void Render(Effect shader, Texture2D source, in Color color, in Rectangle destinationRect, in Rectangle sourceRect)
+    public void Render(Effect shader, Texture2D source, Color color, in Rectangle destinationRect, in Rectangle sourceRect)
     {
-        Render(shader, source, in color, 
-        new Vector3(destinationRect.X, destinationRect.Y, 0), new Vector2(destinationRect.Width, destinationRect.Height), 0,
+        Render(shader, source, color, 
+        new Vector3(destinationRect.X + destinationRect.Width / 2, destinationRect.Y + destinationRect.Height / 2, 0), new Vector2(destinationRect.Width, destinationRect.Height), 0,
         in sourceRect);
     }
-    public void Render(Effect shader, Texture2D source, in Color color, in Vector3 position, in Vector2 scale, float rotation, in Rectangle sourceRect)
+    public void Render(Effect shader, Texture2D source, Color color, in Vector3 position, Vector2 scale, float rotation, in Rectangle sourceRect)
     {
         if (shader != currShader || source != currTexture)
         {

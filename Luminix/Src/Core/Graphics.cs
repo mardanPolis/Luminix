@@ -136,9 +136,9 @@ public sealed class Graphics : Workspace.Service
 
     public bool IsRendering => renderBuffer != null;
 
-    public void DrawSprite(TextureResource texture, in Transform transform)                                     => DrawSprite(DefaultShader.Source, texture?.Source ?? DefaultTexture.Source, texture.Rectangle, Color.White, in transform);
-    public void DrawSprite(TextureResource texture, Color color, in Transform transform)                        => DrawSprite(DefaultShader.Source, texture?.Source ?? DefaultTexture.Source, texture.Rectangle, color, transform);
-    public void DrawSprite(ShaderResource shader, TextureResource texture, Color color, in Transform transform) => DrawSprite(shader.Source, texture?.Source ?? DefaultTexture.Source, texture.Rectangle, color, transform);
+    public void DrawSprite(TextureResource texture, in Vector3 position, Vector2 scale, float rotation)                                     => DrawSprite(DefaultShader.Source, texture?.Source ?? DefaultTexture.Source, texture.Rectangle, Color.White, new Transform(position, scale, rotation));
+    public void DrawSprite(TextureResource texture, Color color, in Vector3 position, Vector2 scale, float rotation)                        => DrawSprite(DefaultShader.Source, texture?.Source ?? DefaultTexture.Source, texture.Rectangle, color, new Transform(position, scale, rotation));
+    public void DrawSprite(ShaderResource shader, TextureResource texture, Color color, in Vector3 position, Vector2 scale, float rotation) => DrawSprite(shader.Source, texture?.Source ?? DefaultTexture.Source, texture.Rectangle, color, new Transform(position, scale, rotation));
     private void DrawSprite(ShaderID shader, TextureID texture, in Rectangle rectangle, Color color, in Transform transform)
     {
         if (!EnsureRenderBuffer()) return;

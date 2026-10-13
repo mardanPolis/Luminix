@@ -74,14 +74,11 @@ internal sealed class RenderingSystem : Workspace.Service
     public int ResolutionWidth => resolution.Width;
     public int ResolutionHeight => resolution.Height;
  
-    /// <summary>Actual back buffer (window) size in pixels.</summary>
     public int BackBufferWidth => GraphicsDevice.PresentationParameters.BackBufferWidth;
     public int BackBufferHeight => GraphicsDevice.PresentationParameters.BackBufferHeight;
  
-    /// <summary>Where the world render target is drawn inside the back buffer (letterbox rectangle).</summary>
     public Rectangle WorldDestination => renderTargetDestination;
  
-    /// <summary>When true, the world target is scaled by whole numbers only (pixel-perfect) when it is larger than the internal resolution.</summary>
     public bool IntegerScaling
     {
         get => integerScaling;
@@ -320,7 +317,7 @@ internal sealed class RenderingSystem : Workspace.Service
  
     private Matrix CreateProjectionMatrix(int width, int height)
     {
-        Matrix.CreateOrthographicOffCenter(0f, width, height, 0f, 4f, -4f, out Matrix matrix);
+        Matrix.CreateOrthographicOffCenter(0f, width, height, 0f, 400f, -400f, out Matrix matrix);
  
         if (GraphicsDevice.UseHalfPixelOffset)
         {
@@ -341,7 +338,7 @@ internal sealed class RenderingSystem : Workspace.Service
  
         renderTargetDestination = FitRectangle(renderTarget.Width, renderTarget.Height, backWidth, backHeight, integerScaling);
  
-        unscaledRenderTargetDestination = new Rectangle(unscaledRenderTarget.Width / 2, unscaledRenderTarget.Height / 2, backWidth, backHeight);
+        unscaledRenderTargetDestination = new Rectangle(0, 0, backWidth, backHeight);
     }
  
     private static Rectangle FitRectangle(int sourceWidth, int sourceHeight, int destWidth, int destHeight, bool integerScale)
@@ -357,7 +354,7 @@ internal sealed class RenderingSystem : Workspace.Service
         int width = Math.Max(1, (int)MathF.Round(sourceWidth * scale));
         int height = Math.Max(1, (int)MathF.Round(sourceHeight * scale));
  
-        return new Rectangle(destWidth - width / 2, destHeight - height / 2, width, height);
+        return new Rectangle((destWidth - width) / 2, (destHeight - height) / 2, width, height);
     }
  
     private void SetData(ReadOnlySpan<RenderInstance> newInstances, float partialTick)
@@ -378,8 +375,7 @@ internal sealed class RenderingSystem : Workspace.Service
  
                 Transform transform = Interpolate(instance.Transform, partialTick);
  
-                ushort layerBits = (ushort)Math.Clamp((int)(transform.Position.X * 100.0f), 0, 65535);
-                var key = BuildKey(layerBits, shader, texture);
+                var key = BuildKey(transform.Position.Z, shader, texture);
  
                 var transformPos = transform.Position;
                 var position = new Vector3(transformPos.X, -transformPos.Y, transformPos.Z);
@@ -445,13 +441,14 @@ internal sealed class RenderingSystem : Workspace.Service
     }
  
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static ulong BuildKey(uint layer, ShaderID shader, TextureID texture)
+    private static ulong BuildKey(float layer, ShaderID shader, TextureID texture)
     {
-        ulong layerBits = ((ulong)layer & 0xFFFF) << 48;
-        ulong shaderBits = ((ulong)(shader.ID & 0xFF_FFFF)) << 24;
-        ulong textureBits = (ulong)(texture.ID & 0xFF_FFFF);
- 
-        return layerBits | shaderBits | textureBits;
+        uint bits = BitConverter.SingleToUInt32Bits(layer);
+        bits = (bits & 0x8000_0000) != 0 ? ~bits : bits | 0x8000_0000;
+
+        return ((ulong)bits << 32)
+            | ((ulong)(shader.ID & 0xFFFF) << 16)
+            | (ulong)(texture.ID & 0xFFFF);
     }
  
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

@@ -5,6 +5,12 @@ namespace Luminix;
 
 public struct Transform
 {
+    public Transform()
+    {
+        Position = Vector3.Zero;
+        Scale = Vector2.One;
+        Rotation = 0;
+    }
     public Transform(Vector3 position)
     {
         Position = position;
