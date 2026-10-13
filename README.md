@@ -36,7 +36,7 @@ A 2D Game Engine in C# with an archetype ECS and data-driven defs, currently usi
 
 ## STRESS TEST, 10k -> 100k -> 1mil entities
 
-<video src="./Sandbox/TestVideos/entityTest.mp4" width="50%" autoplay loop muted playsinline></video>
+https://github.com/user-attachments/assets/f0d076e5-ea07-4a09-809b-d738fdeb30fe
 
 **Hardware Specs Used:**
 - **CPU:** Intel Core i5-14600K
