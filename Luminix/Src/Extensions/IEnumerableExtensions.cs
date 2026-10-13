@@ -8,9 +8,6 @@ public static class IEnumerableExtensions
 {
     public static DenseList<T> ToDenseList<T>(this IEnumerable<T> source)
     {
-        if (source is null)
-            throw new ArgumentNullException(nameof(source));
-
-        return new DenseList<T>(source);
+        return source is null ? throw new ArgumentNullException(nameof(source)) : [.. source];
     }
 }

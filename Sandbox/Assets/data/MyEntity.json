@@ -11,7 +11,7 @@
             "type" : "TransformInterp"
         },
         {
-            "type" : "Sandbox.AudioHolder"
+            "type" : "Sandbox.TargetPosition"
         }
     ]
 }

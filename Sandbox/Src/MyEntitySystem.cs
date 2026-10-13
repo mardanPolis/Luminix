@@ -10,16 +10,25 @@ public class MyEntitySystem : EntitySystem
     [JsonInclude] private TextureResource texture;
     [JsonInclude] private AudioResource audio;
 
-    private const float Speed = 0.5f;
-    private const float Stride = 0.5f;
-    private const float Range = 5f;
+    [JsonInclude] private float areaSize = 12f;
+    [JsonInclude] private float speed = 1.5f;
+
+    private readonly Random random = new();
+
+    private Vector3 RandomPointInArea(Vector3 center)
+    {
+        float half = areaSize / 2f;
+        float x = center.X + (float)(random.NextDouble() * (areaSize * 2) - half * 2);
+        float y = center.Y + (float)(random.NextDouble() * areaSize - half);
+
+        return new Vector3(x, y, -y); // Z = Y
+    }
 
     private void Start(ref TransformInterp transform)
     {
         transform.Scale0 = new Vector2(1, 1);
         transform.Scale = new Vector2(1, 1);
     }
-
 
     private void Prepare(ref TransformInterp transform)
     {
@@ -28,44 +37,28 @@ public class MyEntitySystem : EntitySystem
         transform.Rotation0 = transform.Rotation;
     }
 
-    private static float PathLength(float t)
+    private void Update(ref TargetPosition targetPosition, ref TransformInterp transform)
     {
-        float k = MathF.Floor(t / MathF.PI);
-        float r = t - k * MathF.PI;
-        float partial = r <= MathF.PI / 2f ? MathF.Sin(r) : 2f - MathF.Sin(r);
-        return (2f * k + partial) * MathF.Sqrt(2f);
-    }
+        float step = speed * (float)Time.TickDeltaTime;
 
-    private void Update(ref TransformInterp transform, ref AudioHolder audioHolder)
-    {
-        float dt = 1f / Time.TickRate;
-        float t = Time.TickCount * dt * Speed;
-        float tPrev = t - dt * Speed;
+        Vector3 toTarget = targetPosition.position - transform.Position;
+        float distance = toTarget.Length();
 
-        float s = MathF.Sin(t) * Range;
-        transform.Position = new Vector3(s, s, transform.Position.Z);
-
-        if (tPrev >= 0f &&
-            MathF.Floor(PathLength(t) / Stride) > MathF.Floor(PathLength(tPrev) / Stride))
+        if (distance <= step)
         {
-            AudioMedia.PlaySource(audioHolder.AudioSource);
+            transform.Position = targetPosition.position;
+            targetPosition.position = RandomPointInArea(Vector3.Zero);
         }
+        else
+        {
+            transform.Position += toTarget / distance * step;
+        }
+        
+        transform.Position.Z = -transform.Position.Y;
     }
 
     private void Render(in TransformInterp transform)
     {
         Graphics.DrawSprite(texture, transform);
-    }
-
-
-    private void Start(ref AudioHolder audioHolder)
-    {
-        audioHolder.AudioSource = AudioMedia.CreateSource(audio);
-        AudioMedia.PlaySource(audioHolder.AudioSource);
-    }
-
-    private void OnDestroy(ref AudioHolder audioHolder)
-    {
-        AudioMedia.DisposeSource(audioHolder.AudioSource);
     }
 }

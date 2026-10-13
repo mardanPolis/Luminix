@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using Microsoft.Xna.Framework;
 
-namespace Luminix.UI;
+namespace Luminix;
 
 public class UIManager : Workspace.Service
 {
