@@ -1,12 +1,10 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.IO;
 using Luminix.Collections;
 using Luminix.Threading.Bridges;
 using Luminix.Threading.Commands;
 using Microsoft.Xna.Framework;
-using StbImageWriteSharp;
 
 namespace Luminix;
 
@@ -22,7 +20,9 @@ public sealed class Resources : Workspace.Service, IEnumerable<Resource>
     private Dictionary<(Type, string), Resource> container;
     public int ResourceCount => container.Count;
  
-    internal TextureResource NullTexture;
+    internal ShaderResource DefaultShader;
+    internal TextureResource DefaultTexture;
+    internal FontResource DefaultFont;
 
     private ShaderID sourceShader;
     private TextureID sourceTexture;
@@ -33,7 +33,8 @@ public sealed class Resources : Workspace.Service, IEnumerable<Resource>
 
         {
             XnbAsset asset = assetIO.LoadXnbAsset(Application.EngineAssembly, "Asset.GenericShader.xnb");
-            ProcessShaderAsset("generic_shader", asset.Data, ref sourceShader);
+            ProcessShaderAsset("generic_shader", asset.Data);
+            DefaultShader = GetResource<ShaderResource>("generic_shader");
         }
 
         {
@@ -45,30 +46,36 @@ public sealed class Resources : Workspace.Service, IEnumerable<Resource>
                         : Color.Black;
             
             var size = new Point(32, 32);
-            ProcessTextureAsset("null", colors, size, ref sourceTexture);
-            NullTexture = GetResource<TextureResource>("null");
+            ProcessTextureAsset("null", colors, size);
+            DefaultTexture = GetResource<TextureResource>("null");
         }
 
         {
             var identifier = "font_bold";
             XnbAsset asset = assetIO.LoadXnbAsset(Application.EngineAssembly, "Asset.IBMPlexMono-Bold.xnb");
-            CreateResource(asset, identifier);
+            ProcessFontAsset(identifier, asset.Data);
         }
 
         {
             var identifier = "font_medium";
             XnbAsset asset = assetIO.LoadXnbAsset(Application.EngineAssembly, "Asset.IBMPlexMono-Medium.xnb");
-            CreateResource(asset, identifier);  
+            ProcessFontAsset(identifier, asset.Data);
+            DefaultFont = GetResource<FontResource>("font_medium");
         }
 
         {
             var identifier = "font_regular";
             XnbAsset asset = assetIO.LoadXnbAsset(Application.EngineAssembly, "Asset.IBMPlexMono-Regular.xnb");
-            CreateResource(asset, identifier);
+            ProcessFontAsset(identifier, asset.Data);
         }
+        
+        var graphics = Workspace.GetService<Graphics>();
 
-        Workspace.GetService<Graphics>().DefaultFont = GetResource<FontResource>("font_medium");
+        graphics.DefaultShader = DefaultShader;
+        graphics.DefaultTexture = DefaultTexture;
+        graphics.DefaultFont = DefaultFont;
 
+        Logger.NewLog(Logger.Log.Level.Info, "Graphics Default Resources set");
     }
 
     public void CreateResource(Asset asset)
@@ -86,19 +93,19 @@ public sealed class Resources : Workspace.Service, IEnumerable<Resource>
                 break;
                 
             case TextureAsset textureAsset:
-                ProcessTextureAsset(identifier, textureAsset.Colors, textureAsset.Size, ref sourceTexture);
+                ProcessTextureAsset(identifier, textureAsset.Colors, textureAsset.Size);
                 break;
                 
             case AtlasAsset atlasAsset:
-                ProcessAtlasAsset(identifier, atlasAsset.Colors, atlasAsset.Size, atlasAsset.Regions, ref sourceTexture);
+                ProcessAtlasAsset(identifier, atlasAsset.Colors, atlasAsset.Size, atlasAsset.Regions);
                 break;
                 
             case XnbAsset xnbAsset when xnbAsset.Type == XnbAsset.XnbType.Font:
-                ProcessFontAsset(identifier, xnbAsset.Data, ref sourceTexture);
+                ProcessFontAsset(identifier, xnbAsset.Data);
                 break;
                 
             case XnbAsset xnbAsset:
-                ProcessShaderAsset(identifier, xnbAsset.Data, ref sourceShader);
+                ProcessShaderAsset(identifier, xnbAsset.Data);
                 break;
                 
             default:
@@ -127,6 +134,12 @@ public sealed class Resources : Workspace.Service, IEnumerable<Resource>
 
             case TextureResource texture:
             {
+                if(resource == DefaultTexture)
+                {
+                    Logger.NewLog(Logger.Log.Level.Warning,$"Cannot unload texture '{texture.Identifier}', reason: The provided Texture is Default.");
+                    return;
+                }
+
                 if (!texture.IsSource)           // region: owner decides
                 {
                     Logger.NewLog(Logger.Log.Level.Warning,
@@ -146,11 +159,23 @@ public sealed class Resources : Workspace.Service, IEnumerable<Resource>
             }
 
             case ShaderResource shader:
+                if(resource == DefaultShader)
+                {
+                    Logger.NewLog(Logger.Log.Level.Warning,$"Cannot unload Shader '{shader.Identifier}', reason: The provided Shader is Default.");
+                    return;
+                }
+
                 if (!container.Remove((typeof(ShaderResource), shader.Identifier))) return;
                 resourceBridge.NewCommand(GraphicResourceCommand.Unload(shader.Source.ID, GraphicResourceType.Shader));
                 break;
 
             case FontResource font:
+                if(resource == DefaultFont)
+                {
+                    Logger.NewLog(Logger.Log.Level.Warning,$"Cannot unload Font '{font.Identifier}', reason: The provided Font is Default.");
+                    return;
+                }
+
                 if (!container.Remove((typeof(FontResource), font.Identifier))) return;
                 UnloadResource(font.Atlas);
                 break;
@@ -169,7 +194,7 @@ public sealed class Resources : Workspace.Service, IEnumerable<Resource>
         var resource = new AudioResource(clip, identifier);
         container.Add((typeof(AudioResource), identifier), resource);
     }
-    private void ProcessTextureAsset(string identifier, Color[] colors, Point size, ref TextureID sourceTexture)
+    private void ProcessTextureAsset(string identifier, Color[] colors, Point size)
     {
         if (container.ContainsKey((typeof(TextureResource), identifier)))
             throw new InvalidOperationException($"Texture resource with identifier '{identifier}' already exists");
@@ -182,7 +207,7 @@ public sealed class Resources : Workspace.Service, IEnumerable<Resource>
         var sourceCreateCommand = GraphicResourceCommand.Create(source.ID, colors, size.X, size.Y);
         resourceBridge.NewCommand(sourceCreateCommand);
     }
-    private void ProcessAtlasAsset(string identifier, Color[] colors, Point size, AtlasAsset.Region[] regions, ref TextureID sourceTexture)
+    private void ProcessAtlasAsset(string identifier, Color[] colors, Point size, AtlasAsset.Region[] regions)
     {
         if (container.ContainsKey((typeof(TextureResource), identifier)))
             throw new InvalidOperationException($"Texture resource with identifier '{identifier}' already exists");
@@ -215,7 +240,7 @@ public sealed class Resources : Workspace.Service, IEnumerable<Resource>
             subTextures.Add(regionResource);
         }
     }
-    private void ProcessFontAsset(string identifier, byte[] data, ref TextureID sourceTexture)
+    private void ProcessFontAsset(string identifier, byte[] data)
     {
         if (container.ContainsKey((typeof(FontResource), identifier)))
             throw new InvalidOperationException($"Font resource with identifier '{identifier}' already exists");
@@ -258,7 +283,7 @@ public sealed class Resources : Workspace.Service, IEnumerable<Resource>
         var font = new FontResource(identifier, parsed, atlas, regions.ToArray());
         container.Add((typeof(FontResource), identifier), font);
     }
-    private void ProcessShaderAsset(string identifier, byte[] data, ref ShaderID sourceShader)
+    private void ProcessShaderAsset(string identifier, byte[] data)
     {
         if (container.ContainsKey((typeof(ShaderResource), identifier)))
             throw new InvalidOperationException($"Shader resource with identifier '{identifier}' already exists");

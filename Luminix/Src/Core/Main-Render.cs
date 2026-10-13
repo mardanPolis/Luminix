@@ -7,9 +7,8 @@ using Luminix.Threading;
 using Luminix.Threading.Bridges;
 using Luminix.InputSystem.Handlers;
 using Luminix.Threading.Buffers;
-using Luminix.IO;
 using Luminix.Threading.Commands;
-using System.Collections.Frozen;
+using Microsoft.Xna.Framework.Graphics;
 
 namespace Luminix;
 internal sealed class MainRender : Microsoft.Xna.Framework.Game
@@ -97,6 +96,8 @@ internal sealed class MainRender : Microsoft.Xna.Framework.Game
     {
         try
         {
+            var adapters = GraphicsAdapter.Adapters;
+
             this.mainThread = Thread.CurrentThread;
             this.coreThread = (TickedThread)Thread.GetThreadByName(Application.CORE_THREAD_NAME);
 
