@@ -79,7 +79,6 @@ public sealed class Graphics : Workspace.Service
 
         this.screens = screens;
         renderSettings.Resolution = screens[0].Resolutions[2];
-        Logger.NewLog(Logger.Log.Level.Info, $"{renderSettings.Resolution}");
     }
     
     private RenderBuffer renderBuffer;
