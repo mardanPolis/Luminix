@@ -33,8 +33,6 @@ public static partial class Logger
 
     static Logger()
     {
-        Console.Clear();
-
         LogDir = Path.Combine(AppContext.BaseDirectory, "logs");
 
         loggerLock = new();
@@ -46,6 +44,8 @@ public static partial class Logger
 
         logPath = Path.Combine(Logger.LogDir, $"{Application.StartTime.ToString("yyyy-MM-dd HH-mm-ss")}.log");
         File.WriteAllText(logPath, string.Empty);
+        
+        Clear();
     }
 
     private static readonly object loggerLock;

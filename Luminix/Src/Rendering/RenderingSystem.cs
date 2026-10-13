@@ -16,113 +16,141 @@ internal sealed class RenderingSystem : Workspace.Service
     {
         ArgumentNullException.ThrowIfNull(main);
         ArgumentNullException.ThrowIfNull(main.GraphicsDeviceManager);
-
+ 
         this.main = main;
-        this.graphics = main.GraphicsDeviceManager;
+        this.graphicManager = main.GraphicsDeviceManager;
         this.window = main.Window;
         this.resourceManager = main.ResourceManager;
-
-        resolution = new Rectangle(0, 0, graphics.PreferredBackBufferWidth, graphics.PreferredBackBufferHeight);
-
+ 
+        resolution = new Rectangle(0, 0, graphicManager.PreferredBackBufferWidth, graphicManager.PreferredBackBufferHeight);
+ 
         this.renderBridge = renderBridge;
         this.instances = new GPUInstance[4096];
         this.commands = new RenderCommand[4096];
     }
-
+ 
     private record struct GPUInstance(Effect Shader, Texture2D Source, Rectangle SourceRect, Color Color, Vector3 Position, Vector2 Scale, float Rotation);
     private record struct RenderCommand(ulong Key, int Index) : IComparable<RenderCommand> { public int CompareTo(RenderCommand other) => Key.CompareTo(other.Key); }
-
+ 
     private MainRender main;
     private Renderer renderer;
-    private GraphicsDeviceManager graphics;
+    private GraphicsDeviceManager graphicManager;
     private GameWindow window;
     private GraphicsResourceManager resourceManager;
-
+ 
     private TripleBufferBridge<RenderBuffer> renderBridge;
     private RenderBuffer renderBuffer;
-
+ 
+    // World target: fixed internal resolution (the "virtual" resolution), letterboxed onto the back buffer.
     private RenderTarget2D renderTarget;
+    // UI target: always the size of the back buffer, drawn 1:1 over the whole window.
     private RenderTarget2D unscaledRenderTarget;
     private Rectangle renderTargetDestination;
     private Rectangle unscaledRenderTargetDestination;
-
+ 
+    // Internal (virtual) resolution.
     private Rectangle resolution;
-    private Rectangle screenBounds;
-
+ 
+    private float targetFrameRate;
+ 
     private long frameCount = 0;
     private long drawCount = 0;
-
-    private Viewport viewport;
-
-    private Matrix? viewMatrix;
-    private Matrix projectionMatrix;
-
+ 
+    private bool integerScaling = false;
+ 
     private GPUInstance[] instances;
     private RenderCommand[] commands;
     private int commandCount;
-
-    public bool IsFullScreen => graphics.IsFullScreen;
-    public bool IsVSync => graphics.SynchronizeWithVerticalRetrace;
-
+ 
+    public bool IsFullScreen => graphicManager.IsFullScreen;
+    public bool IsVSync => graphicManager.SynchronizeWithVerticalRetrace;
+ 
     public GraphicsResourceManager ResourceManager => resourceManager;
-    public GraphicsDeviceManager GraphicsDeviceManager => graphics;
-    public Microsoft.Xna.Framework.Graphics.GraphicsDevice GraphicsDevice => graphics.GraphicsDevice;
+    public GraphicsDeviceManager GraphicsDeviceManager => graphicManager;
+    public Microsoft.Xna.Framework.Graphics.GraphicsDevice GraphicsDevice => graphicManager.GraphicsDevice;
     public long FrameCount => frameCount;
     public long DrawCount => drawCount;
-
+ 
     public int ResolutionWidth => resolution.Width;
     public int ResolutionHeight => resolution.Height;
-
+ 
+    /// <summary>Actual back buffer (window) size in pixels.</summary>
+    public int BackBufferWidth => GraphicsDevice.PresentationParameters.BackBufferWidth;
+    public int BackBufferHeight => GraphicsDevice.PresentationParameters.BackBufferHeight;
+ 
+    /// <summary>Where the world render target is drawn inside the back buffer (letterbox rectangle).</summary>
+    public Rectangle WorldDestination => renderTargetDestination;
+ 
+    /// <summary>When true, the world target is scaled by whole numbers only (pixel-perfect) when it is larger than the internal resolution.</summary>
+    public bool IntegerScaling
+    {
+        get => integerScaling;
+        set
+        {
+            if (integerScaling == value) return;
+            integerScaling = value;
+            ValidateRenderTargetDestination();
+        }
+    }
+ 
     protected override void Initialize()
     {
+        var pp = GraphicsDevice.PresentationParameters;
+ 
         renderTarget = new RenderTarget2D(GraphicsDevice, ResolutionWidth, ResolutionHeight);
-        unscaledRenderTarget = new RenderTarget2D(GraphicsDevice, ResolutionWidth, ResolutionHeight);
-
+        unscaledRenderTarget = new RenderTarget2D(GraphicsDevice, pp.BackBufferWidth, pp.BackBufferHeight);
+ 
         renderer = new Renderer();
+ 
+        ValidateRenderTargetDestination();
     }
-
+ 
     internal void NewFrame(float partialTick)
     {
         if (renderBridge.ReadBuffer != renderBuffer)
-        {       
+        {
+            resourceManager.HandleCommands();
+ 
             renderBuffer = renderBridge.ReadBuffer;
-            
+ 
             SetSettings(ref renderBuffer.RenderSettings);
+ 
+            ValidateRenderTargetDestination();
         }
-
+ 
+        // The window may have been resized by the user / OS (or fullscreen toggled).
+        SyncBackBuffer();
+ 
         GraphicsDevice.RasterizerState = RasterizerState.CullNone;
         GraphicsDevice.BlendState = BlendState.AlphaBlend;
-
-        if(GraphicsDevice.PresentationParameters.Bounds != screenBounds)
-            CreateRenderTargetDestination();
-
+ 
         partialTick = Math.Clamp(partialTick, 0f, 1f);
-
-        var cameraData = renderBuffer?.GetCameraData();
-
-        //World space
-
-        if(renderBuffer != null)
+ 
+        if (renderBuffer != null)
         {
-            GraphicsDevice.SetRenderTarget(this.renderTarget);
-            if(cameraData != null)
+            var cameraData = renderBuffer.GetCameraData();
+ 
+            GraphicsDevice.SetRenderTarget(renderTarget);
+ 
+            if (cameraData != null)
             {
-                projectionMatrix = GetProjectionMatrix(viewport, out viewport);
-                viewMatrix = GetViewMatrix(cameraData, viewport, partialTick);
-                renderer.SetTransformMatrix(viewMatrix.Value * projectionMatrix);
+                var projection = CreateProjectionMatrix(renderTarget.Width, renderTarget.Height);
+                var view = GetViewMatrix(cameraData, renderTarget.Width, renderTarget.Height, partialTick);
+ 
+                renderer.SetTransformMatrix(view.Value * projection);
                 renderer.Reset();
-                
+ 
                 GraphicsDevice.Clear(cameraData.Value.BackgroundColor);
-
+ 
                 SetData(renderBuffer.GetRenderInstances(), partialTick);
-
-                for(int i = 0; i < commandCount; i++)
+ 
+                for (int i = 0; i < commandCount; i++)
                 {
                     var command = commands[i];
                     var instance = instances[command.Index];
                     renderer.Render(instance.Shader, instance.Source, instance.Color, instance.Position, instance.Scale, instance.Rotation, instance.SourceRect);
                 }
-
+ 
                 renderer.Flush();
                 renderer.Reset();
             }
@@ -130,36 +158,34 @@ internal sealed class RenderingSystem : Workspace.Service
             {
                 GraphicsDevice.Clear(Color.Black);
             }
-            
-            // //Screen space
-            GraphicsDevice.SetRenderTarget(this.unscaledRenderTarget);
+ 
+            GraphicsDevice.SetRenderTarget(unscaledRenderTarget);
             GraphicsDevice.Clear(Color.Transparent);
-            projectionMatrix = GetProjectionMatrix(viewport, out viewport);
-            
-            if(renderBuffer != null)
+ 
+            renderer.SetTransformMatrix(CreateProjectionMatrix(unscaledRenderTarget.Width, unscaledRenderTarget.Height));
+            renderer.Reset();
+            SetData(renderBuffer.GetUIRenderInstances());
+ 
+            for (int i = 0; i < commandCount; i++)
             {
-                renderer.SetTransformMatrix(projectionMatrix);
-                renderer.Reset();
-                SetData(renderBuffer.GetUIRenderInstances());
-
-                for(int i = 0; i < commandCount; i++)
-                {
-                    var instance = instances[i];
-
-                    renderer.Render(instance.Shader, instance.Source, instance.Color, instance.Position, instance.Scale, instance.Rotation, instance.SourceRect);
-                }
-
-                renderer.Flush();
+                var instance = instances[i];
+                renderer.Render(instance.Shader, instance.Source, instance.Color, instance.Position, instance.Scale, instance.Rotation, instance.SourceRect);
             }
-
-            //final
+ 
+            renderer.Flush();
+            renderer.Reset();
+ 
             var shader = resourceManager.GetShader(new ShaderID(0));
-
+ 
             GraphicsDevice.SetRenderTarget(null);
+            GraphicsDevice.Clear(Color.Black); // letterbox / pillarbox bars
+ 
+            renderer.SetTransformMatrix(CreateProjectionMatrix(BackBufferWidth, BackBufferHeight));
+            renderer.Reset();
             renderer.Render(shader, renderTarget, Color.White, in renderTargetDestination);
             renderer.Render(shader, unscaledRenderTarget, Color.White, in unscaledRenderTargetDestination);
             renderer.Flush();
-
+ 
             frameCount++;
             drawCount = GraphicsDevice.Metrics.DrawCount;
         }
@@ -169,218 +195,267 @@ internal sealed class RenderingSystem : Workspace.Service
             GraphicsDevice.Clear(Color.Black);
         }
     }
-
+ 
     private void SetSettings(ref RenderSettings renderSettings)
     {
         var settingsChanged = false;
-
+ 
         var resolution = renderSettings.Resolution;
         var frameRate = renderSettings.FrameRate;
         var vSync = renderSettings.VSync;
-
-        //TODO frameRate
-
-        if(this.resolution.X != resolution.X || this.resolution.Y != resolution.Y)
+ 
+        if (frameRate != targetFrameRate)
         {
+            targetFrameRate = frameRate;
+            main.TargetElapsedTime = TimeSpan.FromSeconds(1d / frameRate);
+        }
+ 
+        if (this.resolution.Width != resolution.X || this.resolution.Height != resolution.Y)
+        {
+            SetWindowSize(resolution.X, resolution.Y);
+ 
             this.resolution = new Rectangle(0, 0, resolution.X, resolution.Y);
             settingsChanged = true;
         }
-
-        if(this.IsVSync != vSync)
+ 
+        if (this.IsVSync != vSync)
         {
-            this.graphics.SynchronizeWithVerticalRetrace = vSync;
+            this.graphicManager.SynchronizeWithVerticalRetrace = vSync;
             settingsChanged = true;
         }
-
-        if(settingsChanged)
+ 
+        if (settingsChanged)
             Apply();
     }
-
+ 
+    public void SetWindowSize(int width, int height)
+    {
+        graphicManager.PreferredBackBufferWidth = width;
+        graphicManager.PreferredBackBufferHeight = height;
+    }
+ 
     public void SetWindowMode(Window.Mode windowMode)
     {
-        this.graphics.IsFullScreen = windowMode == Window.Mode.Fullscreen;
+        this.graphicManager.IsFullScreen = windowMode == Window.Mode.Fullscreen;
+        Apply();
     }
+ 
     public void Apply()
     {
         var prevWindowPos = new Vector2(window.ClientBounds.X, window.ClientBounds.Y);
         MouseState mouse = Mouse.GetState();
-
-        graphics.ApplyChanges();
-
-        if(resolution.Width != renderTarget.Width || resolution.Height != renderTarget.Height)
+ 
+        graphicManager.ApplyChanges();
+ 
+        // Internal resolution changed -> recreate the world target.
+        if (resolution.Width != renderTarget.Width || resolution.Height != renderTarget.Height)
         {
             renderTarget.Dispose();
             renderTarget = new RenderTarget2D(GraphicsDevice, resolution.Width, resolution.Height);
         }
-
+ 
+        // Back buffer changed -> recreate the UI target.
+        SyncBackBuffer();
+ 
+        ValidateRenderTargetDestination();
+ 
         var currWindowPos = new Vector2(window.ClientBounds.X, window.ClientBounds.Y);
         var pos = prevWindowPos - currWindowPos;
         Mouse.SetPosition((int)(pos.X + mouse.X), (int)(pos.Y + mouse.Y));
     }
-
-    private Matrix? GetViewMatrix(in Camera? cameraData, Viewport viewport, float partialTick)
+ 
+    /// <summary>
+    /// Keeps the UI target the same size as the back buffer and refreshes the destination rectangles.
+    /// </summary>
+    private void SyncBackBuffer()
     {
-        if(cameraData == null) return null;
-
+        int w = BackBufferWidth;
+        int h = BackBufferHeight;
+ 
+        if (unscaledRenderTarget.Width == w && unscaledRenderTarget.Height == h)
+            return;
+ 
+        unscaledRenderTarget.Dispose();
+        unscaledRenderTarget = new RenderTarget2D(GraphicsDevice, w, h);
+ 
+        ValidateRenderTargetDestination();
+    }
+ 
+    /// <summary>
+    /// Maps a window (back buffer) pixel position to a position inside the internal resolution.
+    /// Returns false when the point lies in the letterbox bars.
+    /// </summary>
+    public bool TryWindowToResolution(Point windowPoint, out Vector2 resolutionPoint)
+    {
+        var dest = renderTargetDestination;
+        resolutionPoint = default;
+ 
+        if (dest.Width <= 0 || dest.Height <= 0 || !dest.Contains(windowPoint))
+            return false;
+ 
+        resolutionPoint = new Vector2(
+            (windowPoint.X - dest.X) * (resolution.Width / (float)dest.Width),
+            (windowPoint.Y - dest.Y) * (resolution.Height / (float)dest.Height));
+        return true;
+    }
+ 
+    private Matrix? GetViewMatrix(in Camera? cameraData, int targetWidth, int targetHeight, float partialTick)
+    {
+        if (cameraData == null) return null;
+ 
         Camera camera = cameraData.Value;
         Vector2 position = Vector2.Lerp(Camera.GetPosition(in camera), Camera.GetTargetPosition(in camera), partialTick);
-        float orthoSize  = MathHelper.Lerp(Camera.GetOrthographicSize(in camera), Camera.GetTargetOrthographicSize(in camera), partialTick);
-
-        float scaleY = viewport.Height / orthoSize;
+        float orthoSize = MathHelper.Lerp(Camera.GetOrthographicSize(in camera), Camera.GetTargetOrthographicSize(in camera), partialTick);
+ 
+        // orthoSize = number of world units visible vertically at the internal resolution.
+        float scaleY = targetHeight / orthoSize;
         float scaleX = scaleY;
-
+ 
         var translation = Matrix.CreateTranslation(new Vector3(-position.X, position.Y, 0f));
         var scale = Matrix.CreateScale(scaleX, scaleY, 1f);
-        var screenCenter = Matrix.CreateTranslation(new Vector3(viewport.Width * 0.5f, viewport.Height * 0.5f, 0f));
-
+        var screenCenter = Matrix.CreateTranslation(new Vector3(targetWidth * 0.5f, targetHeight * 0.5f, 0f));
+ 
         return translation * scale * screenCenter;
     }
-    private Matrix GetProjectionMatrix(Viewport preViewport, out Viewport _viewport)
+ 
+    private Matrix CreateProjectionMatrix(int width, int height)
     {
-        var matrix = projectionMatrix;
-
-        Viewport viewport = graphics.GraphicsDevice.Viewport;
-        _viewport = preViewport;
-        if (viewport.Width != preViewport.Width || viewport.Height != preViewport.Height)
+        Matrix.CreateOrthographicOffCenter(0f, width, height, 0f, 4f, -4f, out Matrix matrix);
+ 
+        if (GraphicsDevice.UseHalfPixelOffset)
         {
-            Matrix.CreateOrthographicOffCenter(0f, viewport.Width, viewport.Height, 0f, 4f, -4f, out matrix);
-            if (GraphicsDevice.UseHalfPixelOffset)
-            {
-                matrix.M41 += -0.5f * matrix.M11;
-                matrix.M42 += -0.5f * matrix.M22;
-            }
-
-            _viewport = viewport;
+            matrix.M41 += -0.5f * matrix.M11;
+            matrix.M42 += -0.5f * matrix.M22;
         }
+ 
         return matrix;
     }
-
-    private void CreateRenderTargetDestination()
+ 
+    private void ValidateRenderTargetDestination()
     {
-        var screenSize = GraphicsDevice.PresentationParameters.Bounds;
-
-        {
-            float scaleX = (float)screenSize.Width / renderTarget.Width;
-            float scaleY = (float)screenSize.Height / renderTarget.Height;
-            float scale = Math.Min(scaleX, scaleY);
-
-            int newWidth = (int)(renderTarget.Width * scale);
-            int newHeight = (int)(renderTarget.Height * scale);
-
-            int posX = screenSize.Width - newWidth / 2; // we do it like and not "(screenSize.Width - newWidth) / 2" because we have the quad vertices from -0.5 to 0.5
-            int posY = screenSize.Height - newHeight / 2;
-
-            renderTargetDestination = new Rectangle(posX, posY, newWidth, newHeight);
-        }
-
-        {
-            float scaleX = (float)screenSize.Width / unscaledRenderTarget.Width;
-            float scaleY = (float)screenSize.Height / unscaledRenderTarget.Height;
-            float scale = Math.Min(scaleX, scaleY);
-
-            int newWidth = (int)(unscaledRenderTarget.Width * scale);
-            int newHeight = (int)(unscaledRenderTarget.Height * scale);
-
-            int posX = screenSize.Width - newWidth / 2;
-            int posY = screenSize.Height - newHeight / 2;
-
-            unscaledRenderTargetDestination = new Rectangle(posX, posY, newWidth, newHeight);
-        }
-
-        screenBounds = screenSize;
+        if (renderTarget == null || unscaledRenderTarget == null)
+            return;
+ 
+        int backWidth = BackBufferWidth;
+        int backHeight = BackBufferHeight;
+ 
+        renderTargetDestination = FitRectangle(renderTarget.Width, renderTarget.Height, backWidth, backHeight, integerScaling);
+ 
+        unscaledRenderTargetDestination = new Rectangle(unscaledRenderTarget.Width / 2, unscaledRenderTarget.Height / 2, backWidth, backHeight);
     }
-
+ 
+    private static Rectangle FitRectangle(int sourceWidth, int sourceHeight, int destWidth, int destHeight, bool integerScale)
+    {
+        if (sourceWidth <= 0 || sourceHeight <= 0 || destWidth <= 0 || destHeight <= 0)
+            return new Rectangle(0, 0, Math.Max(destWidth, 0), Math.Max(destHeight, 0));
+ 
+        float scale = Math.Min((float)destWidth / sourceWidth, (float)destHeight / sourceHeight);
+ 
+        if (integerScale && scale >= 1f)
+            scale = MathF.Floor(scale);
+ 
+        int width = Math.Max(1, (int)MathF.Round(sourceWidth * scale));
+        int height = Math.Max(1, (int)MathF.Round(sourceHeight * scale));
+ 
+        return new Rectangle(destWidth - width / 2, destHeight - height / 2, width, height);
+    }
+ 
     private void SetData(ReadOnlySpan<RenderInstance> newInstances, float partialTick)
     {
         commandCount = newInstances.Length;
         if (commandCount == 0) return;
-
-        EnsureCapacity(commands, instances, commandCount);
-
+ 
+        EnsureCapacity(commandCount);
+ 
         for (int i = 0; i < commandCount; i++)
         {
             try
             {
                 ref readonly var instance = ref newInstances[i];
-
+ 
                 ShaderID shader = instance.Shader;
                 TextureID texture = instance.Texture;
-
+ 
                 Transform transform = Interpolate(instance.Transform, partialTick);
-
+ 
                 ushort layerBits = (ushort)Math.Clamp((int)(transform.Position.X * 100.0f), 0, 65535);
                 var key = BuildKey(layerBits, shader, texture);
-
+ 
                 var transformPos = transform.Position;
                 var position = new Vector3(transformPos.X, -transformPos.Y, transformPos.Z);
-
+ 
                 commands[i] = new RenderCommand(key, i);
-
+ 
                 instances[i] = new GPUInstance(resourceManager.GetShader(shader), resourceManager.GetTexture(texture), instance.SourceRectangle, instance.Color, position, transform.Scale, transform.Rotation);
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 Logger.NewLog(Logger.Log.Level.Error, $"Unable to render instance, reason: {ex}");
                 i--;
                 commandCount--;
             }
         }
-
+ 
         Array.Sort(commands, 0, commandCount);
     }
+ 
     private void SetData(ReadOnlySpan<RenderInstanceUI> newInstances)
     {
         commandCount = newInstances.Length;
         if (commandCount == 0) return;
-
-        EnsureCapacity(commands, instances, commandCount);
-
+ 
+        EnsureCapacity(commandCount);
+ 
         for (int i = 0; i < commandCount; i++)
         {
             try
             {
                 ref readonly var instance = ref newInstances[i];
-
+ 
                 Vector3 position = new Vector3(instance.Position.X, instance.Position.Y, 0);
                 Vector2 scale = new Vector2(instance.Scale.X, instance.Scale.Y);
-
+ 
                 ShaderID shader = instance.Shader;
                 TextureID texture = instance.Texture;
-
+ 
                 instances[i] = new GPUInstance(resourceManager.GetShader(shader), resourceManager.GetTexture(texture), instance.SourceRectangle, instance.Color, position, scale, instance.Rotation);
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 Logger.NewLog(Logger.Log.Level.Error, $"Unable to render instance, reason: {ex}");
                 i--;
                 commandCount--;
             }
         }
-
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)] private static void EnsureCapacity(RenderCommand[] commands, GPUInstance[] instances, int requiredCapacity)
+ 
+    // Instance method on purpose: Array.Resize needs to write back to the fields.
+    // (The old static version resized local copies of the references, so the real arrays never grew.)
+    private void EnsureCapacity(int requiredCapacity)
     {
-        if (commands.Length < requiredCapacity)
-        {
-            int newCapacity = commands.Length * 2;
-            while (newCapacity < requiredCapacity)
-                newCapacity *= 2;
-
-            Array.Resize(ref commands, newCapacity);
-            Array.Resize(ref instances, newCapacity);
-        }
+        if (commands.Length >= requiredCapacity && instances.Length >= requiredCapacity)
+            return;
+ 
+        int newCapacity = Math.Max(commands.Length, 1) * 2;
+        while (newCapacity < requiredCapacity)
+            newCapacity *= 2;
+ 
+        Array.Resize(ref commands, newCapacity);
+        Array.Resize(ref instances, newCapacity);
     }
-    [MethodImpl(MethodImplOptions.AggressiveInlining)] private static ulong BuildKey(uint layer, ShaderID shader, TextureID texture)
+ 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static ulong BuildKey(uint layer, ShaderID shader, TextureID texture)
     {
-
         ulong layerBits = ((ulong)layer & 0xFFFF) << 48;
         ulong shaderBits = ((ulong)(shader.ID & 0xFF_FFFF)) << 24;
         ulong textureBits = (ulong)(texture.ID & 0xFF_FFFF);
-
+ 
         return layerBits | shaderBits | textureBits;
     }
-    [MethodImpl(MethodImplOptions.AggressiveInlining)] private static Transform Interpolate(in TransformInterp transform, float partialTick)
+ 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static Transform Interpolate(in TransformInterp transform, float partialTick)
     {
         return new Transform(
             Vector3.Lerp(transform.Position0, transform.Position, partialTick),
@@ -388,7 +463,9 @@ internal sealed class RenderingSystem : Workspace.Service
             MathHelper.Lerp(transform.Rotation0, transform.Rotation, partialTick)
         );
     }
-
+ 
+}
+ 
     // public void TakeScreenshot(float partialTick)
     // {
     //     string screenshotPath = Path.Combine("Screenshots", $"screenshot_{DateTime.Now:yyyyMMdd_HHmmss}.png");
@@ -462,4 +539,3 @@ internal sealed class RenderingSystem : Workspace.Service
     //         Logger.NewLog(Logger.Log.Level.Error, $"RenderingSystem: failed to produce a screenshot, reason: {e.Message}");
     //     }
     // }
-}
