@@ -4,6 +4,8 @@ using System.Collections.Generic;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Luminix.IO;
+using Luminix.Threading.Bridges;
+using Luminix.Threading.Commands;
 
 namespace Luminix;
 
@@ -17,6 +19,44 @@ internal sealed class GraphicsResourceManager : Microsoft.Xna.Framework.Content.
         this.textures = [];
     }
 
+    public void Initialize()
+    {
+        resourceBridge = ThreadBridges.GetBridge<CommandBridge<GraphicResourceCommand>>(Application.CORE_THREAD_NAME);
+        
+        resourceCommandHandler = (command) =>
+        {
+            try
+            {
+                switch ((command.CommandType, command.ResourceType))
+                {
+                    case (GraphicResourceCommandType.Create, GraphicResourceType.Shader):
+                        CreateShader(new(command.id), (byte[])command.Data);
+                        break;
+
+                    case (GraphicResourceCommandType.Create, GraphicResourceType.Texture):
+                        CreateTexture(new(command.id), (Color[])command.Data, command.Width, command.Height);
+                        break;
+
+                    case (GraphicResourceCommandType.Update, GraphicResourceType.Texture):
+                        UpdateTexture(new(command.id), (Color[])command.Data);
+                        break;
+
+                    case (GraphicResourceCommandType.Unload, GraphicResourceType.Shader):
+                        UnloadShader(new(command.id));
+                        break;
+
+                    case (GraphicResourceCommandType.Unload, GraphicResourceType.Texture):
+                        UnloadTexture(new(command.id));
+                        break;
+                }
+            }
+            catch(Exception ex)
+            {
+                Logger.NewLog(Logger.Log.Level.Error, $"Failed to resolve graphic resource {command.CommandType} command, reason: {ex}");
+            }
+        };
+    }
+
     public new string RootDirectory => AssetIO.ASSET_DIRECTORY;
 
     private MainRender main;
@@ -24,8 +64,18 @@ internal sealed class GraphicsResourceManager : Microsoft.Xna.Framework.Content.
 
     private Stream openedStream = null; 
 
+    private CommandBridge<GraphicResourceCommand> resourceBridge;
+
     private readonly Dictionary<ShaderID, Effect> shaders;
     private readonly Dictionary<TextureID, Texture2D> textures;
+
+    private Action<GraphicResourceCommand> resourceCommandHandler;
+
+    public void HandleCommands()
+    {
+        if(resourceBridge.CommandsIncoming)
+            resourceBridge.ConsumeCommands(resourceCommandHandler);
+    }
 
     public Texture2D CreateTexture(TextureID texture, Color[] colors, int X, int Y)
     {
@@ -74,14 +124,6 @@ internal sealed class GraphicsResourceManager : Microsoft.Xna.Framework.Content.
         source.Dispose();
         shaders.Remove(shader);
     }
-    public void UnloadResources()
-    {
-        foreach(var shader in shaders.Keys)
-            UnloadShader(shader);
-        foreach(var texture in textures.Keys)
-            UnloadTexture(texture);
-    }
-
 
     internal Effect GetShader(ShaderID resource)
     {

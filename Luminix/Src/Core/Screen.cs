@@ -25,4 +25,6 @@ public sealed class Screen
     public bool IsWideScreen { get; }
     private readonly Graphics.Resolution[] resolutions;
     public ReadOnlySpan<Graphics.Resolution> Resolutions => resolutions;
+
+    public string ToString() => $"{Name}, {IsWideScreen}";
 }

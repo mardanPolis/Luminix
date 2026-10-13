@@ -24,6 +24,8 @@ public sealed class Graphics : Workspace.Service
         public int X => Point.X;
         public int Y => Point.Y;
         public int RefreshRate { get; }
+
+        public override string ToString() => $"{X}, {Y}";
     }
 
     internal Graphics()
@@ -66,17 +68,18 @@ public sealed class Graphics : Workspace.Service
         window.Position = result.Position;
         window.CurrentMode = result.WindowMode;
         
-        //FIXME NOT THREAD SAFE, MUST FIX
         var adapters = GraphicsAdapter.Adapters;
 
         Screen[] screens = new Screen[adapters.Count];
 
         for(int adapterIndex = 0; adapterIndex < adapters.Count; adapterIndex++)
+        {
             screens[adapterIndex] = new Screen(adapters[adapterIndex]);
+        }
 
         this.screens = screens;
-        renderSettings.Resolution = screens[0].Resolutions[0];
-
+        renderSettings.Resolution = screens[0].Resolutions[2];
+        Logger.NewLog(Logger.Log.Level.Info, $"{renderSettings.Resolution}");
     }
     
     private RenderBuffer renderBuffer;
@@ -346,6 +349,7 @@ public sealed class Graphics : Workspace.Service
     {
         ref RenderSettings settings = ref this.RenderSettings;
         var renderBuffer = this.renderBuffer;
+        renderBuffer.RenderSettings = settings;
 
         var world = this.Workspace.GetService<World>();
         if(world.EntityExists(this.mainCamera))
@@ -364,8 +368,6 @@ public sealed class Graphics : Workspace.Service
             renderBuffer.SetCam(null);
         }
             
-        renderBuffer.RenderSettings = this.renderSettings;
-
         this.renderBuffer = null;
     }
 }

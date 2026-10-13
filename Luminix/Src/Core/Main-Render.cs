@@ -65,7 +65,6 @@ internal sealed class MainRender : Microsoft.Xna.Framework.Game
 
     private RenderInfoBuffer renderInfoBuffer;
 
-    private Action<GraphicResourceCommand> resourceCommandHandler;
     private Action<WindowCommand> windowCommandHandler;
 
     public Thread MainThread => mainThread;
@@ -109,6 +108,8 @@ internal sealed class MainRender : Microsoft.Xna.Framework.Game
             resourceBridge          = ThreadBridges.GetBridge<CommandBridge<GraphicResourceCommand>>(Application.CORE_THREAD_NAME);
             windowBridge            = ThreadBridges.GetBridge<WindowBridge>(Application.CORE_THREAD_NAME);
             
+            resourceManager.Initialize();
+
             inputBridge.PopulateIfEmpty();
 
             startBytes = GC.GetAllocatedBytesForCurrentThread();
@@ -136,38 +137,6 @@ internal sealed class MainRender : Microsoft.Xna.Framework.Game
 
             base.Initialize();
 
-            resourceCommandHandler = (command) =>
-            {
-                try
-                {
-                    switch ((command.CommandType, command.ResourceType))
-                    {
-                        case (GraphicResourceCommandType.Create, GraphicResourceType.Shader):
-                            resourceManager.CreateShader(new(command.id), (byte[])command.Data);
-                            break;
-
-                        case (GraphicResourceCommandType.Create, GraphicResourceType.Texture):
-                            resourceManager.CreateTexture(new(command.id), (Color[])command.Data, command.Width, command.Height);
-                            break;
-
-                        case (GraphicResourceCommandType.Update, GraphicResourceType.Texture):
-                            resourceManager.UpdateTexture(new(command.id), (Color[])command.Data);
-                            break;
-
-                        case (GraphicResourceCommandType.Unload, GraphicResourceType.Shader):
-                            resourceManager.UnloadShader(new(command.id));
-                            break;
-
-                        case (GraphicResourceCommandType.Unload, GraphicResourceType.Texture):
-                            resourceManager.UnloadTexture(new(command.id));
-                            break;
-                    }
-                }
-                catch(Exception ex)
-                {
-                    Logger.NewLog(Logger.Log.Level.Error, $"Failed to resolve graphic resource {command.CommandType} command, reason: {ex}");
-                }
-            };
             windowCommandHandler = (command) =>
             {
                 switch(command.Kind)
@@ -215,8 +184,6 @@ internal sealed class MainRender : Microsoft.Xna.Framework.Game
 
         inputHandler.Update(IsActive);
 
-        if(resourceBridge.CommandsIncoming)
-            resourceBridge.ConsumeCommands(resourceCommandHandler);
 
         if(windowBridge.CommandsIncoming)
         {
