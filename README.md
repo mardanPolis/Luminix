@@ -25,7 +25,7 @@ A 2D Game Engine in C# with an archetype ECS and data-driven defs, currently usi
   - [ ] SDL3
   - [ ] font .ttf file loading
   - [ ] shader loading
-- [ ] **Serialization System**
+- [ ] **Serialization System** **(Partially done)** 
   - [x] Data-driven definition loading
   - [ ] Game state saving & loading
 - [ ] Physics
