@@ -33,6 +33,22 @@ A 2D Game Engine in C# with an archetype ECS and data-driven defs, currently usi
 - [ ] Particle System
 - [ ] Localization
 
+## Project Structure
+```text  
+Luminix
+– Assets            # Engine Embedded Assets
+– native            # Native Code
+– Src               
+– – Core            # Engine Code
+– – Collections     # Custom collection types
+– – Debug           # Engine Debug Code
+– – Exceptions      # Custom engine exception types
+– – Extensions      # Helper extension methods across engine types
+– – IO              # asset loading
+– – Json            # Json Converters and Json Utility
+– – Rendering       # Render pipeline
+– – Threading       # Core and Render thread synchronization & tasks
+```
 
 ## STRESS TEST, 10k -> 100k -> 1mil entities
 
@@ -42,19 +58,5 @@ https://github.com/user-attachments/assets/f0d076e5-ea07-4a09-809b-d738fdeb30fe
 - **CPU:** Intel Core i5-14600K
 - **GPU:** NVIDIA RTX 4070 Ti Super
 
+**Test source location:** `Sandbox/`
 
-## Project Structure
-```text  
-Luminix
-– Assets            # Engine Embedded Assets
-– native            # Native Code
-– Src               
-– – Core            # Engine Code
-– – Collections     #   collection types
-– – Debug           # Engine Debug Code
-– – Exceptions      # Custom engine exception types
-– – Extensions      # Helper extension methods across engine types
-– – IO              # asset loading
-– – Json            # Json Converters and Json Utility
-– – Rendering       # Render pipeline
-– – Threading       # Core and Render thread synchronization & tasks
