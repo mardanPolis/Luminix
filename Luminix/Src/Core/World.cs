@@ -177,6 +177,7 @@ public sealed class World : Workspace.Service
         cameraData.BackgroundColor = new Color(49, 77, 121);
     }
 
+    //Entity Lifetime
     public EntityID CreateEntity(EntityType entityType)
     {
         ArgumentNullException.ThrowIfNull(entityType, nameof(entityType));
@@ -237,6 +238,7 @@ public sealed class World : Workspace.Service
         return true;
     }
 
+    //Components
     public ref T GetEntityComponent<T>(EntityID entityID) where T : struct
     {
         if(graphics.IsRendering)
@@ -257,20 +259,15 @@ public sealed class World : Workspace.Service
 
         return ref typeContainers[entityType].GetComponent<T>(entityID);
     }
-
-    public bool EntityHasTag(EntityID entityID, string tag)
+    public bool HasComponent<T>(EntityType entityType) where T : struct
     {
-        if (!entities.TryGetValue(entityID, out EntityType entityType))
-            throw new ArgumentException($"Entity does not exist", nameof(entityID));
+        if(!typeContainers.TryGetValue(entityType, out EntityContainer container))
+            throw new ArgumentException("Unknown entity type", nameof(entityType));
 
-        if (entityType.HasTag(tag))
-            return true;
-        
-        if(!this.taggedEntities.TryGetValue(tag, out var taggedEntities))
-            return false;
-        
-        return taggedEntities.Contains(entityID);
+        return container.HasComponent<T>();
     }
+    
+    //Tags
     public void AddEntityTag(EntityID entityID, string tag)
     {
         if(isPreparing)
@@ -296,6 +293,19 @@ public sealed class World : Workspace.Service
 
         tags.Add(tag);
     }
+    public bool EntityHasTag(EntityID entityID, string tag)
+    {
+        if (!entities.TryGetValue(entityID, out EntityType entityType))
+            throw new ArgumentException($"Entity does not exist", nameof(entityID));
+
+        if (entityType.HasTag(tag))
+            return true;
+        
+        if(!this.taggedEntities.TryGetValue(tag, out var taggedEntities))
+            return false;
+        
+        return taggedEntities.Contains(entityID);
+    }
     public ReadOnlySpan<string> GetEntityTags(EntityID entityID)
     {
         if (!entities.ContainsKey(entityID))
@@ -306,29 +316,6 @@ public sealed class World : Workspace.Service
         
         return CollectionsMarshal.AsSpan(tags);
     }
-
-    public bool RemoveEntityTag(EntityID entityID, string tag)
-    {
-        if(isPreparing)
-            throw new InvalidOperationException("Cant remove a tag from an Entity during preparing phase.");
-
-        if (!entities.ContainsKey(entityID))
-            throw new ArgumentException($"Entity does not exist", nameof(entityID));
-
-        if(!this.taggedEntities.TryGetValue(tag, out var taggedEntities))
-            return false;
-        
-        if(!taggedEntities.Remove(entityID))
-            return false;
-        
-        if(entityTags.TryGetValue(entityID, out var tags) && tags.Remove(tag) && tags.Count == 0)
-        {
-            entityTags.Remove(entityID);
-            listPool.Return(tags);
-        }
-
-        return true;
-    }
     public ReadOnlySpan<EntityID> GetTaggedEntities(string tag)
     {
         if(!this.taggedEntities.TryGetValue(tag, out var taggedEntities))
@@ -337,20 +324,13 @@ public sealed class World : Workspace.Service
         return taggedEntities.AsSpan();
     }
 
+    //EntityType
     public EntityType GetEntityType(EntityID entityID)
     {
         if (!entities.TryGetValue(entityID, out EntityType entityType))
             throw new ArgumentException($"Entity does not exist", nameof(entityID));
 
         return entityType;
-    }
-    
-    public bool HasComponent<T>(EntityType entityType) where T : struct
-    {
-        if(!typeContainers.TryGetValue(entityType, out EntityContainer container))
-            throw new ArgumentException("Unknown entity type", nameof(entityType));
-
-        return container.HasComponent<T>();
     }
     public EntityEnumerable GetEntities(EntityType entityType)
     {
@@ -374,6 +354,7 @@ public sealed class World : Workspace.Service
         return container.EntityCount;
     }
     
+    //GameObjects
     public void AddGameObject(GameObject gameObject)
     {
         gameObjects.Add(gameObject.GetType(), gameObject);
@@ -396,6 +377,7 @@ public sealed class World : Workspace.Service
         return false;
     }
     
+    //both
     public void Clear()
     {
         gameObjects.Clear();
