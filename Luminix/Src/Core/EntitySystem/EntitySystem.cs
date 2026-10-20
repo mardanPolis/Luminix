@@ -4,6 +4,7 @@ namespace Luminix;
 
 public abstract class EntitySystem
 {
+    protected Workspace Workspace { get; }
     protected Time Time { get; }
     protected World World { get; }
     protected Graphics Graphics { get; }
@@ -12,10 +13,11 @@ public abstract class EntitySystem
 
     public EntitySystem()
     {
-        Time = Workspace.Current.GetService<Time>();
-        World = Workspace.Current.GetService<World>();
-        Graphics = Workspace.Current.GetService<Graphics>();
-        AudioMedia = Workspace.Current.GetService<AudioMedia>();
+        Workspace = Workspace.Current;
+        Time = Workspace.GetService<Time>();
+        World = Workspace.GetService<World>();
+        Graphics = Workspace.GetService<Graphics>();
+        AudioMedia = Workspace.GetService<AudioMedia>();
     }
 
     internal void Initialize(EntityType type)
